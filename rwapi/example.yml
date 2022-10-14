@@ -1,0 +1,21 @@
+fields:
+  exclude:
+  - body-html
+  - url_alias
+filter:
+  conditions:
+  - field: format
+    negate: true
+    value:
+    - Map
+    - Interactive
+    - Infographic
+  - field: language
+    value: English
+  operator: AND
+limit: 300
+offset: 0
+profile: full
+slim: 1
+sort:
+- date:desc
