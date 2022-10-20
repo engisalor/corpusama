@@ -23,7 +23,7 @@
       ],
       "operator": "AND"
     },
-    "limit": 1,
+    "limit": 300,
     "offset": 0,
     "profile": "full",
     "slim": 1,
