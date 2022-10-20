@@ -23,8 +23,10 @@ JSON content is returned and its content is well-formatted.
 This package wraps the ReliefWeb API to simplify making queries and storing data.
 
 - accepts parameters in JSON, YML, or dict format 
-- `Manager` will execute a call and save data to a SQLite database
-- new reports are added and existing reports are overwritten (determined by the `"id"` field)
+- existing reports are overwritten (determined by the `"id"` field)
+- can make sets of calls to retrieve multiple pages of results
+- waits between calls
+- tracks API usage and limits to daily quota
 - see the docstrings in `manager.py` for details
 
 **Installation**
@@ -37,10 +39,14 @@ See example below for making a call.
 
 - make a parameters dictionary (see `example.json` and `example.yml`)
 - use an `appname` as per RW guidelines
-- run `rwapi.Manager()`
 - explore data via terminal or a GUI application, e.g. [sqlitebrowser](https://sqlitebrowser.org/)
-- `Manager` objects can optionally be inspected for troubleshooting
 
 ```python
-manager_object = rwapi.Manager("rwapi/example.yml", "<appname>")
+import rwapi
+
+# make a rw Manager object to start working
+rw = rwapi.Manager() 
+
+# execute a call
+rw.call("rwapi/calls/<parameters_file>.json", "<appname>")
 ```
