@@ -248,9 +248,9 @@ class Manager:
     - new calls replace log entries if the parameters are identical."""
 
     self.log_table = "call_log"
-    self.c.execute(f"CREATE TABLE IF NOT EXISTS {self.log_table} (parameters PRIMARY KEY, rwapi_input, rwapi_date)")
+    self.c.execute(f"CREATE TABLE IF NOT EXISTS {self.log_table} (parameters PRIMARY KEY, rwapi_input, rwapi_date, count, total_count)")
     self.c.execute(
-      f"INSERT OR REPLACE INTO {self.log_table} VALUES (?,?,?)", (json.dumps(self.parameters), self.input.name, str(self.now))
+      f"INSERT OR REPLACE INTO {self.log_table} VALUES (?,?,?,?,?)", (json.dumps(self.parameters), self.input.name, str(self.now), self.response_json["count"], self.response_json["totalCount"])
     )
 
     self.conn.commit()
