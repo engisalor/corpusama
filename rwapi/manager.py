@@ -92,12 +92,8 @@ class Manager:
     """Makes a single ReliefWeb API call (returns response_json)"""
     
     # adjust offset when making multiple calls
-    if self.pages > 1:
-      try:
-        self.parameters["offset"] = self.response_json["count"]
-        logger.debug(f"PARAMS using previous count as offset {self.response_json['count']}")
-      except:
-        self.parameters["offset"] = self.parameters["limit"] * self.page
+    if self.page > 0:
+      self.parameters["offset"] += self.response_json["count"]
 
     # make call
     self.now = pd.Timestamp.now().round("S").isoformat()
