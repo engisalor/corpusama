@@ -93,7 +93,11 @@ class Manager:
     
     # adjust offset when making multiple calls
     if self.pages > 1:
-      self.parameters["offset"] = self.parameters["limit"] * self.page
+      try:
+        self.parameters["offset"] = self.response_json["count"]
+        logger.debug(f"PARAMS using previous count as offset {self.response_json['count']}")
+      except:
+        self.parameters["offset"] = self.parameters["limit"] * self.page
 
     # make call
     self.now = pd.Timestamp.now().round("S").isoformat()
