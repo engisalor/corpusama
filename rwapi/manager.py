@@ -1,3 +1,5 @@
+import ast
+import numpy as np
 import time
 import requests
 import json
@@ -29,7 +31,7 @@ class Manager:
 
   Options
   - db = "data/reliefweb.db" session SQLite database
-  - loglevel = "info" (logs found in .rwapi.log)
+  - log_level = "info" (logs found in .rwapi.log)
   
   Usage:
   ```
@@ -233,7 +235,7 @@ class Manager:
     for k, v in self.wait_dict.items():
       if v:
           if self.pages <= v:
-          waits.append(k)
+            waits.append(k)
     if not waits:
       waits.append(max([k for k in self.wait_dict.keys()]))
     
@@ -321,14 +323,14 @@ class Manager:
   def __init__(
       self,
       db="data/reliefweb.db",
-      loglevel="info",
+      log_level="info",
   ):
       # variables
       self.db = db
       self.log_file = log_file
  
       # logging
-      numeric_level = getattr(logging, loglevel.upper(), None)
+      numeric_level = getattr(logging, log_level.upper(), None)
       if not isinstance(numeric_level, int):
-        raise ValueError("Invalid log level: %s" % loglevel)
+        raise ValueError("Invalid log level: %s" % log_level)
       logger.setLevel(numeric_level)
