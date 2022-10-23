@@ -4,7 +4,6 @@ import json
 import pandas as pd
 import yaml
 import sqlite3 as sql
-import pandas as pd
 import pathlib
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -15,7 +14,7 @@ logger.setLevel(logging.WARNING)
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 log_file = ".rwapi.log"
-file_handler = TimedRotatingFileHandler(log_file, backupCount=1)
+file_handler = TimedRotatingFileHandler(log_file,'midnight')
 file_handler.setFormatter(formatter)
 
 stream_handler = logging.StreamHandler()
@@ -188,8 +187,8 @@ class Manager:
     self.quota = 0
 
     # count calls in log
-    if pathlib.Path(self.log_file).exists():
-      with open(pathlib.Path(self.log_file), "r") as f:
+    if pathlib.Path(log_file).exists():
+      with open(pathlib.Path(log_file), "r") as f:
         daily_log = f.readlines()
       for x in daily_log:
         if "- CALL" in x:
@@ -209,7 +208,7 @@ class Manager:
 
 
   def _set_wait(self, wait_dict={0: 1, 5: 49, 10: 99, 20:499, 30:None}):
-    """Sets wait time between calls based on pages (seconds to wait / for n calls).
+    """Sets wait time between pages (seconds to wait / for n pages).
 
     Defaults:
     (0/1)
@@ -233,7 +232,7 @@ class Manager:
     waits = []
     for k, v in self.wait_dict.items():
       if v:
-        if self.pages <= v:
+          if self.pages <= v:
           waits.append(k)
     if not waits:
       waits.append(max([k for k in self.wait_dict.keys()]))
