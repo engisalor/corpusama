@@ -52,7 +52,7 @@ class Manager:
     
     self.conn = sql.connect(self.db)
     self.c = self.conn.cursor()
-    logger.debug(f"SQL {self.db} open")
+    logger.debug(f"{self.db}")
 
 
   def close_db(self):
@@ -61,7 +61,7 @@ class Manager:
     self.c.execute("pragma optimize")
     self.c.close()
     self.conn.close()
-    logger.debug(f"SQL close {self.db}")
+    logger.debug(f"{self.db}")
 
 
   def _get_parameters(self):
@@ -98,7 +98,7 @@ class Manager:
 
     # make call
     self.now = pd.Timestamp.now().round("S").isoformat()
-    logger.debug(f"PARAMS {self.parameters}")
+    logger.debug(f"params {self.parameters}")
     self.response = requests.post(self.url, json.dumps(self.parameters))
 
     # check response
@@ -108,7 +108,7 @@ class Manager:
       raise ValueError(self.response_json)
 
     summary = {k:v for k,v in self.response_json.items() if k != "data"}
-    logger.info(f"CALL {summary}")
+    logger.info(f"{summary}")
 
 
   def _get_field_names(self):
@@ -118,7 +118,7 @@ class Manager:
     for x in self.response_json["data"]:
       self.field_names.update(list(x["fields"].keys()))
 
-    logger.debug(f"FIELDS {len(self.field_names)} {sorted(self.field_names)}")
+    logger.debug(f"{len(self.field_names)} {sorted(self.field_names)}")
 
 
   def _get_records_columns(self):
@@ -140,7 +140,7 @@ class Manager:
     for x in self.columns_all:
       try:
         self.c.execute(f"ALTER TABLE {self.records_table} ADD COLUMN '%s' " % x)
-        logger.debug(f"SQL {x} added to {self.records_table}")
+        logger.debug(f"{x} added to {self.records_table}")
       except:
         pass
 
@@ -172,12 +172,12 @@ class Manager:
     for x in [x for x in self.columns_all if x not in self.df.columns]:
       self.df[x] = None
       added_columns.append(x)    
-    logger.debug(f"DF added {len(added_columns)} {added_columns} columns")
+    logger.debug(f"added {len(added_columns)} {added_columns} columns")
   
     # convert everything to str
     self.df = self.df[self.columns_all]
     self.df = self.df.applymap(json.dumps)
-    logger.debug(f"DF prepared {len(self.df.columns.tolist())} {sorted(self.df.columns.tolist())} columns")
+    logger.debug(f"prepared {len(self.df.columns.tolist())} {sorted(self.df.columns.tolist())} columns")
 
 
   def _insert_records(self):
@@ -190,7 +190,7 @@ class Manager:
     )
 
     self.conn.commit()
-    logger.debug(f"SQL insert to {self.records_table}")
+    logger.debug(f"{self.records_table}")
 
 
   def _quota_handler(self):
@@ -213,10 +213,10 @@ class Manager:
 
     # control API usage
     if self.pages > (self.quota_remaining):
-      logger.info(f"QUOTA pages exceeds quota: will make {self.quota_remaining} instead of {self.pages}")
+      logger.info(f"pages exceeds quota: making {self.quota_remaining} instead of {self.pages}")
       self.pages = self.quota_remaining
 
-    logger.debug(f"QUOTA {self.quota}/{self.quota_limit}")
+    logger.debug(f"{self.quota}/{self.quota_limit}")
 
 
   def _set_wait(self, wait_dict={0: 1, 5: 49, 10: 99, 20:499, 30:None}):
@@ -237,7 +237,7 @@ class Manager:
 
     # check for custom wait dict
     try:
-      logger.debug(f"WAIT custom dict {self.wait_dict}")
+      logger.debug(f"custom dict {self.wait_dict}")
     except:
       self.wait_dict = wait_dict
 
@@ -250,7 +250,7 @@ class Manager:
       waits.append(max([k for k in self.wait_dict.keys()]))
     
     self.wait = min(waits)
-    logger.debug(f"WAIT set to {self.wait} second(s)")
+    logger.debug(f"{self.wait} second(s)")
 
 
   def _insert_log(self):
@@ -265,7 +265,7 @@ class Manager:
     )
 
     self.conn.commit()
-    logger.debug(f"SQL insert to {self.log_table}")
+    logger.debug(f"{self.log_table}")
 
 
   def call(self,
@@ -303,7 +303,7 @@ class Manager:
       self.page = page
       
       # make call
-      logger.debug(f"MANAGER start page {self.page}")
+      logger.debug(f"page {self.page}")
       self._quota_handler()
       self._call()
 
@@ -319,11 +319,10 @@ class Manager:
       self._insert_records()
       self._insert_log()
       self.close_db()
-      logger.debug(f"MANAGER done page {self.page}")
 
       # wait if needed
       if page < (self.pages - 1):
-        logger.debug(f"WAIT {self.wait} seconds")
+        logger.debug(f"waiting {self.wait} seconds")
         time.sleep(self.wait)
 
 
