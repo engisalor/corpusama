@@ -384,13 +384,14 @@ class Manager:
     qty_summary = {x: len(df[df["qty"] == x]) for x in sorted(df["qty"].unique())}
     logger.debug(f"{len(df)}/{len(df_records)} records with PDFs")
     logger.debug(f"pdf distribution {qty_summary}")
+    self.detect_orphans()
 
 
-  def detect_orphans(self, pdf_dir=None):
+  def detect_orphans(self, dir=None):
     """Detects items in 'pdfs' missing from 'records'.
     
     Marks orphans as '1' in 'pdfs'.
-    Optionally outputs files in 'pdf_dir' missing from 'pdfs' table."""
+    Optionally outputs files in 'dir' missing from 'pdfs' table."""
 
     df_records = pd.read_sql("SELECT id FROM records", self.conn)
     df = pd.read_sql("SELECT * FROM pdfs", self.conn)
@@ -401,7 +402,7 @@ class Manager:
     not_orphan = df_merged[df_merged["_merge"] == "both"]["id"].values
 
     # update pdfs table
-    self.c.executemany('''UPDATE pdfs SET orphan = 1 WHERE id=?;''',
+    self.c.executemany('''UPDATE pdfs SET orphan = 'true' WHERE id=?;''',
     [(x,) for x in orphan])
     self.c.executemany('''UPDATE pdfs SET orphan = 'null' WHERE id=?;''',
     [(x,) for x in not_orphan])
@@ -409,11 +410,11 @@ class Manager:
     self.conn.commit()
 
     # find orphan files (in directory but no record in db)
-    if pdf_dir:
-      pdf_dir = pathlib.Path(pdf_dir)
-      stored_pdfs = [x.name for x in pdf_dir.glob('**/*') if x.is_file()]
+    if dir:
+      dir = pathlib.Path(dir)
+      stored_pdfs = [x.stem for x in dir.glob('**/*') if x.is_file()]
       df = df.applymap(self.try_literal)
-      filenames = [x for y in df.apply(lambda row: self.make_filenames(row), axis=1) for x in y]
+      filenames = [pathlib.Path(x).stem for y in df.apply(lambda row: self.make_filenames(row), axis=1) for x in y]
       orphan_files = [x for x in stored_pdfs if x not in filenames]
       logger.debug(f"{len(orphan_files)} file(s) missing a record in 'pdfs'")
       return orphan_files
