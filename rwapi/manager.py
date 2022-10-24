@@ -1,3 +1,7 @@
+import sys
+import hashlib
+from pdfminer.high_level import extract_text
+import io
 import ast
 import numpy as np
 import time
@@ -438,6 +442,113 @@ class Manager:
         names.append(f'{row["id"]}_{x}.pdf')
     return names
 
+
+  def check_ocr(self, text):
+    """Counts words in text and checks for common English lemmas.
+
+    About lemma score:
+    - 0 = no ubiquitous lemmas detected ('the', 'and', 'of', 'in', etc.)
+    - 1 = all ubiquitous lemmas detected"""
+    
+    tokens = ["the", "and", "of", "in", "to", "for", "it", "as", "that", "with"]
+    split = text.lower().split()
+    length = len(split)
+    test = sum([1 if x in split else 0 for x in tokens]) / len(tokens)
+    logger.debug(f"{length:,} words {test} lemma score")
+    
+    return length, test
+
+  def try_extract_text(self, response,filepath, maxpages=1000000):
+    if filepath.exists():
+      text = extract_text(filepath, maxpages=maxpages)
+    else:
+      try:
+        text = extract_text(io.BytesIO(response.content, maxpages=maxpages))
+        logger.debug("bytesIO")
+      except:
+        with open(filepath, 'wb') as f:
+          f.write(response.content)
+        text = extract_text(filepath, maxpages=maxpages)
+        logger.debug("bytesIO failed: trying file")
+
+    return text
+
+
+  def get_item_pdfs(self, index: int, mode: list, dir="data/files"):
+    """Downloads PDFs for a 'pdfs' table index to a given directory.
+    
+    Mode saves one or both types of data ["file"], ["text"] or ["file", "text"].
+    Excludes PDFs where exclude = 1 in the 'pdfs' table."""
+
+    self.update_pdf_table()
+    df = pd.read_sql("SELECT * FROM pdfs", self.conn)
+    dates, sizes, checksums, lengths, tests = [], [], [], [], []
+    row = df.iloc[index].copy()
+    row = row.apply(self.try_json)
+    names = self.make_filenames(row)
+
+    # for each url in a record
+    for x in range(len(row["url"])):
+      filepath = pathlib.Path(dir) / names[x]
+      if not row["exclude"]:
+        row["exclude"] = [0] * len(row["url"])
+
+      # skip excluded files
+      if row["exclude"][x] == 1:
+        logger.debug(f"exclude {filepath.name}")
+        for x in [dates, sizes, checksums, lengths, tests]:
+          x.append("")
+
+      # process PDF
+      else:
+        response = requests.get(row["url"][x])
+        size = round(sys.getsizeof(response.content) / 1000000, 1)
+        logger.debug(f'{filepath.stem} ({size} MB) downloaded')
+
+        # manage response by mode
+        if "file" in mode:
+          # save pdf file
+          with open(filepath, 'wb') as f:
+            f.write(response.content)
+          logger.debug(f'{filepath} saved')
+
+        if "text" in mode:
+          # save txt file
+          text = self.try_extract_text(response, filepath)
+          with open(filepath.with_suffix(".txt"), 'w') as f:
+            f.write(text)
+          logger.debug(f'{filepath.with_suffix(".txt")} saved')
+
+        # test for English OCR layer
+        text = self.try_extract_text(response, filepath, 5)
+        length, test = self.check_ocr(text)
+
+        # add metadata
+        dates.append(str(pd.Timestamp.now().round("S").isoformat()))
+        checksums.append(hashlib.sha256(response.content).hexdigest())
+        lengths.append(length)
+        tests.append(test)
+        sizes.append(size)
+
+        # delete unwanted pdf
+        if not "file" in mode:
+          if filepath.exists():
+            pathlib.Path.unlink(filepath)
+            logger.debug(f'{filepath} deleted')
+
+      records = [json.dumps(x) for x in [sizes, dates, checksums, lengths, tests]]
+      records = tuple(records) + (str(row["id"]),)
+
+      # insert into SQL
+      self.c.execute(f'''UPDATE pdfs SET 
+        size_mb = ?,
+        download = ?, 
+        sha256 = ?,
+        words_test = ?,
+        lemma_test = ?
+        WHERE id = ?;''',
+        records)
+      self.conn.commit()
 
   def __repr__(self):
       return ""
