@@ -145,6 +145,13 @@ class Manager:
         pass
 
 
+  def try_literal(self, item):
+    try:
+      return ast.literal_eval(item)  
+    except:
+      return item
+
+
   def _prepare_records(self):
     """Reshapes and prepares response data for adding to the records table."""
 
@@ -152,7 +159,10 @@ class Manager:
     self.df = pd.json_normalize(self.response_json["data"], sep="_", max_level=1)
     self.df.drop(["id"], axis=1, inplace=True, errors=False)
     self.df.columns = [x.replace("fields_", "") for x in self.df.columns]
- 
+
+    self.df = self.df.applymap(self.try_literal)
+    self.df = self.df.replace({np.nan:None})
+
     # add rwapi metadata columns
     self.df["rwapi_input"] = self.input.name
     self.df["rwapi_date"] = self.now
@@ -160,13 +170,13 @@ class Manager:
     # add empty columns & reorder
     added_columns = []
     for x in [x for x in self.columns_all if x not in self.df.columns]:
-      self.df[x] = ""
+      self.df[x] = None
       added_columns.append(x)    
     logger.debug(f"DF added {len(added_columns)} {added_columns} columns")
   
     # convert everything to str
     self.df = self.df[self.columns_all]
-    self.df = self.df.applymap(str)
+    self.df = self.df.applymap(json.dumps)
     logger.debug(f"DF prepared {len(self.df.columns.tolist())} {sorted(self.df.columns.tolist())} columns")
 
 
@@ -251,7 +261,7 @@ class Manager:
     self.log_table = "call_log"
     self.c.execute(f"CREATE TABLE IF NOT EXISTS {self.log_table} (parameters PRIMARY KEY, rwapi_input, rwapi_date)")
     self.c.execute(
-      f"INSERT OR REPLACE INTO {self.log_table} VALUES (?,?,?)", (json.dumps(self.parameters), self.input.name, str(self.now))
+      f"INSERT OR REPLACE INTO {self.log_table} VALUES (?,?,?)", (json.dumps(self.parameters), json.dumps(self.input.name), json.dumps(self.now))
     )
 
     self.conn.commit()
