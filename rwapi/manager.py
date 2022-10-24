@@ -124,8 +124,8 @@ class Manager:
   def _get_records_columns(self):
     """Gets a list of columns from the records table."""
 
-    self.c.execute(f"select * from {self.records_table}")
-    self.records_table_columns = [x[0] for x in self.c.description]
+    self.c.execute(f"select * from records")
+    self.records_columns = [x[0] for x in self.c.description]
 
 
   def _update_columns(self):
@@ -133,14 +133,14 @@ class Manager:
 
     self._get_field_names()
     self._get_records_columns()
-    self.columns_old = [x.strip() for x in self.records_table_columns if x]
+    self.columns_old = [x.strip() for x in self.records_columns if x]
     self.columns_new = [x for x in self.field_names if x not in self.columns_old]
     self.columns_all = self.columns_old + self.columns_new
 
     for x in self.columns_all:
       try:
-        self.c.execute(f"ALTER TABLE {self.records_table} ADD COLUMN '%s' " % x)
-        logger.debug(f"{x} added to {self.records_table}")
+        self.c.execute(f"ALTER TABLE records ADD COLUMN '%s' " % x)
+        logger.debug(f"{x} added to records")
       except:
         pass
 
@@ -185,12 +185,11 @@ class Manager:
 
     records = self.df.to_records(index=False)
     self.c.executemany(
-      f"INSERT OR REPLACE INTO {self.records_table} VALUES ({','.join(list('?' * len(self.columns_all)))})",
+      f"INSERT OR REPLACE INTO records VALUES ({','.join(list('?' * len(self.columns_all)))})",
       records
     )
-
     self.conn.commit()
-    logger.debug(f"{self.records_table}")
+    logger.debug(f"records")
 
 
   def _quota_handler(self):
@@ -254,18 +253,14 @@ class Manager:
 
 
   def _insert_log(self):
-    """Updates the log table with calls and parameters.
-    
-    - new calls replace log entries if the parameters are identical."""
+    """Updates history of calls (replaces identical old calls)."""
 
-    self.log_table = "call_log"
-    self.c.execute(f"CREATE TABLE IF NOT EXISTS {self.log_table} (parameters PRIMARY KEY, rwapi_input, rwapi_date, count, total_count)")
+    self.c.execute(f"CREATE TABLE IF NOT EXISTS call_log (parameters PRIMARY KEY, rwapi_input, rwapi_date, count, total_count)")
     self.c.execute(
-      f"INSERT OR REPLACE INTO {self.log_table} VALUES (?,?,?,?,?)", (json.dumps(self.parameters), self.input.name, str(self.now), self.response_json["count"], self.response_json["totalCount"])
+      f"INSERT OR REPLACE INTO call_log VALUES (?,?,?,?,?)", (json.dumps(self.parameters), self.input.name, str(self.now), self.response_json["count"], self.response_json["totalCount"])
     )
-
     self.conn.commit()
-    logger.debug(f"{self.log_table}")
+    logger.debug(f"call_log")
 
 
   def call(self,
@@ -274,27 +269,21 @@ class Manager:
     pages=1,
     url="https://api.reliefweb.int/v1/reports?appname=",
     quota_limit=1000,
-    records_table="records",
   ):
     """Manages API calls made to ReliefWeb and saves results to database.
     
     Options
     - input = a JSON/YML filepath or dict with parameters
-    - url = base url for making POST calls
+    - appname = unique identifier for using RW API
     - pages = number of calls to make, incrementing 'offset' parameter
-    - quota_limit = daily usage limit (see RW API documentation)
-    - records_table = table where records are saved
-
-    Extra
-    - waits between calls (see _set_wait docstring)
-    - adds call parameters and metadata to log table"""
+    - url = base url for making POST calls
+    - quota_limit = daily usage limit (see RW API documentation)"""
 
     # parameters
     self.input = input
     self.url = "".join([url, appname])
     self.pages = pages
     self.quota_limit = quota_limit
-    self.records_table = records_table
     self._set_wait()
     self._get_parameters()
 
@@ -313,7 +302,7 @@ class Manager:
 
       # continue
       self.open_db()
-      self.c.execute(f"CREATE TABLE IF NOT EXISTS {self.records_table} (id PRIMARY KEY, rwapi_input, rwapi_date) WITHOUT ROWID")
+      self.c.execute(f"CREATE TABLE IF NOT EXISTS records (id PRIMARY KEY, rwapi_input, rwapi_date) WITHOUT ROWID")
       self._update_columns()
       self._prepare_records()
       self._insert_records()
