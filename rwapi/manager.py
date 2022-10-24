@@ -319,7 +319,7 @@ class Manager:
   def _make_pdf_table(self):
     """Makes 'pdfs' table in database."""
 
-    self.c.execute(f"CREATE TABLE IF NOT EXISTS pdfs (id PRIMARY KEY, qty, description, exclude, download, size_mb, words, lemma_test, sha256, orphan, url)")
+    self.c.execute(f"CREATE TABLE IF NOT EXISTS pdfs (id PRIMARY KEY, qty, description, exclude, download, size_mb, words_test, lemma_test, sha256, orphan, url)")
     self.pdfs_columns = [
       'id',
       'qty',
@@ -327,7 +327,7 @@ class Manager:
       'exclude',
       'download',
       'size_mb',
-      'words',
+      'words_test',
       'lemma_test',
       'sha256',
       'orphan',
@@ -362,7 +362,7 @@ class Manager:
     df["description"] = df["file"].apply(lambda item: [x.get("description", "") for x in item])
     df["url"] = df["file"].apply(lambda item: [x.get("url", "") for x in item])
     df["qty"] = df["file"].apply(len)
-    new_columns = ["download", "size_mb", "sha256", "words", "lemma_test", "exclude", "orphan", "exist"]
+    new_columns = ["download", "size_mb", "sha256", "words_test", "lemma_test", "exclude", "orphan", "exist"]
     for x in new_columns:
       df[x] = None
     df.loc[df["qty"] > 1,"exclude"] = np.array([[0] * x for x in df.loc[df["qty"] > 1,"qty"]], dtype=object)
