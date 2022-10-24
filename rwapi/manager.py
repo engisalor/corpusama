@@ -37,12 +37,8 @@ class Manager:
   ```
   # make a Manager object, then execute desired actions
   rw = rwapi.Manager(db="data/reliefweb.db") 
-  
-  # make an API call
-  rw.call("rwapi/calls/<call_parameters>.yml", "<appname>")
-
-  # open/close the database
   rw.open_db()
+  rw.call("rwapi/calls/<call_parameters>.yml", "<appname>")
   rw.close_db()
   ```"""
 
@@ -307,14 +303,12 @@ class Manager:
         raise UserWarning("API manager aborted: query returned no results.")
 
       # continue
-      self.open_db()
       self.c.execute(f"CREATE TABLE IF NOT EXISTS records (id PRIMARY KEY, rwapi_input, rwapi_date) WITHOUT ROWID")
       self._update_columns()
       self._prepare_records()
       self._insert_records()
       self._insert_log()
       self.update_pdf_table()
-      self.close_db()
 
       # wait if needed
       if page < (self.pages - 1):
@@ -356,7 +350,6 @@ class Manager:
   def update_pdf_table(self):
     """Updates PDF table when new records exist."""
 
-    self.open_db()
     self._make_pdf_table()
 
     # get records with PDFs
@@ -462,3 +455,5 @@ class Manager:
       if not isinstance(numeric_level, int):
         raise ValueError("Invalid log level: %s" % log_level)
       logger.setLevel(numeric_level)
+
+      self.open_db()
