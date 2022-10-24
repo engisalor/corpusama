@@ -307,6 +307,7 @@ class Manager:
       self._prepare_records()
       self._insert_records()
       self._insert_log()
+      self.update_pdf_table()
       self.close_db()
 
       # wait if needed
