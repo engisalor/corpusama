@@ -317,6 +317,78 @@ class Manager:
         time.sleep(self.wait)
 
 
+  def _make_pdf_table(self):
+    """Makes 'pdfs' table in database."""
+
+    self.c.execute(f"CREATE TABLE IF NOT EXISTS pdfs (id PRIMARY KEY, qty, description, exclude, download, size_mb, words, lemma_test, sha256, orphan, verify, url)")
+    self.pdfs_columns = [
+      'id',
+      'qty',
+      'description',
+      'exclude',
+      'download',
+      'size_mb',
+      'words',
+      'lemma_test',
+      'sha256',
+      'orphan',
+      'verify',
+      'url'
+    ]
+
+
+  def _empty_list_to_None(self, item):
+    """Converts an empty list to None, otherwise returns item."""
+
+    if isinstance(item, list):
+      if [x for x in item if x]:
+        return item
+      else:
+        return None
+    else:
+      return item
+
+
+  def update_pdf_table(self):
+    """Updates PDF table when new records exist."""
+
+    self.open_db()
+    self._make_pdf_table()
+
+    # get records with PDFs
+    df_records = pd.read_sql("SELECT file, id FROM records", self.conn)
+    df = df_records[df_records["file"].str.contains(".pdf")].copy()
+    df.reset_index(inplace=True,drop=True)
+
+    # make columns
+    df["file"] = df["file"].apply(ast.literal_eval)
+    df["description"] = df["file"].apply(lambda item: [x.get("description", "") for x in item])
+    df["url"] = df["file"].apply(lambda item: [x.get("url", "") for x in item])
+    df["qty"] = df["file"].apply(len)
+    new_columns = ["download", "size_mb", "sha256", "words", "lemma_test", "exclude", "orphan", "verify"]
+    for x in new_columns:
+      df[x] = None
+    df.loc[df["qty"] > 1,"exclude"] = np.array([[0] * x for x in df.loc[df["qty"] > 1,"qty"]], dtype=object)
+
+    # set datatypes
+    df = df.applymap(self._empty_list_to_None)
+    json_columns = [x for x in self.pdfs_columns if x not in ["id", "qty", "file"]]
+    df[json_columns] = df[json_columns].applymap(json.dumps)
+    df[['id', 'qty']] = df[['id', 'qty']].astype(str)
+
+    # insert into SQL
+    records = df[self.pdfs_columns].to_records(index=False)
+    self.c.executemany(
+      f"INSERT OR IGNORE INTO pdfs VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+      records
+    )
+    self.conn.commit()
+
+    qty_summary = {x: len(df[df["qty"] == x]) for x in sorted(df["qty"].unique())}
+    logger.debug(f"{len(df)}/{len(df_records)} records with PDFs")
+    logger.debug(f"pdf distribution {qty_summary}")
+
+
   def __repr__(self):
       return ""
 
