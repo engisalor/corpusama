@@ -151,6 +151,12 @@ class Manager:
     except:
       return item
 
+  def try_json(self, item):
+    try:
+      return json.loads(item)
+    except:
+      return item
+
 
   def _prepare_records(self):
     """Reshapes and prepares response data for adding to the records table."""
