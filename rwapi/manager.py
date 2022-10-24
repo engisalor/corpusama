@@ -387,6 +387,25 @@ class Manager:
     logger.debug(f"pdf distribution {qty_summary}")
 
 
+  def make_filenames(self, row):
+    """Generates a list of filenames for a record in the 'pdfs' table."""
+
+    descriptions = row["description"]
+    names = []
+    for x in range(len(row["url"])):
+      desc, suffix = None, None
+      if isinstance(descriptions, list):
+        desc = row["description"][x]
+      if desc:
+        suffix = desc[:50] if len(desc) > 50 else desc
+        suffix = suffix.replace(" ","_")
+      if suffix:
+        names.append(f'{row["id"]}_{x}_{suffix}.pdf')
+      else:
+        names.append(f'{row["id"]}_{x}.pdf')
+    return names
+
+
   def __repr__(self):
       return ""
 
