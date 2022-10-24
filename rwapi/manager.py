@@ -1,10 +1,11 @@
+import ast
+import numpy as np
 import time
 import requests
 import json
 import pandas as pd
 import yaml
 import sqlite3 as sql
-import pandas as pd
 import pathlib
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -12,10 +13,10 @@ from logging.handlers import TimedRotatingFileHandler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s")
 
 log_file = ".rwapi.log"
-file_handler = TimedRotatingFileHandler(log_file, backupCount=1)
+file_handler = TimedRotatingFileHandler(log_file,'midnight')
 file_handler.setFormatter(formatter)
 
 stream_handler = logging.StreamHandler()
@@ -30,7 +31,7 @@ class Manager:
 
   Options
   - db = "data/reliefweb.db" session SQLite database
-  - loglevel = "info" (logs found in .rwapi.log)
+  - log_level = "info" (logs found in .rwapi.log)
   
   Usage:
   ```
@@ -144,6 +145,13 @@ class Manager:
         pass
 
 
+  def try_literal(self, item):
+    try:
+      return ast.literal_eval(item)  
+    except:
+      return item
+
+
   def _prepare_records(self):
     """Reshapes and prepares response data for adding to the records table."""
 
@@ -151,7 +159,10 @@ class Manager:
     self.df = pd.json_normalize(self.response_json["data"], sep="_", max_level=1)
     self.df.drop(["id"], axis=1, inplace=True, errors=False)
     self.df.columns = [x.replace("fields_", "") for x in self.df.columns]
- 
+
+    self.df = self.df.applymap(self.try_literal)
+    self.df = self.df.replace({np.nan:None})
+
     # add rwapi metadata columns
     self.df["rwapi_input"] = self.input.name
     self.df["rwapi_date"] = self.now
@@ -159,13 +170,13 @@ class Manager:
     # add empty columns & reorder
     added_columns = []
     for x in [x for x in self.columns_all if x not in self.df.columns]:
-      self.df[x] = ""
+      self.df[x] = None
       added_columns.append(x)    
     logger.debug(f"DF added {len(added_columns)} {added_columns} columns")
   
     # convert everything to str
     self.df = self.df[self.columns_all]
-    self.df = self.df.applymap(str)
+    self.df = self.df.applymap(json.dumps)
     logger.debug(f"DF prepared {len(self.df.columns.tolist())} {sorted(self.df.columns.tolist())} columns")
 
 
@@ -188,8 +199,8 @@ class Manager:
     self.quota = 0
 
     # count calls in log
-    if pathlib.Path(self.log_file).exists():
-      with open(pathlib.Path(self.log_file), "r") as f:
+    if pathlib.Path(log_file).exists():
+      with open(pathlib.Path(log_file), "r") as f:
         daily_log = f.readlines()
       for x in daily_log:
         if "- CALL" in x:
@@ -209,7 +220,7 @@ class Manager:
 
 
   def _set_wait(self, wait_dict={0: 1, 5: 49, 10: 99, 20:499, 30:None}):
-    """Sets wait time between calls based on pages (seconds to wait / for n calls).
+    """Sets wait time between pages (seconds to wait / for n pages).
 
     Defaults:
     (0/1)
@@ -233,8 +244,8 @@ class Manager:
     waits = []
     for k, v in self.wait_dict.items():
       if v:
-        if self.pages <= v:
-          waits.append(k)
+          if self.pages <= v:
+            waits.append(k)
     if not waits:
       waits.append(max([k for k in self.wait_dict.keys()]))
     
@@ -316,20 +327,92 @@ class Manager:
         time.sleep(self.wait)
 
 
+  def _make_pdf_table(self):
+    """Makes 'pdfs' table in database."""
+
+    self.c.execute(f"CREATE TABLE IF NOT EXISTS pdfs (id PRIMARY KEY, qty, description, exclude, download, size_mb, words, lemma_test, sha256, orphan, verify, url)")
+    self.pdfs_columns = [
+      'id',
+      'qty',
+      'description',
+      'exclude',
+      'download',
+      'size_mb',
+      'words',
+      'lemma_test',
+      'sha256',
+      'orphan',
+      'verify',
+      'url'
+    ]
+
+
+  def _empty_list_to_None(self, item):
+    """Converts an empty list to None, otherwise returns item."""
+
+    if isinstance(item, list):
+      if [x for x in item if x]:
+        return item
+      else:
+        return None
+    else:
+      return item
+
+
+  def update_pdf_table(self):
+    """Updates PDF table when new records exist."""
+
+    self.open_db()
+    self._make_pdf_table()
+
+    # get records with PDFs
+    df_records = pd.read_sql("SELECT file, id FROM records", self.conn)
+    df = df_records[df_records["file"].str.contains(".pdf")].copy()
+    df.reset_index(inplace=True,drop=True)
+
+    # make columns
+    df["file"] = df["file"].apply(ast.literal_eval)
+    df["description"] = df["file"].apply(lambda item: [x.get("description", "") for x in item])
+    df["url"] = df["file"].apply(lambda item: [x.get("url", "") for x in item])
+    df["qty"] = df["file"].apply(len)
+    new_columns = ["download", "size_mb", "sha256", "words", "lemma_test", "exclude", "orphan", "verify"]
+    for x in new_columns:
+      df[x] = None
+    df.loc[df["qty"] > 1,"exclude"] = np.array([[0] * x for x in df.loc[df["qty"] > 1,"qty"]], dtype=object)
+
+    # set datatypes
+    df = df.applymap(self._empty_list_to_None)
+    json_columns = [x for x in self.pdfs_columns if x not in ["id", "qty", "file"]]
+    df[json_columns] = df[json_columns].applymap(json.dumps)
+    df[['id', 'qty']] = df[['id', 'qty']].astype(str)
+
+    # insert into SQL
+    records = df[self.pdfs_columns].to_records(index=False)
+    self.c.executemany(
+      f"INSERT OR IGNORE INTO pdfs VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+      records
+    )
+    self.conn.commit()
+
+    qty_summary = {x: len(df[df["qty"] == x]) for x in sorted(df["qty"].unique())}
+    logger.debug(f"{len(df)}/{len(df_records)} records with PDFs")
+    logger.debug(f"pdf distribution {qty_summary}")
+
+
   def __repr__(self):
       return ""
 
   def __init__(
       self,
       db="data/reliefweb.db",
-      loglevel="info",
+      log_level="info",
   ):
       # variables
       self.db = db
       self.log_file = log_file
  
       # logging
-      numeric_level = getattr(logging, loglevel.upper(), None)
+      numeric_level = getattr(logging, log_level.upper(), None)
       if not isinstance(numeric_level, int):
-        raise ValueError("Invalid log level: %s" % loglevel)
+        raise ValueError("Invalid log level: %s" % log_level)
       logger.setLevel(numeric_level)
