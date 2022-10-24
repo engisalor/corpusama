@@ -404,7 +404,7 @@ class Manager:
     # update pdfs table
     self.c.executemany('''UPDATE pdfs SET orphan = 1 WHERE id=?;''',
     [(x,) for x in orphan])
-    self.c.executemany('''UPDATE pdfs SET orphan = '' WHERE id=?;''',
+    self.c.executemany('''UPDATE pdfs SET orphan = 'null' WHERE id=?;''',
     [(x,) for x in not_orphan])
     logger.debug(f"{len(orphan)} orphan(s) detected in 'pdfs' table")
     self.conn.commit()
