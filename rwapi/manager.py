@@ -319,7 +319,7 @@ class Manager:
   def _make_pdf_table(self):
     """Makes 'pdfs' table in database."""
 
-    self.c.execute(f"CREATE TABLE IF NOT EXISTS pdfs (id PRIMARY KEY, qty, description, exclude, download, size_mb, words, lemma_test, sha256, orphan, verify, url)")
+    self.c.execute(f"CREATE TABLE IF NOT EXISTS pdfs (id PRIMARY KEY, qty, description, exclude, download, size_mb, words, lemma_test, sha256, orphan, url)")
     self.pdfs_columns = [
       'id',
       'qty',
@@ -331,7 +331,6 @@ class Manager:
       'lemma_test',
       'sha256',
       'orphan',
-      'verify',
       'url'
     ]
 
@@ -364,7 +363,7 @@ class Manager:
     df["description"] = df["file"].apply(lambda item: [x.get("description", "") for x in item])
     df["url"] = df["file"].apply(lambda item: [x.get("url", "") for x in item])
     df["qty"] = df["file"].apply(len)
-    new_columns = ["download", "size_mb", "sha256", "words", "lemma_test", "exclude", "orphan", "verify"]
+    new_columns = ["download", "size_mb", "sha256", "words", "lemma_test", "exclude", "orphan", "exist"]
     for x in new_columns:
       df[x] = None
     df.loc[df["qty"] > 1,"exclude"] = np.array([[0] * x for x in df.loc[df["qty"] > 1,"qty"]], dtype=object)
@@ -378,7 +377,7 @@ class Manager:
     # insert into SQL
     records = df[self.pdfs_columns].to_records(index=False)
     self.c.executemany(
-      f"INSERT OR IGNORE INTO pdfs VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+      f"INSERT OR IGNORE INTO pdfs VALUES (?,?,?,?,?,?,?,?,?,?,?)",
       records
     )
     self.conn.commit()
@@ -417,7 +416,7 @@ class Manager:
       df = df.applymap(self.try_literal)
       filenames = [x for y in df.apply(lambda row: self.make_filenames(row), axis=1) for x in y]
       orphan_files = [x for x in stored_pdfs if x not in filenames]
-      logger.debug(f"{len(orphan_files)} file(s) missing a record in 'pdfs' {orphan_files}")
+      logger.debug(f"{len(orphan_files)} file(s) missing a record in 'pdfs'")
       return orphan_files
 
 
