@@ -1,3 +1,4 @@
+import re
 import sys
 import hashlib
 from pdfminer.high_level import extract_text
@@ -437,9 +438,10 @@ class Manager:
         suffix = desc[:50] if len(desc) > 50 else desc
         suffix = suffix.replace(" ","_")
       if suffix:
-        names.append(f'{row["id"]}_{x}_{suffix}.pdf')
+        name = f'{row["id"]}_{x}_{suffix}.pdf'
       else:
-        names.append(f'{row["id"]}_{x}.pdf')
+        name =f'{row["id"]}_{x}.pdf'
+      names.append(re.sub(r'[^.\w -]', '_', name))
     return names
 
 
