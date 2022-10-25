@@ -476,11 +476,17 @@ class Manager:
     return text
 
 
-  def get_item_pdfs(self, index: int, mode: list, dir="data/files"):
+  def get_item_pdfs(self, index: int, mode, dir="data/files"):
     """Downloads PDFs for a 'pdfs' table index to a given directory.
     
-    Mode saves one or both types of data ["file"], ["text"] or ["file", "text"].
+    Mode determines file format(s) to save: "pdf", "txt" or ["pdf", "txt"].
     Excludes PDFs where exclude = 1 in the 'pdfs' table."""
+
+    if isinstance(mode, str):
+      mode = [mode]
+    for x in mode:
+      if x not in ["pdf", "txt"]:
+        raise ValueError(f"Valid modes are 'pdf', 'txt' or ['pdf','txt']")
 
     self.update_pdf_table()
     df = pd.read_sql("SELECT * FROM pdfs", self.conn)
@@ -508,13 +514,13 @@ class Manager:
         logger.debug(f'{filepath.stem} ({size} MB) downloaded')
 
         # manage response by mode
-        if "file" in mode:
+        if "pdf" in mode:
           # save pdf file
           with open(filepath, 'wb') as f:
             f.write(response.content)
           logger.debug(f'{filepath} saved')
 
-        if "text" in mode:
+        if "txt" in mode:
           # save txt file
           text = self._try_extract_text(response, filepath)
           with open(filepath.with_suffix(".txt"), 'w') as f:
@@ -533,7 +539,7 @@ class Manager:
         sizes.append(size)
 
         # delete unwanted pdf
-        if not "file" in mode:
+        if not "pdf" in mode:
           if filepath.exists():
             pathlib.Path.unlink(filepath)
             logger.debug(f'{filepath} deleted')
