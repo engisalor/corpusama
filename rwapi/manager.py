@@ -550,6 +550,80 @@ class Manager:
         records)
       self.conn.commit()
 
+
+  def add_exclude_list(self, name: str, lines: str):
+    """Adds/replaces an exclude list for PDFS with unwanted 'description' values.
+    
+    - name = a unique name for an exclude list
+    - lines = a string with TXT formatting (one item per line)."""
+
+    self.c.execute(f"CREATE TABLE IF NOT EXISTS excludes (name PRIMARY KEY, list)")
+    self.c.execute(f"INSERT OR REPLACE INTO excludes VALUES (?,?)", (name,lines))
+    self.conn.commit()
+    logger.debug(f"{name} inserted")
+
+
+  def get_excludes(self, names=None):
+    """Get 'excludes' table. Specify 'names' (str, list of str) to filter items."""
+
+    df = pd.read_sql("SELECT * FROM excludes", self.conn)
+    
+    if isinstance(names, str):
+      names = [names]
+    elif isinstance(names, list):
+      pass
+    elif not names:
+      names = list(df["name"])
+    else:
+      raise TypeError("'names' must be None, a string or list of strings.")
+
+    self.excludes_df = df.loc[df["name"].isin(names)]
+    logger.debug(f"retrieved {names}")
+
+
+  def set_excludes(self, names=None):
+    """Sets exclude values in 'pdfs' table using values from 'excludes' table.
+    
+    names = excludes list(s) to apply (str, list of str)"""
+
+    # get excludes items
+    self.get_excludes(names)
+    excludes_values = [x for x in self.excludes_df["list"].values]
+    excludes_list = [y for x in excludes_values for y in x.split()]
+    excludes_set = set(excludes_list)
+
+    # get pdfs table
+    df = pd.read_sql("SELECT id, exclude, description FROM pdfs", self.conn)
+    for x in ["description", "exclude"]:
+      df[x] = df[x].apply(json.loads)
+
+    def set_exclude(description):
+      """Sets exclude value for a row in 'pdfs'."""
+
+      excludes = []
+      if description:
+        for x in description:
+          description_list = x.lower().split()
+          if [x for x in description_list if x in excludes_set]:
+            excludes.append(1)
+          else:
+            excludes.append(0)
+        
+        if [x for x in excludes if x]:
+          return excludes
+        else:
+          return None
+
+    # set values and update table
+    df["exclude"] = df["description"].apply(set_exclude)
+    df["exclude"] = df["exclude"].apply(json.dumps)
+    records = df[["exclude", "id"]].to_records(index=False)
+    self.c.executemany('''UPDATE pdfs SET exclude = ? WHERE id=?;''',
+      records)
+    self.conn.commit()
+    logger.debug(f"excludes set")
+
+
   def __repr__(self):
       return ""
 
