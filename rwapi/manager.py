@@ -626,6 +626,45 @@ class Manager:
     logger.debug(f"excludes set")
 
 
+  def del_exclude_files(self, names=None, dir="data/files", dry_run=False):
+    """Deletes files in dir if filename has match in exclude list.
+
+    Caution: deletes files whether or not they appear in 'pdfs' table.
+    E.g., 'languages' or ['languages', '<another list>']
+    Matches exact words, case insensitive, ('summary', 'spanish') 
+    'names' refers to one or more exclude lists in the 'excludes' table.
+    (See get_excludes docstring)."""
+
+    # get files list
+    dir = pathlib.Path(dir)
+    if not dir.exists():
+      raise OSError(f"{dir} does not exist.")
+    stored_pdfs = [x for x in dir.glob('**/*') if x.is_file()]
+    stored_pdfs = [x for x in stored_pdfs if x]
+
+    # get exclude patterns
+    self.get_excludes(names)
+    excludes = [x.split() for x in self.excludes_df["list"].values]
+    excludes = [y for x in excludes for y in x]
+
+    deleted = 0
+    deletes = []
+    for x in stored_pdfs:
+      delete = []
+      for y in x.stem.lower().split("_"):
+        if y in excludes:
+          delete.append(True)
+      if True in delete:
+        deletes.append(str(x))
+        deleted += 1
+      if not dry_run:
+        x.unlink(missing_ok=True)
+        x.with_suffix(".txt").unlink(missing_ok=True)
+    
+    self.del_files = deletes
+    logger.debug(f"del {deleted}/{len(stored_pdfs)} (dry_run={dry_run}): self.del_files")
+
+
   def __repr__(self):
       return ""
 
