@@ -458,7 +458,7 @@ class Manager:
     
     return length, test
 
-  def try_extract_text(self, response,filepath, maxpages=1000000):
+  def _try_extract_text(self, response,filepath, maxpages=1000000):
     if filepath.exists():
       text = extract_text(filepath, maxpages=maxpages)
     else:
@@ -514,13 +514,13 @@ class Manager:
 
         if "text" in mode:
           # save txt file
-          text = self.try_extract_text(response, filepath)
+          text = self._try_extract_text(response, filepath)
           with open(filepath.with_suffix(".txt"), 'w') as f:
             f.write(text)
           logger.debug(f'{filepath.with_suffix(".txt")} saved')
 
         # test for English OCR layer
-        text = self.try_extract_text(response, filepath, 5)
+        text = self._try_extract_text(response, filepath, 5)
         length, test = self.check_ocr(text)
 
         # add metadata
