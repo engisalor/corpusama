@@ -579,6 +579,12 @@ class Manager:
       self.conn.commit()
 
 
+  def sha256(self,item):
+    """Convenience wrapper for returning a sha256 checksum for an item."""
+
+    return hashlib.sha256(item).hexdigest()
+
+
   def add_exclude_list(self, name: str, lines: str):
     """Adds/replaces an exclude list for PDFS with unwanted 'description' values.
     
