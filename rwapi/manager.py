@@ -1,3 +1,5 @@
+import string
+import fasttext
 import re
 import sys
 import hashlib
@@ -324,7 +326,7 @@ class Manager:
   def _make_pdf_table(self):
     """Makes 'pdfs' table in database."""
 
-    self.c.execute(f"CREATE TABLE IF NOT EXISTS pdfs (id PRIMARY KEY, qty, description, exclude, download, size_mb, words_test, lemma_test, sha256, orphan, url)")
+    self.c.execute(f"CREATE TABLE IF NOT EXISTS pdfs (id PRIMARY KEY, qty, description, exclude, download, size_mb, words_pdf, lang_pdf, lang_score_pdf, orphan, url)")
     self.pdfs_columns = [
       'id',
       'qty',
@@ -332,9 +334,9 @@ class Manager:
       'exclude',
       'download',
       'size_mb',
-      'words_test',
-      'lemma_test',
-      'sha256',
+      'words_pdf',
+      'lang_pdf',
+      'lang_score_pdf',
       'orphan',
       'url'
     ]
@@ -367,7 +369,7 @@ class Manager:
     df["description"] = df["file"].apply(lambda item: [x.get("description", "") for x in item])
     df["url"] = df["file"].apply(lambda item: [x.get("url", "") for x in item])
     df["qty"] = df["file"].apply(len)
-    new_columns = ["download", "size_mb", "sha256", "words_test", "lemma_test", "exclude", "orphan", "exist"]
+    new_columns = ["download", "size_mb", "lang_score_pdf", "words_pdf", "lang_pdf", "exclude", "orphan"]
     for x in new_columns:
       df[x] = None
     df.loc[df["qty"] > 1,"exclude"] = np.array([[0] * x for x in df.loc[df["qty"] > 1,"qty"]], dtype=object)
@@ -445,20 +447,38 @@ class Manager:
     return names
 
 
-  def check_ocr(self, text):
-    """Counts words in text and checks for common English lemmas.
+  def check_ocr(self, text, model="lid.176.bin"):
+    """Counts words in text and uses fasttext to predict language.
 
-    About lemma score:
-    - 0 = no ubiquitous lemmas detected ('the', 'and', 'of', 'in', etc.)
-    - 1 = all ubiquitous lemmas detected"""
+    - model = filename of fasttext model to load (must be in cwd dir/subdir)
     
-    tokens = ["the", "and", "of", "in", "to", "for", "it", "as", "that", "with"]
-    split = text.lower().split()
-    length = len(split)
-    test = sum([1 if x in split else 0 for x in tokens]) / len(tokens)
-    logger.debug(f"{length:,} words {test} lemma score")
+    Uses a cleaned version of 'text' to improve accuracy.
+    Returns a tuple of (words, language, confidence)."""
     
-    return length, test
+    # get fasttext model
+    if not self.ft_model_path[0].exists():
+      self.ft_model_path = [x for x in pathlib.Path().glob('**/lid.176.bin')]
+      self.ft_model = fasttext.load_model(str(self.ft_model_path[0]))
+      logger.debug(f"using ft model {self.ft_model_path[0]}")
+      if len(self.ft_model_path) > 1:
+        logger.warning(f"Multiple {model} files found in cwd")
+
+    # clean text
+    drops = "".join([string.punctuation, string.digits,"\n\t"])
+    blanks = " "*len(drops)
+    text = re.sub(r"\S*\\\S*|\S*@\S*|/*%20/S*|S*/S*/S*|http+\S+|www+\S+", " ", text)
+    text = text.translate(str.maketrans(drops,blanks))
+    text = text.translate(str.maketrans(string.ascii_uppercase,string.ascii_lowercase))
+
+    # predict
+    prediction = self.ft_model.predict(text)
+    length = len(text.split())
+    lang = prediction[0][0][-2:]
+    score = round(prediction[1][0],2)
+    logger.debug(f"{length} words, {lang}: {score}")
+    
+    return length, lang, score
+
 
   def _try_extract_text(self, response,filepath, maxpages=1000000):
     if filepath.exists():
@@ -490,7 +510,7 @@ class Manager:
 
     self.update_pdf_table()
     df = pd.read_sql("SELECT * FROM pdfs", self.conn)
-    dates, sizes, checksums, lengths, tests = [], [], [], [], []
+    dates, sizes, lengths, langs, scores = [], [], [], [], []
     row = df.iloc[index].copy()
     row = row.apply(self.try_json)
     names = self.make_filenames(row)
@@ -504,7 +524,7 @@ class Manager:
       # skip excluded files
       if row["exclude"][x] == 1:
         logger.debug(f"exclude {filepath.name}")
-        for x in [dates, sizes, checksums, lengths, tests]:
+        for x in [dates, sizes, lengths, langs, scores]:
           x.append("")
 
       # process PDF
@@ -528,15 +548,15 @@ class Manager:
           logger.debug(f'{filepath.with_suffix(".txt")} saved')
 
         # test for English OCR layer
-        text = self._try_extract_text(response, filepath, 5)
-        length, test = self.check_ocr(text)
+        text = self._try_extract_text(response, filepath)
+        length, lang, score = self.check_ocr(text)
 
         # add metadata
         dates.append(str(pd.Timestamp.now().round("S").isoformat()))
-        checksums.append(hashlib.sha256(response.content).hexdigest())
-        lengths.append(length)
-        tests.append(test)
         sizes.append(size)
+        lengths.append(length)
+        langs.append(lang)
+        scores.append(score)
 
         # delete unwanted pdf
         if not "pdf" in mode:
@@ -544,16 +564,16 @@ class Manager:
             pathlib.Path.unlink(filepath)
             logger.debug(f'{filepath} deleted')
 
-      records = [json.dumps(x) for x in [sizes, dates, checksums, lengths, tests]]
+      records = [json.dumps(x) for x in [sizes, dates, lengths, langs, scores]]
       records = tuple(records) + (str(row["id"]),)
 
       # insert into SQL
       self.c.execute(f'''UPDATE pdfs SET 
         size_mb = ?,
         download = ?, 
-        sha256 = ?,
-        words_test = ?,
-        lemma_test = ?
+        words_pdf = ?,
+        lang_pdf = ?,
+        lang_score_pdf =?
         WHERE id = ?;''',
         records)
       self.conn.commit()
@@ -682,6 +702,7 @@ class Manager:
       # variables
       self.db = db
       self.log_file = log_file
+      self.ft_model_path = [pathlib.Path("/dummy/path/to/model")]
  
       # logging
       numeric_level = getattr(logging, log_level.upper(), None)
