@@ -143,49 +143,49 @@ class Manager:
     for x in self.columns_all:
       try:
         self.c.execute(f"ALTER TABLE records ADD COLUMN '%s' " % x)
-        logger.debug(f"{x} added to records")
       except:
         pass
 
 
-  def try_literal(self, item):
-    try:
-      return ast.literal_eval(item)  
-    except:
-      return item
+  def _str_to_obj(self, item):
+    """Parses a string into an object if possible using json or literal_eval."""
 
-  def try_json(self, item):
     try:
       return json.loads(item)
     except:
+      try:
+        return ast.literal_eval(item)
+      except:
       return item
+
+
+  def _nan_to_None(self,df):
+    """Converts df np.nan and string equivalents to None."""
+    
+    df.replace({np.nan:None},inplace=True)
+    df.replace(["null","nan","NAN","NULL","NaN", "None"],None,inplace=True)
+    return df
 
 
   def _prepare_records(self):
     """Reshapes and prepares response data for adding to the records table."""
 
-    # normalize data, prepare 
+    # normalize data
     self.df = pd.json_normalize(self.response_json["data"], sep="_", max_level=1)
     self.df.drop(["id"], axis=1, inplace=True, errors=False)
     self.df.columns = [x.replace("fields_", "") for x in self.df.columns]
+    self.df = self.df.applymap(self._str_to_obj)
 
-    self.df = self.df.applymap(self.try_literal)
-    self.df = self.df.replace({np.nan:None})
-
-    # add rwapi metadata columns
+    # add columns
     self.df["rwapi_input"] = self.input.name
     self.df["rwapi_date"] = self.now
-
-    # add empty columns & reorder
-    added_columns = []
     for x in [x for x in self.columns_all if x not in self.df.columns]:
       self.df[x] = None
-      added_columns.append(x)    
-    logger.debug(f"added {len(added_columns)} {added_columns} columns")
   
-    # convert everything to str
+    # reorder, convert to str
     self.df = self.df[self.columns_all]
     self.df = self.df.applymap(json.dumps)
+    self.df = self._nan_to_None(self.df)
     logger.debug(f"prepared {len(self.df.columns.tolist())} {sorted(self.df.columns.tolist())} columns")
 
 
@@ -266,7 +266,7 @@ class Manager:
 
     self.c.execute(f"CREATE TABLE IF NOT EXISTS call_log (parameters PRIMARY KEY, rwapi_input, rwapi_date, count, total_count)")
     self.c.execute(
-      f"INSERT OR REPLACE INTO call_log VALUES (?,?,?,?,?)", (json.dumps(self.parameters), self.input.name, str(self.now), self.response_json["count"], self.response_json["totalCount"])
+      f"INSERT OR REPLACE INTO call_log VALUES (?,?,?,?,?)", (json.dumps(self.parameters), json.dumps(self.input.name), "".join(['"', str(self.now), '"']), self.response_json["count"], self.response_json["totalCount"])
     )
     self.conn.commit()
     logger.debug(f"call_log")
@@ -361,11 +361,11 @@ class Manager:
 
     # get records with PDFs
     df_records = pd.read_sql("SELECT file, id FROM records", self.conn)
-    df = df_records[df_records["file"].str.contains(".pdf")].copy()
+    df = df_records[df_records["file"].notna()].copy()
+    df = df.applymap(self._str_to_obj)
     df.reset_index(inplace=True,drop=True)
 
     # make columns
-    df["file"] = df["file"].apply(ast.literal_eval)
     df["description"] = df["file"].apply(lambda item: [x.get("description", "") for x in item])
     df["url"] = df["file"].apply(lambda item: [x.get("url", "") for x in item])
     df["qty"] = df["file"].apply(len)
@@ -376,9 +376,8 @@ class Manager:
 
     # set datatypes
     df = df.applymap(self._empty_list_to_None)
-    json_columns = [x for x in self.pdfs_columns if x not in ["id", "qty", "file"]]
-    df[json_columns] = df[json_columns].applymap(json.dumps)
-    df[['id', 'qty']] = df[['id', 'qty']].astype(str)
+    df = df.applymap(json.dumps)
+    df = self._nan_to_None(df)
 
     # insert into SQL
     records = df[self.pdfs_columns].to_records(index=False)
@@ -409,9 +408,9 @@ class Manager:
     not_orphan = df_merged[df_merged["_merge"] == "both"]["id"].values
 
     # update pdfs table
-    self.c.executemany('''UPDATE pdfs SET orphan = 'true' WHERE id=?;''',
+    self.c.executemany('''UPDATE pdfs SET orphan = '1' WHERE id=?;''',
     [(x,) for x in orphan])
-    self.c.executemany('''UPDATE pdfs SET orphan = 'null' WHERE id=?;''',
+    self.c.executemany('''UPDATE pdfs SET orphan = null WHERE id=?;''',
     [(x,) for x in not_orphan])
     logger.debug(f"{len(orphan)} orphan(s) detected in 'pdfs' table")
     self.conn.commit()
