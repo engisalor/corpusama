@@ -211,7 +211,7 @@ class Manager:
       with open(pathlib.Path(log_file), "r") as f:
         daily_log = f.readlines()
       for x in daily_log:
-        if "- CALL" in x:
+        if "- call -" in x:
           self.quota += 1
 
     # compute remaining calls in quota
