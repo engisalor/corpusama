@@ -23,7 +23,7 @@ logger.setLevel(logging.WARNING)
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s")
 
 log_file = ".rwapi.log"
-file_handler = TimedRotatingFileHandler(log_file,'midnight')
+file_handler = TimedRotatingFileHandler(log_file,'midnight',backupCount=0)
 file_handler.setFormatter(formatter)
 
 stream_handler = logging.StreamHandler()
