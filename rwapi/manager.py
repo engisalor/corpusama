@@ -696,6 +696,37 @@ class Manager:
     logger.debug(f"del {deleted}/{len(stored_pdfs)} (dry_run={dry_run}): self.del_files")
 
 
+  def make_dfs(self,tables=["records","pdfs","call_log"]):
+    """Adds a dict of dfs to instance.
+
+    'tables' specifies which dfs are created (must be from existing options).
+    Caution: may use excessive memory."""
+
+    if isinstance(tables,str):
+      tables = [tables]
+    accepted_tables = ["records", "pdfs", "call_log"]
+    if [x for x in tables if x not in accepted_tables]:
+      raise ValueError(f"Accepted tables are {tables}")
+
+    self.dfs = {x: pd.read_sql(f"SELECT * FROM {x}", self.conn) for x in tables}
+    for k,v in self.dfs.items():
+      self.dfs[k] = v.applymap(self._str_to_obj)
+   
+    logger.debug(f"generated {tables} dataframes")
+
+  def summarize_descriptions(self, dir="data"):
+    """Generates a file with a summary of descriptions in the 'pdfs' table."""
+
+    dir = pathlib.Path(dir)
+    file = dir / "_".join([pathlib.Path(self.db).stem, "descriptions.csv"])
+    descriptions = [x for x in self.dfs["pdfs"]["description"] if x]
+    descriptions = [y for x in descriptions for y in x]
+    df_flat = pd.DataFrame({"description": descriptions})
+    df_flat["description"].value_counts().to_csv(file)
+    logger.debug(f"{file}")
+
+
+  def _get_nested_value(self,item,key):
   def __repr__(self):
       return ""
 
