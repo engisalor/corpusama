@@ -171,28 +171,28 @@ class Manager:
     """Reshapes and prepares response data for adding to the records table."""
 
     # normalize data
-    self.df = pd.json_normalize(self.response_json["data"], sep="_", max_level=1)
-    self.df.drop(["id"], axis=1, inplace=True, errors=False)
-    self.df.columns = [x.replace("fields_", "") for x in self.df.columns]
-    self.df = self.df.applymap(self._str_to_obj)
+    self.response_df = pd.json_normalize(self.response_json["data"], sep="_", max_level=1)
+    self.response_df.drop(["id"], axis=1, inplace=True, errors=False)
+    self.response_df.columns = [x.replace("fields_", "") for x in self.response_df.columns]
+    self.response_df = self.response_df.applymap(self._str_to_obj)
 
     # add columns
-    self.df["rwapi_input"] = self.input.name
-    self.df["rwapi_date"] = self.now
-    for x in [x for x in self.columns_all if x not in self.df.columns]:
-      self.df[x] = None
+    self.response_df["rwapi_input"] = self.input.name
+    self.response_df["rwapi_date"] = self.now
+    for x in [x for x in self.columns_all if x not in self.response_df.columns]:
+      self.response_df[x] = None
   
     # reorder, convert to str
-    self.df = self.df[self.columns_all]
-    self.df = self.df.applymap(json.dumps)
-    self.df = self._nan_to_None(self.df)
-    logger.debug(f"prepared {len(self.df.columns.tolist())} {sorted(self.df.columns.tolist())} columns")
+    self.response_df = self.response_df[self.columns_all]
+    self.response_df = self.response_df.applymap(json.dumps)
+    self.response_df = self._nan_to_None(self.response_df)
+    logger.debug(f"prepared {len(self.response_df.columns.tolist())} {sorted(self.response_df.columns.tolist())} columns")
 
 
   def _insert_records(self):
     """Inserts API data into records table, with report id as primary key."""
 
-    records = self.df.to_records(index=False)
+    records = self.response_df.to_records(index=False)
     self.c.executemany(
       f"INSERT OR REPLACE INTO records VALUES ({','.join(list('?' * len(self.columns_all)))})",
       records
