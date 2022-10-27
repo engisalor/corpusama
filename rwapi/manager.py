@@ -44,9 +44,9 @@ class Manager:
   ```
   # make a Manager object, then execute desired actions
   rw = rwapi.Manager(db="data/reliefweb.db") 
-  rw.open_db()
   rw.call("rwapi/calls/<call_parameters>.yml", "<appname>")
-  rw.close_db()
+  rw.get_item_pdfs()
+  rw.<other_methods>()
   ```"""
 
 
@@ -598,7 +598,7 @@ class Manager:
 
 
   def get_excludes(self, names=None):
-    """Get 'excludes' table. Specify 'names' (str, list of str) to filter items."""
+    """Generates self.excludes_df. Specify 'names' (str, list of str) to filter items."""
 
     df = pd.read_sql("SELECT * FROM excludes", self.conn)
     
