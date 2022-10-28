@@ -726,7 +726,7 @@ class Manager:
     logger.debug(f"{file}")
 
 
-  def _get_nested_value(self,item,key):
+  
   def __repr__(self):
       return ""
 
