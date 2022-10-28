@@ -454,6 +454,9 @@ class Manager:
     Uses a cleaned version of 'text' to improve accuracy.
     Returns a tuple of (words, language, confidence)."""
     
+    if not text:
+      return None
+    else:    
     # get fasttext model
     if not self.ft_model_path[0].exists():
       self.ft_model_path = [x for x in pathlib.Path().glob('**/lid.176.bin')]
