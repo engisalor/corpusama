@@ -152,12 +152,11 @@ class Manager:
             except:
                 return item
 
-    def _nan_to_None(self, df):
-        """Converts df np.nan and string equivalents to None."""
+    def _nan_to_None(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Converts df empty cells, np.nan, 'NULL' and similar to None."""
 
-        df.replace({np.nan: None}, inplace=True)
-        df.replace(["null", "nan", "NAN", "NULL", "NaN", "None"], None, inplace=True)
-        return df
+        bad_NAs = [np.nan] + [f"^(?i){x}$" for x in ["", "none", "null", "nan"]]
+        return df.replace(to_replace=bad_NAs, value=None, regex=True)
 
     def _prepare_records(self):
         """Reshapes and prepares response data for adding to the records table."""
