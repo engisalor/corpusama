@@ -156,7 +156,7 @@ class Manager:
       try:
         return ast.literal_eval(item)
       except:
-      return item
+        return item
 
 
   def _nan_to_None(self,df):
@@ -457,29 +457,29 @@ class Manager:
     if not text:
       return None
     else:    
-    # get fasttext model
-    if not self.ft_model_path[0].exists():
-      self.ft_model_path = [x for x in pathlib.Path().glob('**/lid.176.bin')]
-      self.ft_model = fasttext.load_model(str(self.ft_model_path[0]))
-      logger.debug(f"using ft model {self.ft_model_path[0]}")
-      if len(self.ft_model_path) > 1:
-        logger.warning(f"Multiple {model} files found in cwd")
+      # get fasttext model
+      if not self.ft_model_path[0].exists():
+        self.ft_model_path = [x for x in pathlib.Path().glob('**/lid.176.bin')]
+        self.ft_model = fasttext.load_model(str(self.ft_model_path[0]))
+        logger.debug(f"using ft model {self.ft_model_path[0]}")
+        if len(self.ft_model_path) > 1:
+          logger.warning(f"Multiple {model} files found in cwd")
 
-    # clean text
-    drops = "".join([string.punctuation, string.digits,"\n\t"])
-    blanks = " "*len(drops)
-    text = re.sub(r"\S*\\\S*|\S*@\S*|/*%20/S*|S*/S*/S*|http+\S+|www+\S+", " ", text)
-    text = text.translate(str.maketrans(drops,blanks))
-    text = text.translate(str.maketrans(string.ascii_uppercase,string.ascii_lowercase))
+      # clean text
+      drops = "".join([string.punctuation, string.digits,"\n\t"])
+      blanks = " "*len(drops)
+      text = re.sub(r"\S*\\\S*|\S*@\S*|/*%20/S*|S*/S*/S*|http+\S+|www+\S+", " ", text)
+      text = text.translate(str.maketrans(drops,blanks))
+      text = text.translate(str.maketrans(string.ascii_uppercase,string.ascii_lowercase))
 
-    # predict
-    prediction = self.ft_model.predict(text)
-    length = len(text.split())
-    lang = prediction[0][0][-2:]
-    score = round(prediction[1][0],2)
-    logger.debug(f"{length} words, {lang}: {score}")
+      # predict
+      prediction = self.ft_model.predict(text)
+      length = len(text.split())
+      lang = prediction[0][0][-2:]
+      score = round(prediction[1][0],2)
+      logger.debug(f"{length} words, {lang}: {score}")
     
-    return length, lang, score
+      return length, lang, score
 
 
   def _try_extract_text(self, response,filepath, maxpages=1000000):
