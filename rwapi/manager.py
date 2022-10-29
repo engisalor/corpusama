@@ -124,7 +124,7 @@ class Manager:
     def _nan_to_None(self, df: pd.DataFrame) -> pd.DataFrame:
         """Converts df empty cells, np.nan, 'NULL' and similar to None."""
 
-        bad_NAs = [np.nan] + [f"^(?i){x}$" for x in ["", "none", "null", "nan"]]
+        bad_NAs = [np.nan] + [f"(?i)^{x}$" for x in ["", "none", "null", "nan"]]
         return df.replace(to_replace=bad_NAs, value=None, regex=True)
 
     def _prepare_records(self):
