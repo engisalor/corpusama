@@ -39,15 +39,15 @@ class Manager:
     def call(        
         self,
         input,
-        appname,
         n_calls=1,
+        appname=None,
         url="https://api.reliefweb.int/v1/reports?appname=",
         quota=1000,
         wait_dict={0: 1, 5: 49, 10: 99, 20: 499, 30: None}
         ):
         """Manages making one or more API calls and saves results in self.db."""
 
-        call_x = rwapi.Call(input, appname, n_calls, url, quota, wait_dict, self.log_level)
+        call_x = rwapi.Call(input, n_calls, appname, url, quota, wait_dict, self.log_level)
         for call_n in range(n_calls):
             call_x.call_n = call_n
             call_x._quota_enforce()
