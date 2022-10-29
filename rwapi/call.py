@@ -44,6 +44,7 @@ class Call:
         self.now = pd.Timestamp.now().round("S").isoformat()
         self.response = requests.post(self.url, json.dumps(self.parameters))
         self._check_response()
+        self._get_field_names()
         summary = {k: v for k, v in self.response_json.items() if k != "data"}
         logger.info(f'offset {self.parameters["offset"]} - summary {summary}')
 
@@ -158,6 +159,15 @@ class Call:
         
         self.url = "".join([self.url, self.appname])
         logger.debug(f"{self.config_file}")
+
+    def _get_field_names(self):
+        """Makes a set of field names from response data."""
+
+        self.field_names = set()
+        for x in self.response_json["data"]:
+            self.field_names.update(list(x["fields"].keys()))
+
+        logger.debug(f"{len(self.field_names)} {sorted(self.field_names)}")
 
     def __repr__(self):
         return ""

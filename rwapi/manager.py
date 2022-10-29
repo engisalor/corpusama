@@ -80,15 +80,6 @@ class Manager:
         self.conn.close()
         logger.debug(f"{self.db}")
 
-    def _get_field_names(self):
-        """Makes a set of field names from response data."""
-
-        self.field_names = set()
-        for x in self.call_x.response_json["data"]:
-            self.field_names.update(list(x["fields"].keys()))
-
-        logger.debug(f"{len(self.field_names)} {sorted(self.field_names)}")
-
     def _get_records_columns(self):
         """Gets a list of columns from the records table."""
 
@@ -98,10 +89,9 @@ class Manager:
     def _update_columns(self):
         """Updates records table columns when new fields are detected."""
 
-        self._get_field_names()
         self._get_records_columns()
         self.columns_old = [x.strip() for x in self.records_columns if x]
-        self.columns_new = [x for x in self.field_names if x not in self.columns_old]
+        self.columns_new = [x for x in self.call_x.field_names if x not in self.columns_old]
         self.columns_all = self.columns_old + self.columns_new
 
         for x in self.columns_all:

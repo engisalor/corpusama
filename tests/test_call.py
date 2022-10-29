@@ -73,9 +73,10 @@ class Test_Call(unittest.TestCase):
         self.job.run()
         # offset gets incremented
         self.assertEqual(self.job.parameters["offset"], self.job.response_json["count"])
-        # store response data
+        # check response data
         self.assertIsInstance(self.job.response, requests.Response)
         self.assertIsInstance(self.job.response_json, dict)
+        self.assertGreater(len(self.job.field_names), 0)
 
     @unittest.skip(skip_manual)
     def test_run_request_error(self):
