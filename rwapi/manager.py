@@ -210,7 +210,7 @@ class Manager:
         )
 
         # set datatypes
-        df = df.applymap(rwapi.convert.empty_list_to_None)
+        df = df.applymap(rwapi.convert.empty_list_to_none)
         df = df.applymap(json.dumps)
         df = rwapi.convert.nan_to_none(df)
 

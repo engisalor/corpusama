@@ -1,5 +1,6 @@
 from .call import Call
 from .manager import Manager
+from . import convert
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
