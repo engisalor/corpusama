@@ -7,32 +7,17 @@ from pdfminer.high_level import extract_text
 import io
 import ast
 import numpy as np
-import time
 import requests
 import json
 import pandas as pd
-import yaml
 import sqlite3 as sql
 import pathlib
 import logging
-from logging.handlers import TimedRotatingFileHandler
 
+import rwapi
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
-formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s"
-)
-
 log_file = ".rwapi.log"
-file_handler = TimedRotatingFileHandler(log_file, "midnight", backupCount=0)
-file_handler.setFormatter(formatter)
-
-stream_handler = logging.StreamHandler()
-stream_handler.setFormatter(formatter)
-
-logger.addHandler(file_handler)
-logger.addHandler(stream_handler)
 
 
 class Manager:
@@ -51,6 +36,35 @@ class Manager:
     rw.<other_methods>()
     ```"""
 
+    def call(        
+        self,
+        input,
+        appname,
+        n_calls=1,
+        url="https://api.reliefweb.int/v1/reports?appname=",
+        quota=1000,
+        wait_dict={0: 1, 5: 49, 10: 99, 20: 499, 30: None}
+        ):
+        """Manages making one or more API calls and saves results in self.db."""
+
+        call_x = rwapi.Call(input, appname, n_calls, url, quota, wait_dict, self.log_level)
+        for call_n in range(n_calls):
+            call_x.call_n = call_n
+            call_x._quota_enforce()
+            call_x._increment_parameters()
+            call_x._request()
+            self.call_x = call_x
+            self.c.execute(
+                f"CREATE TABLE IF NOT EXISTS records (id PRIMARY KEY, rwapi_input, rwapi_date) WITHOUT ROWID"
+            )
+            self._update_columns()
+            self._prepare_records()
+            self._insert_records()
+            self._insert_log()
+            self.update_pdf_table()
+            call_x._wait()
+
+
     def open_db(self):
         """Opens SQL database connection."""
 
@@ -66,56 +80,11 @@ class Manager:
         self.conn.close()
         logger.debug(f"{self.db}")
 
-    def _get_parameters(self):
-        """Loads parameters from an input file or dict."""
-
-        if isinstance(self.input, str):
-            self.input = pathlib.Path(self.input)
-            if not self.input.exists():
-                raise FileNotFoundError(f"No such file: {self.input}")
-            else:
-                if self.input.suffix in [".yml", ".yaml"]:
-                    with open(self.input, "r") as stream:
-                        self.parameters = yaml.safe_load(stream)
-                elif self.input.suffix == ".json":
-                    with open(self.input, "r") as f:
-                        self.parameters = json.load(f)
-                else:
-                    raise ValueError(
-                        "Unknown format (use dict or str w/ extension .json .yml .yaml)."
-                    )
-        elif isinstance(self.input, dict):
-            self.parameters = self.input
-            self.input = "dict"
-        else:
-            raise TypeError("Input must be a filepath (str) or dict.")
-
-    def _call(self):
-        """Makes a single ReliefWeb API call (returns response_json)"""
-
-        # adjust offset when making multiple calls
-        if self.page > 0:
-            self.parameters["offset"] += self.response_json["count"]
-
-        # make call
-        self.now = pd.Timestamp.now().round("S").isoformat()
-        logger.debug(f"params {self.parameters}")
-        self.response = requests.post(self.url, json.dumps(self.parameters))
-
-        # check response
-        self.response.raise_for_status()
-        self.response_json = self.response.json()
-        if "error" in self.response_json:
-            raise ValueError(self.response_json)
-
-        summary = {k: v for k, v in self.response_json.items() if k != "data"}
-        logger.info(f"{summary}")
-
     def _get_field_names(self):
         """Makes a set of field names from response data."""
 
         self.field_names = set()
-        for x in self.response_json["data"]:
+        for x in self.call_x.response_json["data"]:
             self.field_names.update(list(x["fields"].keys()))
 
         logger.debug(f"{len(self.field_names)} {sorted(self.field_names)}")
@@ -163,7 +132,7 @@ class Manager:
 
         # normalize data
         self.response_df = pd.json_normalize(
-            self.response_json["data"], sep="_", max_level=1
+            self.call_x.response_json["data"], sep="_", max_level=1
         )
         self.response_df.drop(["id"], axis=1, inplace=True, errors=False)
         self.response_df.columns = [
@@ -172,8 +141,8 @@ class Manager:
         self.response_df = self.response_df.applymap(self._str_to_obj)
 
         # add columns
-        self.response_df["rwapi_input"] = self.input.name
-        self.response_df["rwapi_date"] = self.now
+        self.response_df["rwapi_input"] = self.call_x.input.name
+        self.response_df["rwapi_date"] = self.call_x.now
         for x in [x for x in self.columns_all if x not in self.response_df.columns]:
             self.response_df[x] = None
 
@@ -196,68 +165,6 @@ class Manager:
         self.conn.commit()
         logger.debug(f"records")
 
-    def _quota_handler(self):
-        """Tracks daily API usage against quota and limits excess calls."""
-
-        self.quota = 0
-
-        # count calls in log
-        if pathlib.Path(log_file).exists():
-            with open(pathlib.Path(log_file), "r") as f:
-                daily_log = f.readlines()
-            for x in daily_log:
-                if "- call -" in x:
-                    self.quota += 1
-
-        # compute remaining calls in quota
-        if self.quota >= self.quota_limit:
-            raise UserWarning(
-                f"Reached daily usage quota: {self.quota}/{self.quota_limit} calls made."
-            )
-        self.quota_remaining = self.quota_limit - self.quota
-
-        # control API usage
-        if self.pages > (self.quota_remaining):
-            logger.info(
-                f"pages exceeds quota: making {self.quota_remaining} instead of {self.pages}"
-            )
-            self.pages = self.quota_remaining
-
-        logger.debug(f"{self.quota}/{self.quota_limit}")
-
-    def _set_wait(self, wait_dict={0: 1, 5: 49, 10: 99, 20: 499, 30: None}):
-        """Sets wait time between pages (seconds to wait / for n pages).
-
-        Defaults:
-        (0/1)
-        (5/2-49)
-        (10/50-99)
-        (20/100-499)
-        (30/500+)
-
-        Set a custom wait_dict before running calls:
-        ```
-        job = rwapi.Manager()
-        job.wait_dict = {0: 1, 1: 49, 4:None}
-        ```"""
-
-        # check for custom wait dict
-        try:
-            logger.debug(f"custom dict {self.wait_dict}")
-        except:
-            self.wait_dict = wait_dict
-
-        waits = []
-        for k, v in self.wait_dict.items():
-            if v:
-                if self.pages <= v:
-                    waits.append(k)
-        if not waits:
-            waits.append(max([k for k in self.wait_dict.keys()]))
-
-        self.wait = min(waits)
-        logger.debug(f"{self.wait} second(s)")
-
     def _insert_log(self):
         """Updates history of calls (replaces identical old calls)."""
 
@@ -267,68 +174,15 @@ class Manager:
         self.c.execute(
             f"INSERT OR REPLACE INTO call_log VALUES (?,?,?,?,?)",
             (
-                json.dumps(self.parameters),
-                json.dumps(self.input.name),
-                "".join(['"', str(self.now), '"']),
-                self.response_json["count"],
-                self.response_json["totalCount"],
+                json.dumps(self.call_x.parameters),
+                json.dumps(self.call_x.input.name),
+                "".join(['"', str(self.call_x.now), '"']),
+                self.call_x.response_json["count"],
+                self.call_x.response_json["totalCount"],
             ),
         )
         self.conn.commit()
         logger.debug(f"call_log")
-
-    def call(
-        self,
-        input,
-        appname,
-        pages=1,
-        url="https://api.reliefweb.int/v1/reports?appname=",
-        quota_limit=1000,
-    ):
-        """Manages API calls made to ReliefWeb and saves results to database.
-
-        Options
-        - input = a JSON/YML filepath or dict with parameters
-        - appname = unique identifier for using RW API
-        - pages = number of calls to make, incrementing 'offset' parameter
-        - url = base url for making POST calls
-        - quota_limit = daily usage limit (see RW API documentation)"""
-
-        # parameters
-        self.input = input
-        self.url = "".join([url, appname])
-        self.pages = pages
-        self.quota_limit = quota_limit
-        self._set_wait()
-        self._get_parameters()
-
-        # run job
-        for page in range(self.pages):
-            self.page = page
-
-            # make call
-            logger.debug(f"page {self.page}")
-            self._quota_handler()
-            self._call()
-
-            # abort
-            if self.response_json["count"] == 0:
-                raise UserWarning("API manager aborted: query returned no results.")
-
-            # continue
-            self.c.execute(
-                f"CREATE TABLE IF NOT EXISTS records (id PRIMARY KEY, rwapi_input, rwapi_date) WITHOUT ROWID"
-            )
-            self._update_columns()
-            self._prepare_records()
-            self._insert_records()
-            self._insert_log()
-            self.update_pdf_table()
-
-            # wait if needed
-            if page < (self.pages - 1):
-                logger.debug(f"waiting {self.wait} seconds")
-                time.sleep(self.wait)
 
     def _make_pdf_table(self):
         """Makes 'pdfs' table in database."""
@@ -760,6 +614,7 @@ class Manager:
     ):
         # variables
         self.db = db
+        self.log_level = log_level
         self.log_file = log_file
         self.ft_model_path = [pathlib.Path("/dummy/path/to/model")]
 
