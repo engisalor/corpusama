@@ -100,23 +100,6 @@ class Manager:
             except:
                 pass
 
-    def _str_to_obj(self, item):
-        """Parses a string into an object if possible using json or literal_eval."""
-
-        try:
-            return json.loads(item)
-        except:
-            try:
-                return ast.literal_eval(item)
-            except:
-                return item
-
-    def _nan_to_None(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Converts df empty cells, np.nan, 'NULL' and similar to None."""
-
-        bad_NAs = [np.nan] + [f"(?i)^{x}$" for x in ["", "none", "null", "nan"]]
-        return df.replace(to_replace=bad_NAs, value=None, regex=True)
-
     def _prepare_records(self):
         """Reshapes and prepares response data for adding to the records table."""
 
@@ -128,7 +111,7 @@ class Manager:
         self.response_df.columns = [
             x.replace("fields_", "") for x in self.response_df.columns
         ]
-        self.response_df = self.response_df.applymap(self._str_to_obj)
+        self.response_df = self.response_df.applymap(rwapi.convert.str_to_obj)
 
         # add columns
         self.response_df["rwapi_input"] = self.call_x.input.name
@@ -139,7 +122,7 @@ class Manager:
         # reorder, convert to str
         self.response_df = self.response_df[self.columns_all]
         self.response_df = self.response_df.applymap(json.dumps)
-        self.response_df = self._nan_to_None(self.response_df)
+        self.response_df = rwapi.convert.nan_to_none(self.response_df)
         logger.debug(
             f"prepared {len(self.response_df.columns.tolist())} {sorted(self.response_df.columns.tolist())} columns"
         )
@@ -194,17 +177,6 @@ class Manager:
             "url",
         ]
 
-    def _empty_list_to_None(self, item):
-        """Converts an empty list to None, otherwise returns item."""
-
-        if isinstance(item, list):
-            if [x for x in item if x]:
-                return item
-            else:
-                return None
-        else:
-            return item
-
     def update_pdf_table(self):
         """Updates PDF table when new records exist."""
 
@@ -213,7 +185,7 @@ class Manager:
         # get records with PDFs
         df_records = pd.read_sql("SELECT file, id FROM records", self.conn)
         df = df_records[df_records["file"].notna()].copy()
-        df = df.applymap(self._str_to_obj)
+        df = df.applymap(rwapi.convert.str_to_obj)
         df.reset_index(inplace=True, drop=True)
 
         # make columns
@@ -238,9 +210,9 @@ class Manager:
         )
 
         # set datatypes
-        df = df.applymap(self._empty_list_to_None)
+        df = df.applymap(rwapi.convert.empty_list_to_None)
         df = df.applymap(json.dumps)
-        df = self._nan_to_None(df)
+        df = rwapi.convert.nan_to_none(df)
 
         # insert into SQL
         records = df[self.pdfs_columns].to_records(index=False)
@@ -579,7 +551,7 @@ class Manager:
 
         self.dfs = {x: pd.read_sql(f"SELECT * FROM {x}", self.conn) for x in tables}
         for k, v in self.dfs.items():
-            self.dfs[k] = v.applymap(self._str_to_obj)
+            self.dfs[k] = v.applymap(rwapi.convert.str_to_obj)
 
         logger.debug(f"generated {tables} dataframes")
 
