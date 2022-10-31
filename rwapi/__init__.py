@@ -1,7 +1,7 @@
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
-from . import convert
+from . import convert, db
 from .call import Call
 from .manager import Manager
 

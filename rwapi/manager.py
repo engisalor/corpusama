@@ -1,11 +1,9 @@
-import ast
 import hashlib
 import io
 import json
 import logging
 import pathlib
 import re
-import sqlite3 as sql
 import string
 import sys
 
@@ -34,7 +32,7 @@ class Manager:
     rw = rwapi.Manager(db="data/reliefweb.db")
     rw.call("rwapi/calls/<call_parameters>.yml", "<appname>")
     rw.get_item_pdfs()
-    rw.<other_methods>()
+    rw.db.close_db()
     ```"""
 
     def call(
@@ -57,61 +55,11 @@ class Manager:
             call_x._increment_parameters()
             call_x._request()
             self.call_x = call_x
-            self.c.execute(
-                """
-                CREATE TABLE IF NOT EXISTS records (
-                country,
-                date,
-                disaster,
-                disaster_type,
-                feature,
-                file,
-                format,
-                headline,
-                id PRIMARY KEY,
-                image,
-                language,
-                ocha_product,
-                origin,
-                primary_country,
-                rwapi_date,
-                rwapi_input,
-                source,
-                status,
-                theme,
-                title,
-                url,
-                vulnerable_group,
-                body
-                ) WITHOUT ROWID"""
-            )
-            self._get_records_columns()
             self._prepare_records()
             self._insert_records()
             self._insert_log()
             self.update_pdf_table()
             call_x._wait()
-
-    def open_db(self):
-        """Opens SQL database connection."""
-
-        self.conn = sql.connect(self.db)
-        self.c = self.conn.cursor()
-        logger.debug(f"{self.db}")
-
-    def close_db(self):
-        """Closes SQL database connection."""
-
-        self.c.execute("pragma optimize")
-        self.c.close()
-        self.conn.close()
-        logger.debug(f"{self.db}")
-
-    def _get_records_columns(self):
-        """Gets a list of columns from the records table."""
-
-        self.c.execute("select * from records")
-        self.records_columns = [x[0] for x in self.c.description]
 
     def _prepare_records(self):
         """Reshapes and prepares response data for adding to the records table."""
@@ -129,11 +77,13 @@ class Manager:
         # add columns
         self.response_df["rwapi_input"] = self.call_x.input.name
         self.response_df["rwapi_date"] = self.call_x.now
-        for x in [x for x in self.records_columns if x not in self.response_df.columns]:
+        for x in [
+            x for x in self.db.columns["records"] if x not in self.response_df.columns
+        ]:
             self.response_df[x] = None
 
         # reorder, convert to str
-        self.response_df = self.response_df[self.records_columns]
+        self.response_df = self.response_df[self.db.columns["records"]]
         self.response_df = self.response_df.applymap(json.dumps)
         self.response_df = rwapi.convert.nan_to_none(self.response_df)
         logger.debug(
@@ -144,20 +94,18 @@ class Manager:
         """Inserts API data into records table, with report id as primary key."""
 
         records = self.response_df.to_records(index=False)
-        self.c.executemany(
-            f"INSERT OR REPLACE INTO records VALUES ({','.join(list('?' * len(self.records_columns)))})",
+        n_columns = len(self.db.columns["records"])
+        self.db.c.executemany(
+            f"INSERT OR REPLACE INTO records VALUES ({','.join(list('?' * n_columns))})",
             records,
         )
-        self.conn.commit()
+        self.db.conn.commit()
         logger.debug(f"records")
 
     def _insert_log(self):
         """Updates history of calls (replaces identical old calls)."""
 
-        self.c.execute(
-            f"CREATE TABLE IF NOT EXISTS call_log (parameters PRIMARY KEY, rwapi_input, rwapi_date, count, total_count)"
-        )
-        self.c.execute(
+        self.db.c.execute(
             f"INSERT OR REPLACE INTO call_log VALUES (?,?,?,?,?)",
             (
                 json.dumps(self.call_x.parameters),
@@ -167,36 +115,14 @@ class Manager:
                 self.call_x.response_json["totalCount"],
             ),
         )
-        self.conn.commit()
+        self.db.conn.commit()
         logger.debug(f"call_log")
-
-    def _make_pdf_table(self):
-        """Makes 'pdfs' table in database."""
-
-        self.c.execute(
-            f"CREATE TABLE IF NOT EXISTS pdfs (id PRIMARY KEY, qty, description, exclude, download, size_mb, words_pdf, lang_pdf, lang_score_pdf, orphan, url)"
-        )
-        self.pdfs_columns = [
-            "id",
-            "qty",
-            "description",
-            "exclude",
-            "download",
-            "size_mb",
-            "words_pdf",
-            "lang_pdf",
-            "lang_score_pdf",
-            "orphan",
-            "url",
-        ]
 
     def update_pdf_table(self):
         """Updates PDF table when new records exist."""
 
-        self._make_pdf_table()
-
         # get records with PDFs
-        df_records = pd.read_sql("SELECT file, id FROM records", self.conn)
+        df_records = pd.read_sql("SELECT file, id FROM records", self.db.conn)
         df = df_records[df_records["file"].notna()].copy()
         df = df.applymap(rwapi.convert.str_to_obj)
         df.reset_index(inplace=True, drop=True)
@@ -228,11 +154,11 @@ class Manager:
         df = rwapi.convert.nan_to_none(df)
 
         # insert into SQL
-        records = df[self.pdfs_columns].to_records(index=False)
-        self.c.executemany(
+        records = df[self.db.columns["pdfs"]].to_records(index=False)
+        self.db.c.executemany(
             f"INSERT OR IGNORE INTO pdfs VALUES (?,?,?,?,?,?,?,?,?,?,?)", records
         )
-        self.conn.commit()
+        self.db.conn.commit()
 
         qty_summary = {x: len(df[df["qty"] == x]) for x in sorted(df["qty"].unique())}
         logger.debug(f"{len(df)}/{len(df_records)} records with PDFs")
@@ -245,8 +171,8 @@ class Manager:
         Marks orphans as '1' in 'pdfs'.
         Optionally outputs files in 'dir' missing from 'pdfs' table."""
 
-        df_records = pd.read_sql("SELECT id FROM records", self.conn)
-        df = pd.read_sql("SELECT * FROM pdfs", self.conn)
+        df_records = pd.read_sql("SELECT id FROM records", self.db.conn)
+        df = pd.read_sql("SELECT * FROM pdfs", self.db.conn)
 
         # find orphan records (in pdfs but not records)
         df_merged = pd.merge(
@@ -256,14 +182,14 @@ class Manager:
         not_orphan = df_merged[df_merged["_merge"] == "both"]["id"].values
 
         # update pdfs table
-        self.c.executemany(
+        self.db.c.executemany(
             """UPDATE pdfs SET orphan = '1' WHERE id=?;""", [(x,) for x in orphan]
         )
-        self.c.executemany(
+        self.db.c.executemany(
             """UPDATE pdfs SET orphan = null WHERE id=?;""", [(x,) for x in not_orphan]
         )
         logger.debug(f"{len(orphan)} orphan(s) detected in 'pdfs' table")
-        self.conn.commit()
+        self.db.conn.commit()
 
         # find orphan files (in directory but no record in db)
         if dir:
@@ -365,7 +291,7 @@ class Manager:
                 raise ValueError(f"Valid modes are 'pdf', 'txt' or ['pdf','txt']")
 
         self.update_pdf_table()
-        df = pd.read_sql("SELECT * FROM pdfs", self.conn)
+        df = pd.read_sql("SELECT * FROM pdfs", self.db.conn)
         dates, sizes, lengths, langs, scores = [], [], [], [], []
         row = df.iloc[index].copy()
         row = row.apply(self.try_json)
@@ -424,7 +350,7 @@ class Manager:
             records = tuple(records) + (str(row["id"]),)
 
             # insert into SQL
-            self.c.execute(
+            self.db.c.execute(
                 """UPDATE pdfs SET
         size_mb = ?,
         download = ?,
@@ -434,7 +360,7 @@ class Manager:
         WHERE id = ?;""",
                 records,
             )
-            self.conn.commit()
+            self.db.conn.commit()
 
     def sha256(self, item):
         """Convenience wrapper for returning a sha256 checksum for an item."""
@@ -447,15 +373,17 @@ class Manager:
         - name = a unique name for an exclude list
         - lines = a string with TXT formatting (one item per line)."""
 
-        self.c.execute("CREATE TABLE IF NOT EXISTS excludes (name PRIMARY KEY, list)")
-        self.c.execute("INSERT OR REPLACE INTO excludes VALUES (?,?)", (name, lines))
-        self.conn.commit()
+        self.db.c.execute(
+            "CREATE TABLE IF NOT EXISTS excludes (name PRIMARY KEY, list)"
+        )
+        self.db.c.execute("INSERT OR REPLACE INTO excludes VALUES (?,?)", (name, lines))
+        self.db.conn.commit()
         logger.debug(f"{name} inserted")
 
     def get_excludes(self, names=None):
         """Generates self.excludes_df. Specify 'names' (str, list of str) to filter items."""
 
-        df = pd.read_sql("SELECT * FROM excludes", self.conn)
+        df = pd.read_sql("SELECT * FROM excludes", self.db.conn)
 
         if isinstance(names, str):
             names = [names]
@@ -481,7 +409,7 @@ class Manager:
         excludes_set = set(excludes_list)
 
         # get pdfs table
-        df = pd.read_sql("SELECT id, exclude, description FROM pdfs", self.conn)
+        df = pd.read_sql("SELECT id, exclude, description FROM pdfs", self.db.conn)
         for x in ["description", "exclude"]:
             df[x] = df[x].apply(json.loads)
 
@@ -506,8 +434,8 @@ class Manager:
         df["exclude"] = df["description"].apply(set_exclude)
         df["exclude"] = df["exclude"].apply(json.dumps)
         records = df[["exclude", "id"]].to_records(index=False)
-        self.c.executemany("""UPDATE pdfs SET exclude = ? WHERE id=?;""", records)
-        self.conn.commit()
+        self.db.c.executemany("""UPDATE pdfs SET exclude = ? WHERE id=?;""", records)
+        self.db.conn.commit()
         logger.debug(f"excludes set")
 
     def del_exclude_files(self, names=None, dir="data/files", dry_run=False):
@@ -550,33 +478,11 @@ class Manager:
             f"del {deleted}/{len(stored_pdfs)} (dry_run={dry_run}): self.del_files"
         )
 
-    def make_dfs(self, tables=["records", "pdfs", "call_log"]):
-        """Adds a dict of dfs to instance.
-
-        'tables' specifies which dfs are created (must be from existing options).
-        Caution: may use excessive memory."""
-
-        self.dfs = {}
-        if isinstance(tables, str):
-            tables = [tables]
-        if [x for x in tables if x not in ["records", "pdfs", "call_log"]]:
-            raise ValueError(f"Accepted tables are {tables}")
-        if "records" in tables:
-            self.dfs["records"] = pd.read_sql("SELECT * FROM records", self.conn)
-        if "pdfs" in tables:
-            self.dfs["pdfs"] = pd.read_sql("SELECT * FROM pdfs", self.conn)
-        if "call_log" in tables:
-            self.dfs["call_log"] = pd.read_sql("SELECT * FROM call_log", self.conn)
-        for k, v in self.dfs.items():
-            self.dfs[k] = v.applymap(rwapi.convert.str_to_obj)
-
-        logger.debug(f"generated {tables} dataframes")
-
     def summarize_descriptions(self, dir="data"):
         """Generates a file with a summary of descriptions in the 'pdfs' table."""
 
         dir = pathlib.Path(dir)
-        file = dir / "_".join([pathlib.Path(self.db).stem, "descriptions.csv"])
+        file = dir / "_".join([pathlib.Path(self.db_name).stem, "descriptions.csv"])
         descriptions = [x for x in self.dfs["pdfs"]["description"] if x]
         descriptions = [y for x in descriptions for y in x]
         df_flat = pd.DataFrame({"description": descriptions})
@@ -592,7 +498,7 @@ class Manager:
         log_level="info",
     ):
         # variables
-        self.db = db
+        self.db_name = db
         self.log_level = log_level
         self.log_file = log_file
         self.ft_model_path = [pathlib.Path("/dummy/path/to/model")]
@@ -603,4 +509,5 @@ class Manager:
             raise ValueError("Invalid log level: %s" % log_level)
         logger.setLevel(numeric_level)
 
-        self.open_db()
+        # database connection
+        self.db = rwapi.db.Database(db, log_level)
