@@ -121,6 +121,17 @@ class Database:
 
         logger.debug(f"generated {tables} dataframes")
 
+    def orphaned_ids(self):
+        """Detects ids in 'pdfs' that are missing in 'records'."""
+
+        self.c.execute("""SELECT id FROM pdfs EXCEPT SELECT id FROM records;""")
+        self.orphan_ids = self.c.fetchall()
+        self.orphan_ids = [item[0] for item in self.orphan_ids if item]
+        if len(self.orphan_ids):
+            logger.warning(f"{len(self.orphan_ids)}")
+        else:
+            logger.debug(f"{len(self.orphan_ids)}")
+
     def __repr__(self):
         return ""
 
@@ -143,3 +154,4 @@ class Database:
         self.open_db()
         self.make_tables()
         self.get_columns()
+        self.orphaned_ids()

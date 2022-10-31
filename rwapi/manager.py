@@ -165,46 +165,6 @@ class Manager:
         logger.debug(f"pdf distribution {qty_summary}")
         self.detect_orphans()
 
-    def detect_orphans(self, dir=None):
-        """Detects items in 'pdfs' missing from 'records'.
-
-        Marks orphans as '1' in 'pdfs'.
-        Optionally outputs files in 'dir' missing from 'pdfs' table."""
-
-        df_records = pd.read_sql("SELECT id FROM records", self.db.conn)
-        df = pd.read_sql("SELECT * FROM pdfs", self.db.conn)
-
-        # find orphan records (in pdfs but not records)
-        df_merged = pd.merge(
-            left=df_records, right=df, on="id", how="outer", indicator=True
-        )
-        orphan = df_merged[df_merged["_merge"] == "right_only"]["id"].values
-        not_orphan = df_merged[df_merged["_merge"] == "both"]["id"].values
-
-        # update pdfs table
-        self.db.c.executemany(
-            """UPDATE pdfs SET orphan = '1' WHERE id=?;""", [(x,) for x in orphan]
-        )
-        self.db.c.executemany(
-            """UPDATE pdfs SET orphan = null WHERE id=?;""", [(x,) for x in not_orphan]
-        )
-        logger.debug(f"{len(orphan)} orphan(s) detected in 'pdfs' table")
-        self.db.conn.commit()
-
-        # find orphan files (in directory but no record in db)
-        if dir:
-            dir = pathlib.Path(dir)
-            stored_pdfs = [x.stem for x in dir.glob("**/*") if x.is_file()]
-            df = df.applymap(self.try_literal)
-            filenames = [
-                pathlib.Path(x).stem
-                for y in df.apply(lambda row: self.make_filenames(row), axis=1)
-                for x in y
-            ]
-            orphan_files = [x for x in stored_pdfs if x not in filenames]
-            logger.debug(f"{len(orphan_files)} file(s) missing a record in 'pdfs'")
-            return orphan_files
-
     def make_filenames(self, row):
         """Generates a list of filenames for a record in the 'pdfs' table."""
 
