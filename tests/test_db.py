@@ -28,11 +28,15 @@ class Test_Database(unittest.TestCase):
         tables = sorted([name[0] for name in self.temp_db.c.fetchall()])
         self.assertListEqual(tables, ["call_log", "pdfs", "records"])
 
-    def test_make_tables(self):
+    def test_make_dfs(self):
         self.db.make_dfs()
         for v in self.db.dfs.values():
             self.assertIsInstance(v, pd.DataFrame)
             self.assertGreater(len(v), 0)
+
+    def test_orphan_ids(self):
+        self.db.orphan_ids()
+        self.assertEqual(len(self.db.orphans["ids"]), 1)
 
 
 if __name__ == "__main__":

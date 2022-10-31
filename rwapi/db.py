@@ -121,16 +121,17 @@ class Database:
 
         logger.debug(f"generated {tables} dataframes")
 
-    def orphaned_ids(self):
-        """Detects ids in 'pdfs' that are missing in 'records'."""
+    def orphan_ids(self):
+        """Detects ids in 'pdfs' missing from 'records' and updates self.orphans."""
 
         self.c.execute("""SELECT id FROM pdfs EXCEPT SELECT id FROM records;""")
-        self.orphan_ids = self.c.fetchall()
-        self.orphan_ids = [item[0] for item in self.orphan_ids if item]
-        if len(self.orphan_ids):
-            logger.warning(f"{len(self.orphan_ids)}")
+        results = self.c.fetchall()
+        self.orphans["ids"] = [item[0] for item in results if item]
+        qty = len(self.orphans["ids"])
+        if qty:
+            logger.warning(f"{qty}")
         else:
-            logger.debug(f"{len(self.orphan_ids)}")
+            logger.debug(f"{qty}")
 
     def __repr__(self):
         return ""
@@ -144,6 +145,7 @@ class Database:
         self.db_name = db
         self.log_level = log_level
         self.log_file = log_file
+        self.orphans = {}
 
         # logging
         numeric_level = getattr(logging, log_level.upper(), None)
@@ -154,4 +156,4 @@ class Database:
         self.open_db()
         self.make_tables()
         self.get_columns()
-        self.orphaned_ids()
+        self.orphan_ids()
