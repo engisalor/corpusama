@@ -58,9 +58,34 @@ class Manager:
             call_x._request()
             self.call_x = call_x
             self.c.execute(
-                f"CREATE TABLE IF NOT EXISTS records (id PRIMARY KEY, rwapi_input, rwapi_date) WITHOUT ROWID"
+                """
+                CREATE TABLE IF NOT EXISTS records (
+                country,
+                date,
+                disaster,
+                disaster_type,
+                feature,
+                file,
+                format,
+                headline,
+                id PRIMARY KEY,
+                image,
+                language,
+                ocha_product,
+                origin,
+                primary_country,
+                rwapi_date,
+                rwapi_input,
+                source,
+                status,
+                theme,
+                title,
+                url,
+                vulnerable_group,
+                body
+                ) WITHOUT ROWID"""
             )
-            self._update_columns()
+            self._get_records_columns()
             self._prepare_records()
             self._insert_records()
             self._insert_log()
@@ -85,24 +110,8 @@ class Manager:
     def _get_records_columns(self):
         """Gets a list of columns from the records table."""
 
-        self.c.execute(f"select * from records")
+        self.c.execute("select * from records")
         self.records_columns = [x[0] for x in self.c.description]
-
-    def _update_columns(self):
-        """Updates records table columns when new fields are detected."""
-
-        self._get_records_columns()
-        self.columns_old = [x.strip() for x in self.records_columns if x]
-        self.columns_new = [
-            x for x in self.call_x.field_names if x not in self.columns_old
-        ]
-        self.columns_all = self.columns_old + self.columns_new
-
-        for x in self.columns_all:
-            try:
-                self.c.execute(f"ALTER TABLE records ADD COLUMN '%s' " % x)
-            except:
-                pass
 
     def _prepare_records(self):
         """Reshapes and prepares response data for adding to the records table."""
@@ -120,11 +129,11 @@ class Manager:
         # add columns
         self.response_df["rwapi_input"] = self.call_x.input.name
         self.response_df["rwapi_date"] = self.call_x.now
-        for x in [x for x in self.columns_all if x not in self.response_df.columns]:
+        for x in [x for x in self.records_columns if x not in self.response_df.columns]:
             self.response_df[x] = None
 
         # reorder, convert to str
-        self.response_df = self.response_df[self.columns_all]
+        self.response_df = self.response_df[self.records_columns]
         self.response_df = self.response_df.applymap(json.dumps)
         self.response_df = rwapi.convert.nan_to_none(self.response_df)
         logger.debug(
@@ -136,7 +145,7 @@ class Manager:
 
         records = self.response_df.to_records(index=False)
         self.c.executemany(
-            f"INSERT OR REPLACE INTO records VALUES ({','.join(list('?' * len(self.columns_all)))})",
+            f"INSERT OR REPLACE INTO records VALUES ({','.join(list('?' * len(self.records_columns)))})",
             records,
         )
         self.conn.commit()
@@ -416,12 +425,12 @@ class Manager:
 
             # insert into SQL
             self.c.execute(
-                f"""UPDATE pdfs SET
+                """UPDATE pdfs SET
         size_mb = ?,
         download = ?,
         words_pdf = ?,
         lang_pdf = ?,
-        lang_score_pdf =?
+        lang_score_pdf = ?
         WHERE id = ?;""",
                 records,
             )
@@ -438,8 +447,8 @@ class Manager:
         - name = a unique name for an exclude list
         - lines = a string with TXT formatting (one item per line)."""
 
-        self.c.execute(f"CREATE TABLE IF NOT EXISTS excludes (name PRIMARY KEY, list)")
-        self.c.execute(f"INSERT OR REPLACE INTO excludes VALUES (?,?)", (name, lines))
+        self.c.execute("CREATE TABLE IF NOT EXISTS excludes (name PRIMARY KEY, list)")
+        self.c.execute("INSERT OR REPLACE INTO excludes VALUES (?,?)", (name, lines))
         self.conn.commit()
         logger.debug(f"{name} inserted")
 
@@ -547,13 +556,17 @@ class Manager:
         'tables' specifies which dfs are created (must be from existing options).
         Caution: may use excessive memory."""
 
+        self.dfs = {}
         if isinstance(tables, str):
             tables = [tables]
-        accepted_tables = ["records", "pdfs", "call_log"]
-        if [x for x in tables if x not in accepted_tables]:
+        if [x for x in tables if x not in ["records", "pdfs", "call_log"]]:
             raise ValueError(f"Accepted tables are {tables}")
-
-        self.dfs = {x: pd.read_sql(f"SELECT * FROM {x}", self.conn) for x in tables}
+        if "records" in tables:
+            self.dfs["records"] = pd.read_sql("SELECT * FROM records", self.conn)
+        if "pdfs" in tables:
+            self.dfs["pdfs"] = pd.read_sql("SELECT * FROM pdfs", self.conn)
+        if "call_log" in tables:
+            self.dfs["call_log"] = pd.read_sql("SELECT * FROM call_log", self.conn)
         for k, v in self.dfs.items():
             self.dfs[k] = v.applymap(rwapi.convert.str_to_obj)
 
