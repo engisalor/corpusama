@@ -1,7 +1,7 @@
 # This file and example.json contain a ReliefWeb API call.
 # Both JSON and YML files can be used with the rwapi package.
 # YML is a little cleaner and accepts commented lines, whereas
-# JSON can be tested by copying a call into a testing box 
+# JSON can be tested by copying a call into a testing box
 # of the RW API docs website: https://apidoc.rwlabs.org/
 fields:
   exclude:

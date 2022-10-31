@@ -22,7 +22,7 @@ JSON content is returned and its content is well-formatted.
 
 This package wraps the ReliefWeb API to simplify making queries and storing data.
 
-- accepts parameters in JSON, YML, or dict format 
+- accepts parameters in JSON, YML, or dict format
 - existing reports are overwritten (determined by the `"id"` field)
 - can make sets of calls to retrieve multiple pages of results
 - waits between calls
@@ -45,7 +45,7 @@ See example below for making a call.
 import rwapi
 
 # make a rw Manager object to start working
-rw = rwapi.Manager() 
+rw = rwapi.Manager()
 
 # execute a call
 rw.call("rwapi/calls/<parameters_file>.json", "<appname>")

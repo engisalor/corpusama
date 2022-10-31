@@ -1,8 +1,10 @@
-import yaml
-import unittest
-import requests
-from rwapi import Call
 import os
+import unittest
+
+import requests
+import yaml
+
+from rwapi import Call
 
 log_file = "tests/.test_rwapi.log"
 skip_manual = "Run test manually."

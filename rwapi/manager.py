@@ -1,18 +1,19 @@
-import string
-import fasttext
-import re
-import sys
-import hashlib
-from pdfminer.high_level import extract_text
-import io
 import ast
-import numpy as np
-import requests
+import hashlib
+import io
 import json
-import pandas as pd
-import sqlite3 as sql
-import pathlib
 import logging
+import pathlib
+import re
+import sqlite3 as sql
+import string
+import sys
+
+import fasttext
+import numpy as np
+import pandas as pd
+import requests
+from pdfminer.high_level import extract_text
 
 import rwapi
 
@@ -36,18 +37,20 @@ class Manager:
     rw.<other_methods>()
     ```"""
 
-    def call(        
+    def call(
         self,
         input,
         n_calls=1,
         appname=None,
         url="https://api.reliefweb.int/v1/reports?appname=",
         quota=1000,
-        wait_dict={0: 1, 5: 49, 10: 99, 20: 499, 30: None}
-        ):
+        wait_dict={0: 1, 5: 49, 10: 99, 20: 499, 30: None},
+    ):
         """Manages making one or more API calls and saves results in self.db."""
 
-        call_x = rwapi.Call(input, n_calls, appname, url, quota, wait_dict, self.log_level)
+        call_x = rwapi.Call(
+            input, n_calls, appname, url, quota, wait_dict, self.log_level
+        )
         for call_n in range(n_calls):
             call_x.call_n = call_n
             call_x._quota_enforce()
@@ -63,7 +66,6 @@ class Manager:
             self._insert_log()
             self.update_pdf_table()
             call_x._wait()
-
 
     def open_db(self):
         """Opens SQL database connection."""
@@ -91,7 +93,9 @@ class Manager:
 
         self._get_records_columns()
         self.columns_old = [x.strip() for x in self.records_columns if x]
-        self.columns_new = [x for x in self.call_x.field_names if x not in self.columns_old]
+        self.columns_new = [
+            x for x in self.call_x.field_names if x not in self.columns_old
+        ]
         self.columns_all = self.columns_old + self.columns_new
 
         for x in self.columns_all:
@@ -412,9 +416,9 @@ class Manager:
 
             # insert into SQL
             self.c.execute(
-                f"""UPDATE pdfs SET 
+                f"""UPDATE pdfs SET
         size_mb = ?,
-        download = ?, 
+        download = ?,
         words_pdf = ?,
         lang_pdf = ?,
         lang_score_pdf =?

@@ -1,10 +1,11 @@
-import yaml
-import logging
-import time
-import requests
-import pathlib
 import json
+import logging
+import pathlib
+import time
+
 import pandas as pd
+import requests
+import yaml
 
 logger = logging.getLogger(__name__)
 log_file = ".rwapi.log"
@@ -150,13 +151,13 @@ class Call:
     def _load_config(self):
         """Use a config file to load an appname from a JSON file.
 
-        File contents:        
+        File contents:
         {"appname": "<my_appname>"}"""
-        
+
         if not self.appname:
             with open(self.config_file, "r") as f:
                 self.appname = json.load(f)["appname"]
-        
+
         self.url = "".join([self.url, self.appname])
         logger.debug(f"{self.config_file}")
 
