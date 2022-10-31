@@ -140,7 +140,6 @@ class Manager:
             "words_pdf",
             "lang_pdf",
             "exclude",
-            "orphan",
         ]
         for x in new_columns:
             df[x] = None
@@ -163,7 +162,6 @@ class Manager:
         qty_summary = {x: len(df[df["qty"] == x]) for x in sorted(df["qty"].unique())}
         logger.debug(f"{len(df)}/{len(df_records)} records with PDFs")
         logger.debug(f"pdf distribution {qty_summary}")
-        self.detect_orphans()
 
     def make_filenames(self, row):
         """Generates a list of filenames for a record in the 'pdfs' table."""

@@ -81,7 +81,6 @@ class Database:
             words_pdf,
             lang_pdf,
             lang_score_pdf,
-            orphan,
             url
             )"""
         )
