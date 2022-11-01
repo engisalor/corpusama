@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import pathlib
@@ -130,6 +131,10 @@ class Call:
             if self.response_json["count"] == 0:
                 raise UserWarning("Call aborted: no more results.")
 
+    def _hash(self):
+        params = json.dumps(self.parameters, sort_keys=True)
+        self.hash = hashlib.blake2b(params.encode()).hexdigest()[:16]
+
     def _wait(self):
         """Wait between calls."""
 
@@ -145,6 +150,7 @@ class Call:
             self._quota_enforce()
             self._increment_parameters()
             self._request()
+            self._hash()
             self.data[call_n] = self.response_json
             self._wait()
 

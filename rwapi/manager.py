@@ -1,15 +1,8 @@
-import io
 import json
 import logging
 import pathlib
-import re
-import string
-import sys
 
-import fasttext
 import pandas as pd
-import requests
-from pdfminer.high_level import extract_text
 
 import rwapi
 
@@ -52,6 +45,7 @@ class Manager:
             call_x._quota_enforce()
             call_x._increment_parameters()
             call_x._request()
+            call_x._hash()
             self.call_x = call_x
             self._insert_records()
             self._insert_log()
@@ -69,162 +63,26 @@ class Manager:
         # add columns
         records["rwapi_input"] = self.call_x.input.name
         records["rwapi_date"] = self.call_x.now
+        records["params_hash"] = self.call_x.hash
         for x in [x for x in self.db.columns["records"] if x not in records.columns]:
             records[x] = None
         self.db._insert(records, "records")
 
     def _insert_log(self):
-        """Updates history of calls (replaces identical old calls)."""
+        """Inserts history of calls."""
 
-        self.db.c.execute(
-            f"INSERT OR REPLACE INTO call_log VALUES (?,?,?,?,?)",
-            (
-                self.call_x.parameters,
-                self.call_x.input.name,
-                "".join(['"', str(self.call_x.now), '"']),
-                self.call_x.response_json["count"],
-                self.call_x.response_json["totalCount"],
-            ),
-        )
-        self.db.conn.commit()
-        logger.debug(f"call logged")
-
-    def check_ocr(self, text, model="lid.176.bin"):
-        """Counts words in text and uses fasttext to predict language.
-
-        - model = filename of fasttext model to load (must be in cwd dir/subdir)
-
-        Uses a cleaned version of 'text' to improve accuracy.
-        Returns a tuple of (words, language, confidence)."""
-
-        if not text:
-            return None
-        else:
-            # get fasttext model
-            if not self.ft_model_path[0].exists():
-                self.ft_model_path = [x for x in pathlib.Path().glob("**/lid.176.bin")]
-                self.ft_model = fasttext.load_model(str(self.ft_model_path[0]))
-                logger.debug(f"using ft model {self.ft_model_path[0]}")
-                if len(self.ft_model_path) > 1:
-                    logger.warning(f"Multiple {model} files found in cwd")
-
-            # clean text
-            drops = "".join([string.punctuation, string.digits, "\n\t"])
-            blanks = " " * len(drops)
-            text = re.sub(
-                r"\S*\\\S*|\S*@\S*|/*%20/S*|S*/S*/S*|http+\S+|www+\S+", " ", text
-            )
-            text = text.translate(str.maketrans(drops, blanks))
-            text = text.translate(
-                str.maketrans(string.ascii_uppercase, string.ascii_lowercase)
-            )
-
-            # predict
-            prediction = self.ft_model.predict(text)
-            length = len(text.split())
-            lang = prediction[0][0][-2:]
-            score = round(prediction[1][0], 2)
-            logger.debug(f"{length} words, {lang}: {score}")
-
-            return length, lang, score
-
-    def _try_extract_text(self, response, filepath, maxpages=1000000):
-        if filepath.exists():
-            text = extract_text(filepath, maxpages=maxpages)
-        else:
-            try:
-                text = extract_text(io.BytesIO(response.content, maxpages=maxpages))
-                logger.debug("bytesIO")
-            except:
-                with open(filepath, "wb") as f:
-                    f.write(response.content)
-                text = extract_text(filepath, maxpages=maxpages)
-                logger.debug("bytesIO failed: trying file")
-
-        return text
-
-    def get_item_pdfs(self, index: int, mode, dir="data/files"):
-        """Downloads PDFs for a 'pdfs' table index to a given directory.
-
-        Mode determines file format(s) to save: "pdf", "txt" or ["pdf", "txt"].
-        Excludes PDFs where exclude = 1 in the 'pdfs' table."""
-
-        if isinstance(mode, str):
-            mode = [mode]
-        for x in mode:
-            if x not in ["pdf", "txt"]:
-                raise ValueError(f"Valid modes are 'pdf', 'txt' or ['pdf','txt']")
-
-        df = pd.read_sql("SELECT * FROM pdfs", self.db.conn)
-        dates, sizes, lengths, langs, scores = [], [], [], [], []
-        row = df.iloc[index].copy()
-        row = row.apply(self.try_json)
-        names = self.make_filenames(row)
-
-        # for each url in a record
-        for x in range(len(row["url"])):
-            filepath = pathlib.Path(dir) / names[x]
-            if not row["exclude"]:
-                row["exclude"] = [0] * len(row["url"])
-
-            # skip excluded files
-            if row["exclude"][x] == 1:
-                logger.debug(f"exclude {filepath.name}")
-                for x in [dates, sizes, lengths, langs, scores]:
-                    x.append("")
-
-            # process PDF
-            else:
-                response = requests.get(row["url"][x])
-                size = round(sys.getsizeof(response.content) / 1000000, 1)
-                logger.debug(f"{filepath.stem} ({size} MB) downloaded")
-
-                # manage response by mode
-                if "pdf" in mode:
-                    # save pdf file
-                    with open(filepath, "wb") as f:
-                        f.write(response.content)
-                    logger.debug(f"{filepath} saved")
-
-                if "txt" in mode:
-                    # save txt file
-                    text = self._try_extract_text(response, filepath)
-                    with open(filepath.with_suffix(".txt"), "w") as f:
-                        f.write(text)
-                    logger.debug(f'{filepath.with_suffix(".txt")} saved')
-
-                # test for English OCR layer
-                text = self._try_extract_text(response, filepath)
-                length, lang, score = self.check_ocr(text)
-
-                # add metadata
-                dates.append(str(pd.Timestamp.now().round("S").isoformat()))
-                sizes.append(size)
-                lengths.append(length)
-                langs.append(lang)
-                scores.append(score)
-
-                # delete unwanted pdf
-                if not "pdf" in mode:
-                    if filepath.exists():
-                        pathlib.Path.unlink(filepath)
-                        logger.debug(f"{filepath} deleted")
-
-            records = [json.dumps(x) for x in [sizes, dates, lengths, langs, scores]]
-            records = tuple(records) + (str(row["id"]),)
-
-            # insert into SQL
-            self.db.c.execute(
-                """UPDATE pdfs SET
-        size_mb = ?,
-        download = ?,
-        words_pdf = ?,
-        lang_pdf = ?,
-        lang_score_pdf = ?
-        WHERE id = ?;""",
-                records,
-            )
-            self.db.conn.commit()
+        record = [
+            {
+                "params_hash": self.call_x.hash,
+                "parameters": json.dumps(self.call_x.parameters, sort_keys=True),
+                "rwapi_input": self.call_x.input.name,
+                "rwapi_date": "".join(['"', str(self.call_x.now), '"']),
+                "count": self.call_x.response_json["count"],
+                "total_count": self.call_x.response_json["totalCount"],
+            }
+        ]
+        df = pd.DataFrame.from_records(record)
+        self.db._insert(df, "call_log")
 
     def summarize_descriptions(self, dir="data"):
         """Generates a file with a summary of descriptions in the 'pdfs' table."""

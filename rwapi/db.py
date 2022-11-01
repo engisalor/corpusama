@@ -43,9 +43,8 @@ class Database:
         self.c.execute(
             """
             CREATE TABLE IF NOT EXISTS records (
+            params_hash NOT NULL,
             id PRIMARY KEY,
-            rwapi_date,
-            rwapi_input,
             country,
             date,
             disaster,
@@ -86,11 +85,13 @@ class Database:
         self.c.execute(
             """
             CREATE TABLE IF NOT EXISTS call_log (
-            parameters PRIMARY KEY,
-            rwapi_input,
-            rwapi_date,
+            params_hash PRIMARY KEY,
+            parameters NOT NULL UNIQUE,
+            rwapi_input NOT NULL,
+            rwapi_date NOT NULL,
             count,
-            total_count
+            total_count,
+            FOREIGN KEY(params_hash) REFERENCES records(params_hash)
             )"""
         )
 
@@ -148,15 +149,6 @@ class Database:
         pdfs_flat["id"] = [x for y in ids_temp for x in y]
         self._insert(pdfs_flat, "pdfs")
 
-        self.c.execute("""SELECT id FROM pdfs EXCEPT SELECT id FROM records;""")
-        results = self.c.fetchall()
-        self.orphans["ids"] = [item[0] for item in results if item]
-        qty = len(self.orphans["ids"])
-        if qty:
-            logger.warning(f"{qty}")
-        else:
-            logger.debug(f"{qty}")
-
     def __repr__(self):
         return ""
 
@@ -180,4 +172,3 @@ class Database:
         self.open_db()
         self.make_tables()
         self.get_columns()
-        self.orphan_ids()
