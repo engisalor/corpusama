@@ -34,10 +34,6 @@ class Test_Database(unittest.TestCase):
             self.assertIsInstance(v, pd.DataFrame)
             self.assertGreater(len(v), 0)
 
-    def test_orphan_ids(self):
-        self.db.orphan_ids()
-        self.assertEqual(len(self.db.orphans["ids"]), 1)
-
 
 if __name__ == "__main__":
     unittest.main()
