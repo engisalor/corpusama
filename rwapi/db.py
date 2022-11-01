@@ -43,6 +43,9 @@ class Database:
         self.c.execute(
             """
             CREATE TABLE IF NOT EXISTS records (
+            id PRIMARY KEY,
+            rwapi_date,
+            rwapi_input,
             country,
             date,
             disaster,
@@ -51,14 +54,11 @@ class Database:
             file,
             format,
             headline,
-            id PRIMARY KEY,
             image,
             language,
             ocha_product,
             origin,
             primary_country,
-            rwapi_date,
-            rwapi_input,
             source,
             status,
             theme,
