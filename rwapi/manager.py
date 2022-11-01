@@ -1,4 +1,3 @@
-import hashlib
 import io
 import json
 import logging
@@ -89,25 +88,6 @@ class Manager:
         )
         self.db.conn.commit()
         logger.debug(f"call logged")
-
-    def make_filenames(self, row):
-        """Generates a list of filenames for a record in the 'pdfs' table."""
-
-        descriptions = row["description"]
-        names = []
-        for x in range(len(row["url"])):
-            desc, suffix = None, None
-            if isinstance(descriptions, list):
-                desc = row["description"][x]
-            if desc:
-                suffix = desc[:50] if len(desc) > 50 else desc
-                suffix = suffix.replace(" ", "_")
-            if suffix:
-                name = f'{row["id"]}_{x}_{suffix}.pdf'
-            else:
-                name = f'{row["id"]}_{x}.pdf'
-            names.append(re.sub(r"[^.\w -]", "_", name))
-        return names
 
     def check_ocr(self, text, model="lid.176.bin"):
         """Counts words in text and uses fasttext to predict language.
@@ -245,11 +225,6 @@ class Manager:
                 records,
             )
             self.db.conn.commit()
-
-    def sha256(self, item):
-        """Convenience wrapper for returning a sha256 checksum for an item."""
-
-        return hashlib.sha256(item).hexdigest()
 
     def summarize_descriptions(self, dir="data"):
         """Generates a file with a summary of descriptions in the 'pdfs' table."""
