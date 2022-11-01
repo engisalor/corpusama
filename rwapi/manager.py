@@ -74,9 +74,9 @@ class Manager:
         record = [
             {
                 "params_hash": self.call_x.hash,
-                "parameters": json.dumps(self.call_x.parameters, sort_keys=True),
+                "parameters": self.call_x.parameters,
                 "rwapi_input": self.call_x.input.name,
-                "rwapi_date": "".join(['"', str(self.call_x.now), '"']),
+                "rwapi_date": self.call_x.now,
                 "count": self.call_x.response_json["count"],
                 "total_count": self.call_x.response_json["totalCount"],
             }
