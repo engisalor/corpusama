@@ -8,7 +8,6 @@ import string
 import sys
 
 import fasttext
-import numpy as np
 import pandas as pd
 import requests
 from pdfminer.high_level import extract_text
@@ -55,52 +54,25 @@ class Manager:
             call_x._increment_parameters()
             call_x._request()
             self.call_x = call_x
-            self._prepare_records()
             self._insert_records()
             self._insert_log()
-            self.update_pdf_table()
             call_x._wait()
 
-    def _prepare_records(self):
-        """Reshapes and prepares response data for adding to the records table."""
+    def _insert_records(self):
+        """Reshapes and inserts API results to the records table."""
 
         # normalize data
-        self.response_df = pd.json_normalize(
+        records = pd.json_normalize(
             self.call_x.response_json["data"], sep="_", max_level=1
         )
-        self.response_df.drop(["id"], axis=1, inplace=True, errors=False)
-        self.response_df.columns = [
-            x.replace("fields_", "") for x in self.response_df.columns
-        ]
-        self.response_df = self.response_df.applymap(rwapi.convert.str_to_obj)
-
+        records.drop(["id"], axis=1, inplace=True, errors=False)
+        records.columns = [x.replace("fields_", "") for x in records.columns]
         # add columns
-        self.response_df["rwapi_input"] = self.call_x.input.name
-        self.response_df["rwapi_date"] = self.call_x.now
-        for x in [
-            x for x in self.db.columns["records"] if x not in self.response_df.columns
-        ]:
-            self.response_df[x] = None
-
-        # reorder, convert to str
-        self.response_df = self.response_df[self.db.columns["records"]]
-        self.response_df = self.response_df.applymap(json.dumps)
-        self.response_df = rwapi.convert.nan_to_none(self.response_df)
-        logger.debug(
-            f"prepared {len(self.response_df.columns.tolist())} {sorted(self.response_df.columns.tolist())} columns"
-        )
-
-    def _insert_records(self):
-        """Inserts API data into records table, with report id as primary key."""
-
-        records = self.response_df.to_records(index=False)
-        n_columns = len(self.db.columns["records"])
-        self.db.c.executemany(
-            f"INSERT OR REPLACE INTO records VALUES ({','.join(list('?' * n_columns))})",
-            records,
-        )
-        self.db.conn.commit()
-        logger.debug(f"records")
+        records["rwapi_input"] = self.call_x.input.name
+        records["rwapi_date"] = self.call_x.now
+        for x in [x for x in self.db.columns["records"] if x not in records.columns]:
+            records[x] = None
+        self.db._insert(records, "records")
 
     def _insert_log(self):
         """Updates history of calls (replaces identical old calls)."""
@@ -108,60 +80,15 @@ class Manager:
         self.db.c.execute(
             f"INSERT OR REPLACE INTO call_log VALUES (?,?,?,?,?)",
             (
-                json.dumps(self.call_x.parameters),
-                json.dumps(self.call_x.input.name),
+                self.call_x.parameters,
+                self.call_x.input.name,
                 "".join(['"', str(self.call_x.now), '"']),
                 self.call_x.response_json["count"],
                 self.call_x.response_json["totalCount"],
             ),
         )
         self.db.conn.commit()
-        logger.debug(f"call_log")
-
-    def update_pdf_table(self):
-        """Updates PDF table when new records exist."""
-
-        # get records with PDFs
-        df_records = pd.read_sql("SELECT file, id FROM records", self.db.conn)
-        df = df_records[df_records["file"].notna()].copy()
-        df = df.applymap(rwapi.convert.str_to_obj)
-        df.reset_index(inplace=True, drop=True)
-
-        # make columns
-        df["description"] = df["file"].apply(
-            lambda item: [x.get("description", "") for x in item]
-        )
-        df["url"] = df["file"].apply(lambda item: [x.get("url", "") for x in item])
-        df["qty"] = df["file"].apply(len)
-        new_columns = [
-            "download",
-            "size_mb",
-            "lang_score_pdf",
-            "words_pdf",
-            "lang_pdf",
-            "exclude",
-        ]
-        for x in new_columns:
-            df[x] = None
-        df.loc[df["qty"] > 1, "exclude"] = np.array(
-            [[0] * x for x in df.loc[df["qty"] > 1, "qty"]], dtype=object
-        )
-
-        # set datatypes
-        df = df.applymap(rwapi.convert.empty_list_to_none)
-        df = df.applymap(json.dumps)
-        df = rwapi.convert.nan_to_none(df)
-
-        # insert into SQL
-        records = df[self.db.columns["pdfs"]].to_records(index=False)
-        self.db.c.executemany(
-            f"INSERT OR IGNORE INTO pdfs VALUES (?,?,?,?,?,?,?,?,?,?,?)", records
-        )
-        self.db.conn.commit()
-
-        qty_summary = {x: len(df[df["qty"] == x]) for x in sorted(df["qty"].unique())}
-        logger.debug(f"{len(df)}/{len(df_records)} records with PDFs")
-        logger.debug(f"pdf distribution {qty_summary}")
+        logger.debug(f"call logged")
 
     def make_filenames(self, row):
         """Generates a list of filenames for a record in the 'pdfs' table."""
@@ -248,7 +175,6 @@ class Manager:
             if x not in ["pdf", "txt"]:
                 raise ValueError(f"Valid modes are 'pdf', 'txt' or ['pdf','txt']")
 
-        self.update_pdf_table()
         df = pd.read_sql("SELECT * FROM pdfs", self.db.conn)
         dates, sizes, lengths, langs, scores = [], [], [], [], []
         row = df.iloc[index].copy()
@@ -324,117 +250,6 @@ class Manager:
         """Convenience wrapper for returning a sha256 checksum for an item."""
 
         return hashlib.sha256(item).hexdigest()
-
-    def add_exclude_list(self, name: str, lines: str):
-        """Adds/replaces an exclude list for PDFS with unwanted 'description' values.
-
-        - name = a unique name for an exclude list
-        - lines = a string with TXT formatting (one item per line)."""
-
-        self.db.c.execute(
-            "CREATE TABLE IF NOT EXISTS excludes (name PRIMARY KEY, list)"
-        )
-        self.db.c.execute("INSERT OR REPLACE INTO excludes VALUES (?,?)", (name, lines))
-        self.db.conn.commit()
-        logger.debug(f"{name} inserted")
-
-    def get_excludes(self, names=None):
-        """Generates self.excludes_df. Specify 'names' (str, list of str) to filter items."""
-
-        df = pd.read_sql("SELECT * FROM excludes", self.db.conn)
-
-        if isinstance(names, str):
-            names = [names]
-        elif isinstance(names, list):
-            pass
-        elif not names:
-            names = list(df["name"])
-        else:
-            raise TypeError("'names' must be None, a string or list of strings.")
-
-        self.excludes_df = df.loc[df["name"].isin(names)]
-        logger.debug(f"retrieved {names}")
-
-    def set_excludes(self, names=None):
-        """Sets exclude values in 'pdfs' table using values from 'excludes' table.
-
-        names = excludes list(s) to apply (str, list of str)"""
-
-        # get excludes items
-        self.get_excludes(names)
-        excludes_values = [x for x in self.excludes_df["list"].values]
-        excludes_list = [y for x in excludes_values for y in x.split()]
-        excludes_set = set(excludes_list)
-
-        # get pdfs table
-        df = pd.read_sql("SELECT id, exclude, description FROM pdfs", self.db.conn)
-        for x in ["description", "exclude"]:
-            df[x] = df[x].apply(json.loads)
-
-        def set_exclude(description):
-            """Sets exclude value for a row in 'pdfs'."""
-
-            excludes = []
-            if description:
-                for x in description:
-                    description_list = x.lower().split()
-                    if [x for x in description_list if x in excludes_set]:
-                        excludes.append(1)
-                    else:
-                        excludes.append(0)
-
-                if [x for x in excludes if x]:
-                    return excludes
-                else:
-                    return None
-
-        # set values and update table
-        df["exclude"] = df["description"].apply(set_exclude)
-        df["exclude"] = df["exclude"].apply(json.dumps)
-        records = df[["exclude", "id"]].to_records(index=False)
-        self.db.c.executemany("""UPDATE pdfs SET exclude = ? WHERE id=?;""", records)
-        self.db.conn.commit()
-        logger.debug(f"excludes set")
-
-    def del_exclude_files(self, names=None, dir="data/files", dry_run=False):
-        """Deletes files in dir if filename has match in exclude list.
-
-        Caution: deletes files whether or not they appear in 'pdfs' table.
-        E.g., 'languages' or ['languages', '<another list>']
-        Matches exact words, case insensitive, ('summary', 'spanish')
-        'names' refers to one or more exclude lists in the 'excludes' table.
-        (See get_excludes docstring)."""
-
-        # get files list
-        dir = pathlib.Path(dir)
-        if not dir.exists():
-            raise OSError(f"{dir} does not exist.")
-        stored_pdfs = [x for x in dir.glob("**/*") if x.is_file()]
-        stored_pdfs = [x for x in stored_pdfs if x]
-
-        # get exclude patterns
-        self.get_excludes(names)
-        excludes = [x.split() for x in self.excludes_df["list"].values]
-        excludes = [y for x in excludes for y in x]
-
-        deleted = 0
-        deletes = []
-        for x in stored_pdfs:
-            delete = []
-            for y in x.stem.lower().split("_"):
-                if y in excludes:
-                    delete.append(True)
-            if True in delete:
-                deletes.append(str(x))
-                deleted += 1
-            if not dry_run:
-                x.unlink(missing_ok=True)
-                x.with_suffix(".txt").unlink(missing_ok=True)
-
-        self.del_files = deletes
-        logger.debug(
-            f"del {deleted}/{len(stored_pdfs)} (dry_run={dry_run}): self.del_files"
-        )
 
     def summarize_descriptions(self, dir="data"):
         """Generates a file with a summary of descriptions in the 'pdfs' table."""
