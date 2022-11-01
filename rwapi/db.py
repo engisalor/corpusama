@@ -3,7 +3,7 @@ import sqlite3 as sql
 
 import pandas as pd
 
-import rwapi
+from rwapi import convert
 
 logger = logging.getLogger(__name__)
 log_file = ".rwapi.log"
@@ -95,7 +95,7 @@ class Database:
             )"""
         )
 
-        logger.debug(f"tables generated, if missing")
+        logger.debug("tables generated, if missing")
 
     def make_dfs(self, tables=["records", "pdfs", "call_log"]):
         """Adds a dict of dfs to instance.
@@ -115,14 +115,14 @@ class Database:
         if "call_log" in tables:
             self.dfs["call_log"] = pd.read_sql("SELECT * FROM call_log", self.conn)
         for k, v in self.dfs.items():
-            self.dfs[k] = v.applymap(rwapi.convert.str_to_obj)
+            self.dfs[k] = v.applymap(convert.str_to_obj)
 
         logger.debug(f"generated {tables} dataframes")
 
     def _insert(self, df, table):
         # standardize datatypes
         df = df.astype(str)
-        df = rwapi.convert.nan_to_none(df)
+        df = convert.nan_to_none(df)
         # insert into SQL
         records = df[self.columns[table]].to_records(index=False)
         n_columns = len(self.columns[table])

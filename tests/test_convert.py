@@ -8,6 +8,9 @@ from rwapi import convert
 
 class Test_Convert(unittest.TestCase):
     def test_str_to_obj(self):
+        self.assertEqual(convert.str_to_obj("6c6781143df3f3ab"), "6c6781143df3f3ab")
+        self.assertEqual(convert.str_to_obj(1.1), 1.1)
+        self.assertEqual(convert.str_to_obj("asdf"), "asdf")
         self.assertEqual(convert.str_to_obj('["a", 1, true]'), ["a", 1, True])
         self.assertEqual(convert.str_to_obj("['a', 1, True]"), ["a", 1, True])
         self.assertIs(convert.str_to_obj(None), None)

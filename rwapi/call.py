@@ -80,7 +80,8 @@ class Call:
         """Sets a wait time between API calls given n_calls and wait_dict.
 
         Example wait_dict: `{0: 1, 5: 49, 10: 99, 20: 499, 30: None}`
-        Where: keys = seconds to wait and values = the maximum number of calls allowed before increasing the wait time.
+        Where: keys = seconds to wait and values = the maximum number of
+        calls allowed before increasing the wait time.
         A `None` value indicates the largest possible wait time."""
 
         waits = []
@@ -124,7 +125,7 @@ class Call:
             raise TypeError("Input must be a dict of parameters or filepath.")
 
     def _increment_parameters(self):
-        """Adjusts offset when making multiple calls and halts job if no more results."""
+        """Adjusts offset parameter and halts job if no more results."""
 
         if self.call_n > 0:
             self.parameters["offset"] += self.response_json["count"]
@@ -143,7 +144,7 @@ class Call:
             time.sleep(self.wait)
 
     def run(self):
-        """Manages making one or more API calls and stores response_json in dict self.data."""
+        """Makes API call(s) and stores response_json in dict self.data."""
 
         for call_n in range(self.n_calls):
             self.call_n = call_n

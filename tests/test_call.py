@@ -4,7 +4,7 @@ import unittest
 import requests
 import yaml
 
-from rwapi import Call
+from rwapi.call import Call
 
 log_file = "tests/.test_rwapi.log"
 skip_manual = "Run test manually."

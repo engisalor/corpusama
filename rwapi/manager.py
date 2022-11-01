@@ -1,10 +1,10 @@
-import json
 import logging
 import pathlib
 
 import pandas as pd
 
-import rwapi
+from rwapi.call import Call
+from rwapi.db import Database
 
 logger = logging.getLogger(__name__)
 log_file = ".rwapi.log"
@@ -37,9 +37,7 @@ class Manager:
     ):
         """Manages making one or more API calls and saves results in self.db."""
 
-        call_x = rwapi.Call(
-            input, n_calls, appname, url, quota, wait_dict, self.log_level
-        )
+        call_x = Call(input, n_calls, appname, url, quota, wait_dict, self.log_level)
         for call_n in range(n_calls):
             call_x.call_n = call_n
             call_x._quota_enforce()
@@ -116,4 +114,4 @@ class Manager:
         logger.setLevel(numeric_level)
 
         # database connection
-        self.db = rwapi.db.Database(db, log_level)
+        self.db = Database(db, log_level)

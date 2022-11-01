@@ -8,13 +8,18 @@ import pandas as pd
 def str_to_obj(item):
     """Parses a string into an object if possible using json or literal_eval."""
 
-    try:
-        return json.loads(item)
-    except:
+    if not item:
+        return item
+    elif isinstance(item, (int, float)):
+        return item
+    else:
         try:
-            return ast.literal_eval(item)
-        except:
-            return item
+            return json.loads(item)
+        except json.JSONDecodeError:
+            try:
+                return ast.literal_eval(item)
+            except (SyntaxError, ValueError):
+                return item
 
 
 def nan_to_none(df: pd.DataFrame) -> pd.DataFrame:

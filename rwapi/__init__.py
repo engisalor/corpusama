@@ -1,10 +1,6 @@
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
-from . import convert, db
-from .call import Call
-from .manager import Manager
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
 formatter = logging.Formatter(
