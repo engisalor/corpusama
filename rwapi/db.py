@@ -72,16 +72,14 @@ class Database:
         self.c.execute(
             """
             CREATE TABLE IF NOT EXISTS pdfs (
-            id PRIMARY KEY,
-            qty,
+            id NOT NULL,
+            file_id NOT NULL UNIQUE,
             description,
-            exclude,
-            download,
-            size_mb,
-            words_pdf,
-            lang_pdf,
-            lang_score_pdf,
-            url
+            filename NOT NULL,
+            filesize NOT NULL,
+            url NOT NULL UNIQUE,
+            mimetype NOT NULL,
+            FOREIGN KEY(id) REFERENCES records(id)
             )"""
         )
 
@@ -120,8 +118,35 @@ class Database:
 
         logger.debug(f"generated {tables} dataframes")
 
-    def orphan_ids(self):
-        """Detects ids in 'pdfs' missing from 'records' and updates self.orphans."""
+    def _insert(self, df, table):
+        # standardize datatypes
+        df = df.astype(str)
+        df = rwapi.convert.nan_to_none(df)
+        # insert into SQL
+        records = df[self.columns[table]].to_records(index=False)
+        n_columns = len(self.columns[table])
+        self.c.executemany(
+            f"INSERT INTO {table} VALUES ({','.join(list('?' * n_columns))})", records
+        )
+        self.conn.commit()
+        logger.debug(f"{len(df)} rows into {table}")
+
+    def insert_pdfs(self):
+        """Updates 'pdfs' table."""
+
+        # get records with files
+        self.make_dfs("records")
+        df = self.dfs["records"]
+        pdfs = df.loc[df["file"].notna()].copy()
+        # make 1 row per file
+        pdfs_flat = pd.json_normalize(pdfs["file"].explode())
+        pdfs_flat.rename(columns={"id": "file_id"}, inplace=True)
+        # add columns
+        ids_temp = [
+            [pdfs.iloc[x]["id"]] * len(pdfs.iloc[x]["file"]) for x in range(len(pdfs))
+        ]
+        pdfs_flat["id"] = [x for y in ids_temp for x in y]
+        self._insert(pdfs_flat, "pdfs")
 
         self.c.execute("""SELECT id FROM pdfs EXCEPT SELECT id FROM records;""")
         results = self.c.fetchall()
