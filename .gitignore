@@ -1,0 +1,8 @@
+**/__pycache__/
+.*
+data/
+
+!.gitignore
+!.flake8
+!.pre-commit-config.yaml
+!.github
