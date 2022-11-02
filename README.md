@@ -1,17 +1,30 @@
-# Humanitarian Encyclopedia Template Repository
+# Humanitarian Encyclopedia Corpus Maker
 
-This repository serves as a template for adding new projects to Github. It's preconfigured for Python -- alter as needed.
+*Under construction*
 
-**Getting started**
+This repo contains code for building and maintaining Humanitarian Encyclopedia corpora.
 
-- use [release-please](https://github.com/googleapis/release-please) for version control
-  - be sure to follow [conventional commits](https://www.conventionalcommits.org)
-  - `CHANGELOG.md` is updated automatically (don't edit manually)
-- use [pre-commit](https://pre-commit.com/) for standardizing code and quality control
-  - install and configure pre-commit locally
-  - see `.pre-commit-config` for commit hooks and urls for more information
-- use `main` as the primary branch name
-- add a name to `pyproject.toml`
-- add a LICENSE file as appropriate
-- overwrite this README with the project's own content
-- update this template with improvements
+Note that required Python packages include stanza, which has dependencies, like torch, exceeding 1 GB. Downloading language resources for stanza can also add >1 GB of files. Using stanza with large data sets may require higher CPU/GPU/memory performance.
+
+Usage:
+
+```python
+from corpus_maker.maker import Maker
+
+# instantiate a Maker object
+# this gets data from a sqlite database with ReliefWeb records
+# loads the 'records' table into self.db
+# and starts a stanza nlp pipeline
+cm = Maker(
+    db="data/reliefweb.db",
+    resources="data/local-only/stanza_resources",
+    processors='tokenize,mwt,pos,lemma')
+
+# filter rows/manipulate the dataframe as needed to prepare data
+cm.df = cm.df.head(20)
+
+# run stanza on the 'body' column and export as files in a compressed tar.xz archive
+cm.export_vert(tarname="data/he.tar.xz")
+
+# next, compile this corpus using NoSketchEngine, etc.
+```
