@@ -1,6 +1,7 @@
 import io
 import logging
 import pathlib
+import re
 import sqlite3 as sql
 import tarfile
 
@@ -119,3 +120,31 @@ def load_tagset(file) -> dict:
     with open(file, "r") as stream:
         tagset = yaml.safe_load(stream)
     return tagset
+
+
+def get_xpos(doc) -> list:
+    """Returns a list of unique xpos strings from a stanza document."""
+
+    xpos = set([word.xpos for sent in doc.sentences for word in sent.words])
+    return sorted(xpos)
+
+
+def number_lemma(word):
+    """Replaces lemmas containing digits with [number] for lempos values.
+
+    Examples:
+    - 35	CD	[number]-m # instead of 35-m
+    - ii	CD	ii-m
+    - five	CD	five-m"""
+
+    if word.xpos == "CD" and bool(re.search(r"\d", word.lemma)):
+        word.lemma = "[number]"
+        return word.lemma
+    else:
+        return word.lemma
+
+    if word.xpos == "CD" and bool(re.search(r"\d", word.lemma)):
+        word.lemma = "[number]"
+        return word.lemma
+    else:
+        return word.lemma
