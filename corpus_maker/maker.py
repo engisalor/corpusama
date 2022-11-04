@@ -1,5 +1,6 @@
 import io
 import logging
+import math
 import pathlib
 import re
 import sqlite3 as sql
@@ -37,27 +38,40 @@ class Maker:
 
         return "".join([row["id"], ".vert"])
 
-    def stanza_df(self):
-        """Runs stanza on self.df["body"] and outputs a new column."""
+    def _stanza(self):
+        """Runs stanza on batches of df rows and outputs self.batch."""
 
         t0 = time.perf_counter()
-        # replace None w/ empty string
-        self.df["body"].fillna("", inplace=True)
+        # get dataframe slice
+        self.batch = self.df.iloc[
+            self.index_start : self.index_start + self.batch_size
+        ].copy()
+        self.batch["body"].fillna("", inplace=True)
         # make Document objects
-        in_docs = [stanza.Document([], text=d) for d in self.df["body"].values]
+        in_docs = [stanza.Document([], text=d) for d in self.batch["body"].values]
         # run nlp
-        self.df["stanza"] = self.nlp(in_docs)
-        t1 = time.perf_counter()
+        self.batch["stanza"] = self.nlp(in_docs)
         # convert empty str back to None
-        self.df["body"].replace("", None, inplace=True)
+        self.batch["body"].replace("", None, inplace=True)
         # job details
-        n_words = sum([doc.num_words for doc in self.df["stanza"].values])
+        t1 = time.perf_counter()
+        n_words = sum([doc.num_words for doc in self.batch["stanza"].values])
+        self.words_total += n_words
         n_seconds = t1 - t0
         words_second = int(n_words / n_seconds)
-        logger.debug(f"{n_seconds:0.2f}s - {n_words:,} words - {words_second:,}/s")
+        logger.debug(
+            "".join(
+                [
+                    f"{n_seconds:0.0f}s - ",
+                    f"{n_words:,} words - ",
+                    f"{words_second:,}/s - ",
+                    f"batch [{self.index_start}:{self.index_start + self.batch_size}]",
+                ]
+            )
+        )
 
     def _vert_row(self, row):
-        """Makes vertical formatted text for a df row."""
+        """Makes vertical formatted text for a row."""
 
         if not isinstance(row["body"], str):
             return None
@@ -65,8 +79,14 @@ class Maker:
             # make vert lines
             items = []
             for sent in row["stanza"].sentences:
+                # set sentence id
                 self.sentence_id += 1
                 sentence = [f"<s id={self.sentence_id}>\n"]
+                # warn if missing lemmas
+                for word in sent.words:
+                    if word.lemma is None:
+                        logger.warning(f"{row['id']} lemmatize fail: {word.text}")
+                # make vert lines
                 words = [
                     "".join(
                         [
@@ -90,50 +110,73 @@ class Maker:
             doc_stop = "</doc>\n"
             return "".join([doc_start, doc_content, doc_stop])
 
-    def vert_df(self):
-        """Makes vertical formatted text for rows in self.df."""
+    def _vert(self):
+        """Makes vertical formatted text for self.batch."""
 
-        self.df["vert"] = self.df.apply(self._vert_row, axis=1)
+        self.batch["vert"] = self.batch.apply(self._vert_row, axis=1)
 
-    def vert_export(self, archive_name=None):
-        """Exports df["vert"] to a tar archive with one file per row."""
+    def _export(self, archive_name=None):
+        """Exports vertical text to a tar archive."""
 
         # make archive name
         if not archive_name:
             archive_name = pathlib.Path(self.db_name)
         else:
             archive_name = pathlib.Path(archive_name)
-        archive_name = archive_name.with_suffix(".tar")
+        self.archive_name = archive_name.with_suffix(".tar")
 
         # write data
-        with tarfile.open(archive_name, "a") as tar:
-            self._vert_tar(tar)
-        logger.debug(f"{archive_name}")
+        with tarfile.open(self.archive_name, "a") as tar:
+            self._tar(tar)
 
-    def _vert_tar(self, tar):
+    def _tar(self, tar):
         """Handles file insertion into a tar archive - skips existing/None."""
 
         existing = tar.getmembers()
         existing_names = [x.name for x in existing]
 
-        for x in range(len(self.df)):
-            if self.df.iloc[x]["vert"] is None:
-                logger.warning(f'{self.df.iloc[x]["id"]} skipped (no content)')
+        for x in range(len(self.batch)):
+            if self.batch.iloc[x]["vert"] is None:
+                logger.warning(f'{self.batch.iloc[x]["id"]} skip (no content)')
             else:
-                info = tarfile.TarInfo(name=self.df.iloc[x]["filename"])
+                info = tarfile.TarInfo(name=self.batch.iloc[x]["filename"])
                 if info.name in existing_names:
-                    logger.warning(f'{self.df.iloc[x]["id"]} skipped (exists)')
+                    logger.warning(f'{self.batch.iloc[x]["id"]} skip (file exists)')
                 else:
-                    text_bytes = io.BytesIO(bytes(self.df.iloc[x]["vert"].encode()))
+                    text_bytes = io.BytesIO(bytes(self.batch.iloc[x]["vert"].encode()))
                     info.size = len(text_bytes.getbuffer())
                     tar.addfile(tarinfo=info, fileobj=text_bytes)
 
-    def make_corpus(self):
-        """Makes a corpus from self.df["body"] content and exports to an archive."""
+    def make_corpus(self, index_start=0, batch_size=100):
+        """Makes vertical files from self.df and appends to <db.name>.tar."""
 
-        self.stanza_df()
-        self.vert_df()
-        self.vert_export()
+        t0 = time.perf_counter()
+        self.words_total = 0
+        self.batch_size = batch_size
+        if len(self.df) < self.batch_size:
+            self.batch_size = len(self.df)
+        self.index_start = index_start - self.batch_size
+        batches = math.floor(len(self.df) / self.batch_size)
+
+        for x in range(batches):
+            self.index_start += self.batch_size
+            self._stanza()
+            self._vert()
+            self._export()
+            logger.debug(f"{self.archive_name} appended")
+
+        t1 = time.perf_counter()
+        n_seconds = t1 - t0
+        words_second = int(self.words_total / n_seconds)
+        logger.debug(
+            "".join(
+                [
+                    f"{n_seconds/60:0.0f}m - ",
+                    f"{self.words_total:,} words - ",
+                    f"{words_second*60:,}/m",
+                ]
+            )
+        )
 
     def _update_model(self):
         """Sets whether to look for stanza model updates based on logs."""
