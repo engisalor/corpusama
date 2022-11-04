@@ -1,5 +1,6 @@
 import io
 import logging
+import pathlib
 import sqlite3 as sql
 import tarfile
 
@@ -66,12 +67,21 @@ class Maker:
                 info.size = len(text_bytes.getbuffer())
                 tar.addfile(tarinfo=info, fileobj=text_bytes)
 
-    def save_xpos(self, doc):
-        xpos = set([word.xpos for sent in doc.sentences for word in sent.words])
-        xpos = sorted(xpos)
-        xpos = [x + "\n" for x in xpos]
-        with open("xpos_stanza.txt", "w") as f:
-            f.writelines(xpos)
+    def _update_model(self):
+        """Sets whether to look for stanza model updates based on logs."""
+
+        self.nlp_runs = 0
+        if pathlib.Path(self.log_file).exists():
+            with open(pathlib.Path(self.log_file), "r") as f:
+                daily_log = f.readlines()
+            for x in daily_log:
+                if "nlp ready" in x:
+                    self.nlp_runs += 1
+        if self.nlp_runs > 0:
+            self.download_method = None
+        else:
+            self.download_method = True
+        logger.debug(f"{self.download_method}")
 
     def __init__(
         self,
@@ -79,9 +89,26 @@ class Maker:
         resources="data/local-only/stanza_resources",
         processors="tokenize,mwt,pos,lemma",
         tagset="corpus_maker/tagset.yml",
+        log_level="debug",
     ):
+        self.log_file = log_file
         self.db_name = db
-        self.nlp = stanza.Pipeline("en", resources, processors=processors)
+
+        # logging
+        numeric_level = getattr(logging, log_level.upper(), None)
+        if not isinstance(numeric_level, int):
+            raise ValueError("Invalid log level: %s" % log_level)
+        logger.setLevel(numeric_level)
+
+        # instantiate
+        self._update_model()
+        self.nlp = stanza.Pipeline(
+            "en",
+            resources,
+            processors=processors,
+            download_method=self.download_method,
+        )
+        logger.debug("nlp ready")
         self.import_db()
         self.tagset = load_tagset(tagset)
 
