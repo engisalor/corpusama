@@ -202,19 +202,18 @@ def get_xpos(doc) -> list:
 def fix_lemma(word):
     """Replaces lemmas containing digits with [number] for lempos values.
 
+    Also manages bad lemma values: defaults to word.text if no word.lemma.
+
     Examples:
     - 35	CD	[number]-m # instead of 35-m
     - ii	CD	ii-m
     - five	CD	five-m"""
 
+    # fix missing lemma
+    if word.lemma is None:
+        word.lemma = word.text
+    # change lpos for numbers
     if word.xpos == "CD" and bool(re.search(r"\d", word.lemma)):
-        word.lemma = "[number]"
-        return word.lemma
-    else:
-        return word.lemma
-
-    if word.xpos == "CD" and bool(re.search(r"\d", word.lemma)):
-        word.lemma = "[number]"
-        return word.lemma
+        return "[number]"
     else:
         return word.lemma
