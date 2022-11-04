@@ -23,8 +23,10 @@ cm = Maker(
 # filter rows/manipulate the dataframe as needed to prepare data
 cm.df = cm.df.head(20)
 
-# run stanza on the 'body' column and export as files in a compressed tar.xz archive
-cm.export_vert(tarname="data/he.tar.xz")
+# make an archive of .vert files
+cm.make_corpus()
+
+# see other methods with the Maker object (in development)
 
 # next, compile this corpus using NoSketchEngine, etc.
 ```
