@@ -4,6 +4,7 @@ import pathlib
 import re
 import sqlite3 as sql
 import tarfile
+import time
 
 import pandas as pd
 import stanza
@@ -36,37 +37,92 @@ class Maker:
 
         return "".join([row["id"], ".vert"])
 
-    def _vert(self, row):
-        if isinstance(row["body"], str):
-            doc = self.nlp(row["body"])
-            # make lines w/ sentence tags
-            vert = []
-            for sent in doc.sentences:
-                sentence = ["<s>\n"]
+    def stanza_df(self):
+        """Runs stanza on self.df["body"] and outputs a new column."""
+
+        t0 = time.perf_counter()
+        # replace None w/ empty string
+        self.df["body"].fillna("", inplace=True)
+        # make Document objects
+        in_docs = [stanza.Document([], text=d) for d in self.df["body"].values]
+        # run nlp
+        self.df["stanza"] = self.nlp(in_docs)
+        t1 = time.perf_counter()
+        # convert empty str back to None
+        self.df["body"].replace("", None, inplace=True)
+        # job details
+        n_words = sum([doc.num_words for doc in self.df["stanza"].values])
+        n_seconds = t1 - t0
+        words_second = int(n_words / n_seconds)
+        logger.debug(f"{n_seconds:0.2f}s - {n_words:,} words - {words_second:,}/s")
+
+    def _vert_row(self, row):
+        """Makes vertical formatted text for a df row."""
+
+        if not isinstance(row["body"], str):
+            return None
+        else:
+            # make vert lines
+            items = []
+            for sent in row["stanza"].sentences:
+                self.sentence_id += 1
+                sentence = [f"<s id={self.sentence_id}>\n"]
                 words = [
-                    f"{word.text}\t{word.xpos}\t{word.lemma}-{word.xpos[0].lower()}\n"
+                    "".join(
+                        [
+                            word.text,
+                            "\t",
+                            word.xpos,
+                            "\t",
+                            fix_lemma(word),
+                            self.tagset[word.xpos]["lpos"],
+                            "\n",
+                        ]
+                    )
                     for word in sent.words
                 ]
                 sentence.extend(words)
                 sentence.append("</s>\n")
-                vert.extend(sentence)
-            # make vert file
+                items.extend(sentence)
+            # make vert document
             doc_start = f'<doc id="{row["id"]}" filename="{row["filename"]}">\n'
-            content = "".join(vert)
+            doc_content = "".join(items)
             doc_stop = "</doc>\n"
-            text = "".join([doc_start, content, doc_stop])
-            return text
+            return "".join([doc_start, doc_content, doc_stop])
 
-    def export_vert(self, tarname: str = "data/he.tar.xz"):
-        self.df["filename"] = self.df.apply(self._filename, axis=1)
-        self.df["vert"] = self.df.apply(self._vert, axis=1)
+    def vert_df(self):
+        """Makes vertical formatted text for rows in self.df."""
 
-        with tarfile.open(tarname, "w:xz") as tar:
+        self.df["vert"] = self.df.apply(self._vert_row, axis=1)
+
+    def vert_export(self, archive_name=None):
+        """Exports df["vert"] to a tar.xz archive with one file per row."""
+
+        # make archive name
+        if not archive_name:
+            archive_name = pathlib.Path(self.db_name)
+        else:
+            archive_name = pathlib.Path(archive_name)
+        archive_name = archive_name.with_suffix(".tar.xz")
+
+        # write data
+        with tarfile.open(archive_name, "w:xz") as tar:
             for x in range(len(self.df)):
-                info = tarfile.TarInfo(name=self.df.iloc[x]["filename"])
-                text_bytes = io.BytesIO(bytes(self.df.iloc[x]["vert"].encode()))
-                info.size = len(text_bytes.getbuffer())
-                tar.addfile(tarinfo=info, fileobj=text_bytes)
+                if self.df.iloc[x]["vert"] is None:
+                    logger.warning(f'{self.df.iloc[x]["id"]} skipped (no content)')
+                else:
+                    info = tarfile.TarInfo(name=self.df.iloc[x]["filename"])
+                    text_bytes = io.BytesIO(bytes(self.df.iloc[x]["vert"].encode()))
+                    info.size = len(text_bytes.getbuffer())
+                    tar.addfile(tarinfo=info, fileobj=text_bytes)
+        logger.debug(f"{archive_name}")
+
+    def make_corpus(self):
+        """Makes a corpus from self.df["body"] content and exports to an archive."""
+
+        self.stanza_df()
+        self.vert_df()
+        self.vert_export()
 
     def _update_model(self):
         """Sets whether to look for stanza model updates based on logs."""
@@ -132,7 +188,7 @@ def get_xpos(doc) -> list:
     return sorted(xpos)
 
 
-def number_lemma(word):
+def fix_lemma(word):
     """Replaces lemmas containing digits with [number] for lempos values.
 
     Examples:
