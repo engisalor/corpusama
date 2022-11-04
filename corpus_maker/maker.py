@@ -96,26 +96,37 @@ class Maker:
         self.df["vert"] = self.df.apply(self._vert_row, axis=1)
 
     def vert_export(self, archive_name=None):
-        """Exports df["vert"] to a tar.xz archive with one file per row."""
+        """Exports df["vert"] to a tar archive with one file per row."""
 
         # make archive name
         if not archive_name:
             archive_name = pathlib.Path(self.db_name)
         else:
             archive_name = pathlib.Path(archive_name)
-        archive_name = archive_name.with_suffix(".tar.xz")
+        archive_name = archive_name.with_suffix(".tar")
 
         # write data
-        with tarfile.open(archive_name, "w:xz") as tar:
-            for x in range(len(self.df)):
-                if self.df.iloc[x]["vert"] is None:
-                    logger.warning(f'{self.df.iloc[x]["id"]} skipped (no content)')
+        with tarfile.open(archive_name, "a") as tar:
+            self._vert_tar(tar)
+        logger.debug(f"{archive_name}")
+
+    def _vert_tar(self, tar):
+        """Handles file insertion into a tar archive - skips existing/None."""
+
+        existing = tar.getmembers()
+        existing_names = [x.name for x in existing]
+
+        for x in range(len(self.df)):
+            if self.df.iloc[x]["vert"] is None:
+                logger.warning(f'{self.df.iloc[x]["id"]} skipped (no content)')
+            else:
+                info = tarfile.TarInfo(name=self.df.iloc[x]["filename"])
+                if info.name in existing_names:
+                    logger.warning(f'{self.df.iloc[x]["id"]} skipped (exists)')
                 else:
-                    info = tarfile.TarInfo(name=self.df.iloc[x]["filename"])
                     text_bytes = io.BytesIO(bytes(self.df.iloc[x]["vert"].encode()))
                     info.size = len(text_bytes.getbuffer())
                     tar.addfile(tarinfo=info, fileobj=text_bytes)
-        logger.debug(f"{archive_name}")
 
     def make_corpus(self):
         """Makes a corpus from self.df["body"] content and exports to an archive."""
