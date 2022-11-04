@@ -5,6 +5,7 @@ import tarfile
 
 import pandas as pd
 import stanza
+import yaml
 
 logger = logging.getLogger(__name__)
 log_file = ".corpus-maker.log"
@@ -69,7 +70,17 @@ class Maker:
         db="data/reliefweb.db",
         resources="data/local-only/stanza_resources",
         processors="tokenize,mwt,pos,lemma",
+        tagset="corpus_maker/tagset.yml",
     ):
         self.db_name = db
         self.nlp = stanza.Pipeline("en", resources, processors=processors)
         self.import_db()
+        self.tagset = load_tagset(tagset)
+
+
+def load_tagset(file) -> dict:
+    """Loads a tagset YML file containing a dict of dicts of xpos tags."""
+
+    with open(file, "r") as stream:
+        tagset = yaml.safe_load(stream)
+    return tagset
