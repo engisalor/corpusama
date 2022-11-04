@@ -86,12 +86,14 @@ class Maker:
 
     def __init__(
         self,
-        db="data/reliefweb.db",
+        db,
         resources="data/local-only/stanza_resources",
         processors="tokenize,mwt,pos,lemma",
         tagset="corpus_maker/tagset.yml",
         log_level="debug",
     ):
+        # variables
+        self.sentence_id = 0
         self.log_file = log_file
         self.db_name = db
 
@@ -111,6 +113,7 @@ class Maker:
         )
         logger.debug("nlp ready")
         self.import_db()
+        self.df["filename"] = self.df.apply(self._filename, axis=1)
         self.tagset = load_tagset(tagset)
 
 
