@@ -12,18 +12,26 @@ log_file = ".corpus-maker.log"
 
 
 class Maker:
-    """A class for managing corpus development."""
+    """A class for managing corpus generation from an SQL database of data."""
 
     def import_db(self):
+        """Opens a SQL connection and reads records into the self.df dataframe."""
+
         self.conn = sql.connect(self.db_name)
         self.c = self.conn.cursor()
         self.df = pd.read_sql("SELECT * FROM records", self.conn)
+        logger.debug(f"{self.db_name}")
 
     def close_db(self):
+        """Closes a SQL connection."""
+
         self.c.close()
         self.conn.close()
+        logger.debug(f"{self.db_name}")
 
     def _filename(self, row):
+        "Generates a filename for a record."
+
         return "".join([row["id"], ".vert"])
 
     def _vert(self, row):
