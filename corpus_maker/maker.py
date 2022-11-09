@@ -1,4 +1,5 @@
 import io
+import json
 import logging
 import math
 import pathlib
@@ -193,6 +194,61 @@ class Maker:
         else:
             self.download_method = True
         logger.debug(f"{self.download_method}")
+
+    def _make_doc_tag(
+        self,
+        row,
+        drops=[
+            "disaster__type",
+            "file",
+            "headline",
+            "image",
+            "origin",
+            "source__homepage",
+            "url",
+        ],
+    ):
+        """Creates a <doc> tag with associated attributes, except for dropped columns.
+
+        (Automatically adds body, body_html and stanza columns to drops.)"""
+
+        # convert df row to dict
+        if not drops:
+            drops = []
+        drops.extend(["stanza", "body", "body_html"])
+        row = {k: v for k, v in row.items() if not k.startswith(tuple(drops))}
+        # order doc id first
+        doc_tag = [f'<doc id="{row["id"]}" ']
+        del row["id"]
+        # add other attribute tags and store attrs
+        self.attrs = set()
+        for k, v in row.items():
+            doc_tag.append(f"{k}={json.dumps(str(v),ensure_ascii=False)} ")
+            self.attrs.update([k])
+        doc_tag.append(">\n")
+        return "".join(doc_tag)
+
+    def _save_attributes(self):
+        """Saves corpus doc attributes in self.attrs to a config file.
+
+        Assumes all attributes are indexes with "|" for MULTISEP."""
+
+        attrs_str = []
+        for attr in sorted(self.attrs):
+            item = "".join(
+                [
+                    '\tATTRIBUTE "' + attr + '" {\n',
+                    '\t\tDYNTYPE "index"\n',
+                    '\t\tMULTISEP "|"\n',
+                    '\t\tMULTIVALUE "y"\n\t}\n',
+                ]
+            )
+            attrs_str.append(item)
+
+        file = f"data/{pathlib.Path(self.db_name).stem}_attributes.txt"
+        with open(file, "w") as f:
+            f.write("".join(attrs_str))
+        logger.debug(f"{file}")
 
     def __init__(
         self,
