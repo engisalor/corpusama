@@ -106,10 +106,10 @@ class Maker:
                 items.extend(sentence)
 
             # make vert document
-            doc_start = f'<doc id="{row["id"]}" filename="{row["filename"]}">\n'
+            doc_tag = self._make_doc_tag(row)
             doc_content = "".join(items)
             doc_stop = "</doc>\n"
-            return "".join([doc_start, doc_content, doc_stop])
+            return "".join([doc_tag, doc_content, doc_stop])
 
     def _vert(self):
         """Makes vertical formatted text for self.batch."""
@@ -157,6 +157,15 @@ class Maker:
 
         for x in range(batches):
             self.index_start += self.batch_size
+            # get df slice and prepare
+            self.batch = self.df.iloc[
+                self.index_start : self.index_start + self.batch_size
+            ].copy()
+
+            self.batch = utils.flatten_df(self.batch)
+            self.batch = utils.format_df(self.batch)
+            # process texts
+            self.batch["body_html"] = self.batch["body_html"].apply(utils.html_to_text)
             self._stanza()
             self._vert()
             self._export()
