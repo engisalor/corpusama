@@ -37,23 +37,19 @@ class Maker:
     def _filename(self, row):
         "Generates a filename for a record."
 
-        return "".join([row["id"], ".vert"])
+        return f'{row["id"]}.vert'
 
     def _stanza(self):
         """Runs stanza on batches of df rows and outputs self.batch."""
 
         t0 = time.perf_counter()
-        # get dataframe slice
-        self.batch = self.df.iloc[
-            self.index_start : self.index_start + self.batch_size
-        ].copy()
-        self.batch["body"].fillna("", inplace=True)
+        self.batch["body_html"].fillna("", inplace=True)
         # make Document objects
-        in_docs = [stanza.Document([], text=d) for d in self.batch["body"].values]
+        in_docs = [stanza.Document([], text=d) for d in self.batch["body_html"].values]
         # run nlp
         self.batch["stanza"] = self.nlp(in_docs)
         # convert empty str back to None
-        self.batch["body"].replace("", None, inplace=True)
+        self.batch["body_html"].replace("", None, inplace=True)
         # job details
         t1 = time.perf_counter()
         n_words = sum([doc.num_words for doc in self.batch["stanza"].values])
@@ -74,7 +70,8 @@ class Maker:
     def _vert_row(self, row):
         """Makes vertical formatted text for a row."""
 
-        if not isinstance(row["body"], str):
+        row = dict(row)
+        if not isinstance(row["body_html"], str):
             return None
         else:
             # make vert lines
@@ -105,6 +102,7 @@ class Maker:
                 sentence.extend(words)
                 sentence.append("</s>\n")
                 items.extend(sentence)
+
             # make vert document
             doc_start = f'<doc id="{row["id"]}" filename="{row["filename"]}">\n'
             doc_content = "".join(items)
