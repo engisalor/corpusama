@@ -12,6 +12,8 @@ import pandas as pd
 import stanza
 import yaml
 
+from corpus_maker import utils
+
 logger = logging.getLogger(__name__)
 log_file = ".corpus-maker.log"
 
@@ -114,7 +116,7 @@ class Maker:
 
         self.batch["vert"] = self.batch.apply(self._vert_row, axis=1)
 
-    def _export(self, archive_name=None):
+    def _export(self, archive_name=None, dir="data"):
         """Exports vertical text to a tar archive."""
 
         # make archive name
@@ -122,29 +124,25 @@ class Maker:
             archive_name = pathlib.Path(self.db_name)
         else:
             archive_name = pathlib.Path(archive_name)
-        self.archive_name = archive_name.with_suffix(".tar")
+        self.archive_name = pathlib.Path(dir) / archive_name.with_suffix(".tar").name
 
         # write data
         with tarfile.open(self.archive_name, "a") as tar:
             self._tar(tar)
 
     def _tar(self, tar):
-        """Handles file insertion into a tar archive - skips existing/None."""
+        """Handles file insertion into an archive (appends or overwrites existing)."""
 
-        existing = tar.getmembers()
-        existing_names = [x.name for x in existing]
-
+        now = pd.Timestamp.now().round("S").timestamp()
         for x in range(len(self.batch)):
             if self.batch.iloc[x]["vert"] is None:
                 logger.warning(f'{self.batch.iloc[x]["id"]} skip (no content)')
             else:
                 info = tarfile.TarInfo(name=self.batch.iloc[x]["filename"])
-                if info.name in existing_names:
-                    logger.warning(f'{self.batch.iloc[x]["id"]} skip (file exists)')
-                else:
-                    text_bytes = io.BytesIO(bytes(self.batch.iloc[x]["vert"].encode()))
-                    info.size = len(text_bytes.getbuffer())
-                    tar.addfile(tarinfo=info, fileobj=text_bytes)
+                text_bytes = io.BytesIO(bytes(self.batch.iloc[x]["vert"].encode()))
+                info.size = len(text_bytes.getbuffer())
+                info.mtime = now
+                tar.addfile(tarinfo=info, fileobj=text_bytes)
 
     def make_corpus(self, index_start=0, batch_size=100):
         """Makes vertical files from self.df and appends to <db.name>.tar."""
@@ -164,6 +162,11 @@ class Maker:
             self._export()
             logger.debug(f"{self.archive_name} appended")
 
+        # compress tar and save attrs config file
+        utils.compress_tar(self.archive_name)
+        self._save_attributes()
+
+        # logging
         t1 = time.perf_counter()
         n_seconds = t1 - t0
         words_second = int(self.words_total / n_seconds)
