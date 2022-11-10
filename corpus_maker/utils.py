@@ -2,7 +2,6 @@ import ast
 import json
 import logging
 import tarfile
-import time
 from html.parser import HTMLParser
 
 import pandas as pd
@@ -93,24 +92,17 @@ def flatten_df(df, separator="__"):
 
     New column names are labelled by <source column name><separator><new key>."""
 
-    t0 = time.perf_counter()
-
     # flatten data
     df = df.copy().applymap(str_to_obj)
     for col in df.columns:
         prefix = "".join([col, separator])
         df[col] = df[col].apply(flatten_list_of_dict)
         df = pd.concat([df, pd.json_normalize(df[col]).add_prefix(prefix)], axis=1)
-
     # drop original list of dict columns
     for col in df.columns:
         types = set([type(x) for x in df[col]])
         if dict in types:
             df.drop(col, inplace=True, axis=1)
-
-    # logging
-    t1 = time.perf_counter()
-    logger.debug(f"{t1 - t0:0.1f}s")
 
     return df
 
@@ -126,13 +118,10 @@ def prepare_df(df, year_column=["date__original"]):
     df.fillna("", inplace=True)
     df = df.applymap(list_to_string)
     df.columns = [x.replace(".", "__") for x in df.columns]
-    df.id = df.id.astype(int)
-
     # add year-only column(s)
     if not year_column:
         year_column = []
     for col in year_column:
         df["__".join([col, "year"])] = pd.to_datetime(df[col]).dt.strftime(r"%Y")
 
-    logger.debug(f"{year_column} added")
     return df
