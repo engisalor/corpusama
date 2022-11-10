@@ -45,35 +45,29 @@ class Maker:
         """Runs stanza on batches of df rows and outputs self.batch."""
 
         t0 = time.perf_counter()
-        self.batch["body_html"].fillna("", inplace=True)
-        # make Document objects
-        in_docs = [stanza.Document([], text=d) for d in self.batch["body_html"].values]
         # run nlp
-        self.batch["stanza"] = self.nlp(in_docs)
-        # convert empty str back to None
-        self.batch["body_html"].replace("", None, inplace=True)
-        # job details
+        docs = [stanza.Document([], text=d) for d in self.batch[self.text_row].values]
+        self.batch["stanza"] = self.nlp(docs)
+        # logging
         t1 = time.perf_counter()
         n_words = sum([doc.num_words for doc in self.batch["stanza"].values])
-        self.words_total += n_words
+        self.words += n_words
         n_seconds = t1 - t0
-        words_second = int(n_words / n_seconds)
+        words_s = int(n_words / n_seconds)
         logger.debug(
-            "".join(
+            " ".join(
                 [
-                    f"{n_seconds:0.0f}s - ",
-                    f"{n_words:,} words - ",
-                    f"{words_second:,}/s - ",
+                    f"{n_seconds:0.0f}s - {n_words:,} words - {words_s:,}/s -",
                     f"batch [{self.index_start}:{self.index_start + self.batch_size}]",
                 ]
             )
         )
 
-    def _vert_row(self, row):
-        """Makes vertical formatted text for a row."""
+    def to_vertical(self, row):
+        """Makes vertical formatted text from a df row/dict."""
 
         row = dict(row)
-        if not isinstance(row["body_html"], str):
+        if not isinstance(row[self.text_row], str):
             return None
         else:
             # make vert lines
@@ -83,57 +77,28 @@ class Maker:
                 self.sentence_id += 1
                 sentence = [f"<s id={self.sentence_id}>\n"]
                 # warn if missing lemmas
-                for word in sent.words:
-                    if word.lemma is None:
-                        logger.warning(f"{row['id']} lemmatize fail: {word.text}")
+                for w in sent.words:
+                    if w.lemma is None:
+                        logger.warning(f"{row['id']} lemmatize fail: {w.text}")
                 # make vert lines
                 words = [
-                    "".join(
-                        [
-                            word.text,
-                            "\t",
-                            word.xpos,
-                            "\t",
-                            fix_lemma(word),
-                            self.tagset[word.xpos]["lpos"],
-                            "\n",
-                        ]
-                    )
-                    for word in sent.words
+                    f'{w.text}\t{w.xpos}\t{fix_lemma(w)}{self.tagset[w.xpos]["lpos"]}\n'
+                    for w in sent.words
                 ]
                 sentence.extend(words)
                 sentence.append("</s>\n")
                 items.extend(sentence)
 
             # make vert document
-            doc_tag = self._make_doc_tag(row)
+            doc_tag = self._doc_tag(row)
             doc_content = "".join(items)
             doc_stop = "</doc>\n"
             return "".join([doc_tag, doc_content, doc_stop])
 
-    def _vert(self):
-        """Makes vertical formatted text for self.batch."""
-
-        self.batch["vert"] = self.batch.apply(self._vert_row, axis=1)
-
-    def _export(self, archive_name=None, dir="data"):
-        """Exports vertical text to a tar archive."""
-
-        # make archive name
-        if not archive_name:
-            archive_name = pathlib.Path(self.db_name)
-        else:
-            archive_name = pathlib.Path(archive_name)
-        self.archive_name = pathlib.Path(dir) / archive_name.with_suffix(".tar").name
-
-        # write data
-        with tarfile.open(self.archive_name, "a") as tar:
-            self._tar(tar)
-
     def _tar(self, tar):
         """Handles file insertion into an archive (appends or overwrites existing)."""
 
-        now = pd.Timestamp.now().round("S").timestamp()
+        now = pd.Timestamp.now(tz="UTC").timestamp()
         for x in range(len(self.batch)):
             if self.batch.iloc[x]["vert"] is None:
                 logger.warning(f'{self.batch.iloc[x]["id"]} skip (no content)')
@@ -144,49 +109,69 @@ class Maker:
                 info.mtime = now
                 tar.addfile(tarinfo=info, fileobj=text_bytes)
 
-    def make_corpus(self, index_start=0, batch_size=100):
-        """Makes vertical files from self.df and appends to <db.name>.tar."""
+    def make_corpus(
+        self,
+        text_row="body_html",
+        drops=None,
+        index_start=0,
+        batch_size=100,
+    ):
+        """Makes vertical files from self.df and appends to data/<db.name>.tar.
+
+        Overwrites previous tar archive.
+
+        Options
+        - text_row, str, the row containing text to be converted to vertical
+        - drops, str or [str], user-defined columns to exclude from text attributes
+        - index_start, int, the starting row for processing data
+        - batch_size, int, the max number of rows processed at once"""
 
         t0 = time.perf_counter()
-        self.words_total = 0
+        # define settings
+        self.archive_name = (
+            pathlib.Path("data") / pathlib.Path(self.db_name).with_suffix(".tar").name
+        )
+        self.archive_name.unlink(missing_ok=True)
+        self.text_row = text_row
+        if not drops:
+            drops = []
+        elif isinstance(drops, str):
+            drops = [drops]
+        self.drops = set(drops + ["stanza", "body", "body_html"])
+        self.words = 0
         self.batch_size = batch_size
         if len(self.df) < self.batch_size:
             self.batch_size = len(self.df)
         self.index_start = index_start - self.batch_size
         batches = math.floor(len(self.df) / self.batch_size)
-
+        # process batches
         for x in range(batches):
-            self.index_start += self.batch_size
-            # get df slice and prepare
-            self.batch = self.df.iloc[
-                self.index_start : self.index_start + self.batch_size
-            ].copy()
-            self.batch = utils.flatten_df(self.batch)
-            self.batch = utils.prepare_df(self.batch)
-            # process texts
-            self.batch["body_html"] = self.batch["body_html"].apply(utils.html_to_text)
-            self._stanza()
-            self._vert()
-            self._export()
-            logger.debug(f"{self.archive_name} appended")
-
+            self._process_batch()
         # compress tar and save attrs config file
         utils.compress_tar(self.archive_name)
         self._save_attributes()
-
         # logging
         t1 = time.perf_counter()
         n_seconds = t1 - t0
-        words_second = int(self.words_total / n_seconds)
-        logger.debug(
-            "".join(
-                [
-                    f"{n_seconds/60:0.0f}m - ",
-                    f"{self.words_total:,} words - ",
-                    f"{words_second*60:,}/m",
-                ]
-            )
-        )
+        words_s = int(self.words / n_seconds)
+        m0 = f"{n_seconds/60:0.0f}m - {self.words:,} words - {words_s*60:,}/m"
+        m1 = f"- {self.archive_name} - drops - {self.drops}"
+        logger.debug(" ".join([m0, m1]))
+
+    def _process_batch(self):
+        self.index_start += self.batch_size
+        # get df slice and prepare
+        self.batch = self.df.iloc[
+            self.index_start : self.index_start + self.batch_size
+        ].copy()
+        self.batch = utils.flatten_df(self.batch)
+        self.batch = utils.prepare_df(self.batch)
+        # process texts
+        self.batch[self.text_row] = self.batch[self.text_row].apply(utils.html_to_text)
+        self._stanza()
+        self.batch["vert"] = self.batch.apply(self.to_vertical, axis=1)
+        with tarfile.open(self.archive_name, "a") as tar:
+            self._tar(tar)
 
     def _update_model(self):
         """Sets whether to look for stanza model updates based on logs."""
@@ -204,28 +189,11 @@ class Maker:
             self.download_method = True
         logger.debug(f"{self.download_method}")
 
-    def _make_doc_tag(
-        self,
-        row,
-        drops=[
-            "disaster__type",
-            "file",
-            "headline",
-            "image",
-            "origin",
-            "source__homepage",
-            "url",
-        ],
-    ):
-        """Creates a <doc> tag with associated attributes, except for dropped columns.
-
-        (Automatically adds body, body_html and stanza columns to drops.)"""
+    def _doc_tag(self, row):
+        """Creates a <doc> tag with attributes in df, except for dropped columns."""
 
         # convert df row to dict
-        if not drops:
-            drops = []
-        drops.extend(["stanza", "body", "body_html"])
-        row = {k: v for k, v in row.items() if not k.startswith(tuple(drops))}
+        row = {k: v for k, v in row.items() if not k.startswith(tuple(self.drops))}
         # order doc id first
         doc_tag = [f'<doc id="{row["id"]}" ']
         del row["id"]
@@ -238,7 +206,7 @@ class Maker:
         return "".join(doc_tag)
 
     def _save_attributes(self):
-        """Saves corpus doc attributes in self.attrs to a config file.
+        """Saves corpus doc attributes to a config file.
 
         Assumes all attributes are indexes with "|" for MULTISEP."""
 
@@ -263,7 +231,7 @@ class Maker:
         self,
         db,
         resources="data/local-only/stanza_resources",
-        processors="tokenize,mwt,pos,lemma",
+        processors="tokenize,pos,lemma",
         tagset="corpus_maker/tagset.yml",
         log_level="debug",
     ):
@@ -286,7 +254,6 @@ class Maker:
             processors=processors,
             download_method=self.download_method,
         )
-        logger.debug("nlp ready")
         self.import_db()
         self.df["filename"] = self.df.apply(self._filename, axis=1)
         self.tagset = load_tagset(tagset)
