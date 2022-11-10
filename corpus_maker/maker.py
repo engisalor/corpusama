@@ -161,9 +161,8 @@ class Maker:
             self.batch = self.df.iloc[
                 self.index_start : self.index_start + self.batch_size
             ].copy()
-
             self.batch = utils.flatten_df(self.batch)
-            self.batch = utils.format_df(self.batch)
+            self.batch = utils.prepare_df(self.batch)
             # process texts
             self.batch["body_html"] = self.batch["body_html"].apply(utils.html_to_text)
             self._stanza()

@@ -12,7 +12,7 @@ log_file = ".corpus-maker.log"
 
 
 def html_to_text(html):
-    """Extracts text from an html string."""
+    """Extracts text from a html string."""
 
     class HTMLFilter(HTMLParser):
         text = ""
@@ -57,7 +57,7 @@ def str_to_obj(item):
 
 
 def list_to_string(cell, separator="|"):
-    """Joins list items with a separator or returns original object."""
+    """Joins list items with a separator (ignores other object types)."""
 
     if isinstance(cell, list):
         return separator.join([str(x) for x in cell])
@@ -88,21 +88,19 @@ def flatten_list_of_dict(cell):
     return flatten(cell)
 
 
-def flatten_df(df):
-    """Flattens a df containing list and dict objects."""
+def flatten_df(df, separator="__"):
+    """Flattens a df containing list and dict objects (pops nested source columns).
+
+    New column names are labelled by <source column name><separator><new key>."""
 
     t0 = time.perf_counter()
 
     # flatten data
     df = df.copy().applymap(str_to_obj)
     for col in df.columns:
+        prefix = "".join([col, separator])
         df[col] = df[col].apply(flatten_list_of_dict)
-        df = pd.concat([df, pd.json_normalize(df[col]).add_prefix(col + ".")], axis=1)
-
-    # clean up df
-    df = df[sorted(df.columns)]
-    df.fillna("", inplace=True)
-    df = df.applymap(list_to_string)
+        df = pd.concat([df, pd.json_normalize(df[col]).add_prefix(prefix)], axis=1)
 
     # drop original list of dict columns
     for col in df.columns:
@@ -112,30 +110,29 @@ def flatten_df(df):
 
     # logging
     t1 = time.perf_counter()
-    n_seconds = t1 - t0
-    rows_second = int(len(df) / n_seconds)
-    logger.debug(
-        "".join(
-            [
-                f"{n_seconds:0.1f}s - ",
-                f"{len(df):,} rows - ",
-                f"{rows_second:,}/s",
-            ]
-        )
-    )
+    logger.debug(f"{t1 - t0:0.1f}s")
 
     return df
 
 
-def format_df(df, add_year_column=["date__original"]):
-    """Replaces . with __ in column names, adds *__year columns based on timestamps.
+def prepare_df(df, year_column=["date__original"]):
+    """Prepares a df for making Sketch-Engine formatted vert files.
 
-    If date__original is a timestamp column, date__original__year will be added
-    with the year value only."""
+    Can parse timestamp columns and make new one with the year only.
+    Replaces . with __ in column names (. is prohibited for SkE text type names)."""
 
+    # clean up df
+    df = df[sorted(df.columns)]
+    df.fillna("", inplace=True)
+    df = df.applymap(list_to_string)
     df.columns = [x.replace(".", "__") for x in df.columns]
     df.id = df.id.astype(int)
-    for col in add_year_column:
+
+    # add year-only column(s)
+    if not year_column:
+        year_column = []
+    for col in year_column:
         df["__".join([col, "year"])] = pd.to_datetime(df[col]).dt.strftime(r"%Y")
 
+    logger.debug(f"{year_column} added")
     return df
