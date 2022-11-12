@@ -1,11 +1,9 @@
-import io
 import json
 import logging
 import math
 import pathlib
 import re
 import sqlite3 as sql
-import tarfile
 import time
 
 import numpy as np
@@ -96,20 +94,6 @@ class Maker:
             doc_stop = "</doc>\n"
             return "".join([doc_tag, doc_content, doc_stop])
 
-    def _tar(self, tar):
-        """Handles file insertion into an archive (appends or overwrites existing)."""
-
-        now = pd.Timestamp.now(tz="UTC").timestamp()
-        for x in range(len(self.batch)):
-            if self.batch.iloc[x]["vert"] is None:
-                logger.warning(f'{self.batch.iloc[x]["id"]} skip (no content)')
-            else:
-                info = tarfile.TarInfo(name=self.batch.iloc[x]["filename"])
-                text_bytes = io.BytesIO(bytes(self.batch.iloc[x]["vert"].encode()))
-                info.size = len(text_bytes.getbuffer())
-                info.mtime = now
-                tar.addfile(tarinfo=info, fileobj=text_bytes)
-
     def make_corpus(
         self,
         text_row="body_html",
@@ -117,9 +101,7 @@ class Maker:
         index_start=0,
         batch_size=100,
     ):
-        """Makes vertical files from self.df and appends to data/<db.name>.tar.
-
-        Overwrites previous tar archive.
+        """Makes vertical files from self.df and saves to data/<db.name>/.
 
         Options
         - text_row, str, the row containing text to be converted to vertical
@@ -128,7 +110,10 @@ class Maker:
         - batch_size, int, the max number of rows processed at once"""
 
         t0 = time.perf_counter()
+        # prepare job
         self.attrs = set()
+        self.archive_dir = pathlib.Path("data") / pathlib.Path(self.db_name).stem
+        self.archive_dir.mkdir(exist_ok=True)
         self.text_row = text_row
         if not drops:
             drops = []
@@ -144,15 +129,13 @@ class Maker:
         # process batches
         for x in range(batches):
             self._process_batch()
-        # compress tar and save attrs config file
-        utils.compress_tar(self.archive_name)
         self._save_attributes()
         # logging
         t1 = time.perf_counter()
         n_seconds = t1 - t0
         words_s = int(self.words / n_seconds)
         m0 = f"{n_seconds/60:0.0f}m - {self.words:,} words - {words_s*60:,}/m"
-        m1 = f"- {self.archive_name} - drops - {self.drops}"
+        m1 = f"- {self.archive_dir} - drops - {self.drops}"
         logger.debug(" ".join([m0, m1]))
 
     def _process_batch(self):
@@ -167,8 +150,11 @@ class Maker:
         self.batch[self.text_row] = self.batch[self.text_row].apply(utils.html_to_text)
         self._stanza()
         self.batch["vert"] = self.batch.apply(self.to_vertical, axis=1)
-        with tarfile.open(self.archive_name, "a") as tar:
-            self._tar(tar)
+        # save file
+        for x in range(len(self.batch)):
+            filepath = self.archive_dir / pathlib.Path(self.batch.iloc[x]["filename"])
+            with open(filepath, "w") as f:
+                f.write(self.batch.iloc[x]["vert"])
 
     def _update_model(self):
         """Sets whether to look for stanza model updates based on logs."""
