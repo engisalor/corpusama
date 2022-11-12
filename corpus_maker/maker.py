@@ -76,7 +76,7 @@ class Maker:
             for sent in row["stanza"].sentences:
                 # set sentence id
                 self.sentence_id += 1
-                sentence = [f"<s id={self.sentence_id}>\n"]
+                sentence = [f"<s id={json.dumps(str(self.sentence_id))}>\n"]
                 # warn if missing lemmas
                 for w in sent.words:
                     if w.lemma is None:
