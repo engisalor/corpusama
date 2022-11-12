@@ -4,6 +4,7 @@ import logging
 import tarfile
 from html.parser import HTMLParser
 
+import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -96,7 +97,7 @@ def flatten_df(df, separator="__"):
     New column names are labelled by <source column name><separator><new key>."""
 
     # flatten data
-    df = df.copy().applymap(str_to_obj)
+    df = df.applymap(str_to_obj)
     for col in df.columns:
         prefix = "".join([col, separator])
         df[col] = df[col].apply(flatten_list_of_dict)
@@ -113,14 +114,20 @@ def flatten_df(df, separator="__"):
 def prepare_df(df, year_column=["date__original"]):
     """Prepares a df for making Sketch-Engine formatted vert files.
 
-    Can parse timestamp columns and make new one with the year only.
-    Replaces . with __ in column names (. is prohibited for SkE text type names)."""
+    - year_column [str], add columns with a year value from existing timestamp columns
+
+    Standardizes nan values and skips records with no text.
+    Replaces . with __ and - with _ in column names (prohibited in SkE)."""
 
     # clean up df
-    df = df[sorted(df.columns)]
-    df.fillna("", inplace=True)
+    df.fillna(np.nan, inplace=True)
+    no_text = df.loc[df["body_html"].isna(), "id"].to_list()
+    if no_text:
+        logger.warning(f"skipping IDs w/o text {no_text}")
+    df = df.loc[df["body_html"].notna()]
+    # reformat
     df = df.applymap(list_to_string)
-    df.columns = [x.replace(".", "__") for x in df.columns]
+    df.columns = [x.replace(".", "__").replace("-", "_") for x in df.columns]
     # add year-only column(s)
     if not year_column:
         year_column = []
