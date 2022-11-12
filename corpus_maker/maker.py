@@ -158,11 +158,11 @@ class Maker:
     def _process_batch(self):
         self.index_start += self.batch_size
         # get df slice and prepare
-        self.batch = self.df.iloc[
+        batch = self.df.iloc[
             self.index_start : self.index_start + self.batch_size
         ].copy()
-        self.batch = utils.flatten_df(self.batch)
-        self.batch = utils.prepare_df(self.batch)
+        batch_flat = utils.flatten_df(batch.reset_index(drop=True))
+        self.batch = utils.prepare_df(batch_flat)
         # process texts
         self.batch[self.text_row] = self.batch[self.text_row].apply(utils.html_to_text)
         self._stanza()
