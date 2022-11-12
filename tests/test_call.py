@@ -2,27 +2,39 @@ import os
 import unittest
 
 import requests
-import yaml
 
 from rwapi.call import Call
 
 log_file = "tests/.test_rwapi.log"
 skip_manual = "Run test manually."
 
+call = {
+    "fields": {"exclude": ["body-html", "url_alias"]},
+    "query": {"value": "earthquake"},
+    "limit": 1,
+    "offset": 0,
+    "profile": "full",
+    "slim": 1,
+    "sort": ["date:asc"],
+}
+
 
 class Test_Call(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.input = "rwapi/calls/example.yml"
+        cls.input_yml = "tests/call.yml"
+        cls.input_json = "tests/call.json"
+        cls.input_dict = call
 
     @classmethod
     def tearDownClass(cls):
-        if os.path.exists(log_file):
-            os.remove(log_file)
+        for x in [log_file]:
+            if os.path.exists(x):
+                os.remove(x)
 
     def setUp(cls):
         # make Call object
-        cls.job = Call(cls.input, quota=1)
+        cls.job = Call(cls.input_json, quota=2)
         cls.job.log_file = log_file
 
     def tearDown(cls):
@@ -38,21 +50,18 @@ class Test_Call(unittest.TestCase):
                 self.assertIsNone(v)
                 v = 1000000
             # values and wait align
-            job = Call(self.input, v)
+            job = Call(self.input_json, v)
             self.assertEqual(job.wait, k)
             # n_calls+1 changes wait
             if v != 1000000:
-                job = Call(self.input, v + 1)
+                job = Call(self.input_json, v + 1)
                 self.assertNotEqual(job.wait, k)
 
     def test_get_parameters(self):
-        # get example parameters
-        with open(self.input, "r") as stream:
-            self.example_parameters = yaml.safe_load(stream)
         # parameters are properly read from file
-        job2 = Call("rwapi/calls/example.json")
+        job2 = Call(self.input_yml)
         for x in [self.job, job2]:
-            self.assertDictEqual(x.parameters, self.example_parameters)
+            self.assertDictEqual(x.parameters, self.input_dict)
         # bad filepath
         with self.assertRaises(FileNotFoundError):
             Call("nonexistent/file.json")
@@ -75,10 +84,6 @@ class Test_Call(unittest.TestCase):
         self.job.run()
         # offset gets incremented
         self.assertEqual(self.job.parameters["offset"], self.job.response_json["count"])
-        # check response data
-        self.assertIsInstance(self.job.response, requests.Response)
-        self.assertIsInstance(self.job.response_json, dict)
-        self.assertGreater(len(self.job.field_names), 0)
 
     @unittest.skip(skip_manual)
     def test_run_request_error(self):

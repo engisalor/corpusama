@@ -1,0 +1,19 @@
+{
+"fields": {
+    "exclude": [
+    "body-html",
+    "url_alias"
+    ]
+},
+    "query":
+{
+    "value": "earthquake"
+},
+"limit": 1,
+"offset": 0,
+"profile": "full",
+"slim": 1,
+"sort": [
+    "date:asc"
+]
+}

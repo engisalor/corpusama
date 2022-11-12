@@ -1,0 +1,12 @@
+fields:
+  exclude:
+  - body-html
+  - url_alias
+limit: 1
+offset: 0
+profile: full
+query:
+  value: earthquake
+slim: 1
+sort:
+- date:asc
