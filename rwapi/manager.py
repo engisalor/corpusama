@@ -58,12 +58,18 @@ class Manager:
         )
         records.drop(["id"], axis=1, inplace=True, errors=False)
         records.columns = [x.replace("fields_", "") for x in records.columns]
+        # replace dashes with underscore in column names
+        renamed_columns = {
+            col: col.replace("-", "_") for col in records.columns if "-" in col
+        }
+        records.rename(columns=renamed_columns, inplace=True)
         # add columns
         records["rwapi_input"] = self.call_x.input.name
         records["rwapi_date"] = self.call_x.now
         records["params_hash"] = self.call_x.hash
         for x in [x for x in self.db.columns["records"] if x not in records.columns]:
             records[x] = None
+        self.record = records
         self.db._insert(records, "records")
 
     def _insert_log(self):
