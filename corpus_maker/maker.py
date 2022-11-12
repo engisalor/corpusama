@@ -8,6 +8,7 @@ import sqlite3 as sql
 import tarfile
 import time
 
+import numpy as np
 import pandas as pd
 import stanza
 import yaml
@@ -127,11 +128,7 @@ class Maker:
         - batch_size, int, the max number of rows processed at once"""
 
         t0 = time.perf_counter()
-        # define settings
-        self.archive_name = (
-            pathlib.Path("data") / pathlib.Path(self.db_name).with_suffix(".tar").name
-        )
-        self.archive_name.unlink(missing_ok=True)
+        self.attrs = set()
         self.text_row = text_row
         if not drops:
             drops = []
@@ -198,10 +195,10 @@ class Maker:
         doc_tag = [f'<doc id="{row["id"]}" ']
         del row["id"]
         # add other attribute tags and store attrs
-        self.attrs = set()
         for k, v in row.items():
-            doc_tag.append(f"{k}={json.dumps(str(v),ensure_ascii=False)} ")
-            self.attrs.update([k])
+            if not isinstance(v, type(np.nan)) and not str(v).strip() == "":
+                doc_tag.append(f"{k}={json.dumps(str(v),ensure_ascii=False)} ")
+                self.attrs.update([k])
         doc_tag.append(">\n")
         return "".join(doc_tag)
 
