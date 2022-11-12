@@ -126,8 +126,10 @@ class Database:
         # insert into SQL
         records = df[self.columns[table]].to_records(index=False)
         n_columns = len(self.columns[table])
+        values = ",".join(list("?" * n_columns))
         self.c.executemany(
-            f"INSERT INTO {table} VALUES ({','.join(list('?' * n_columns))})", records
+            f"INSERT OR REPLACE INTO {table} VALUES ({values})",
+            records,
         )
         self.conn.commit()
         logger.debug(f"{len(df)} rows into {table}")
