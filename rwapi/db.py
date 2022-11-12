@@ -43,41 +43,43 @@ class Database:
         self.c.execute(
             """
             CREATE TABLE IF NOT EXISTS records (
-            params_hash NOT NULL,
-            id PRIMARY KEY,
-            country,
-            date,
-            disaster,
-            disaster_type,
-            feature,
-            file,
-            format,
-            headline,
-            image,
-            language,
-            ocha_product,
-            origin,
-            primary_country,
-            source,
-            status,
-            theme,
-            title,
-            url,
-            vulnerable_group,
-            body
-            ) WITHOUT ROWID"""
+            params_hash TEXT NOT NULL,
+            id INTEGER PRIMARY KEY,
+            country TEXT,
+            date TEXT,
+            disaster TEXT,
+            disaster_type TEXT,
+            feature TEXT,
+            file TEXT,
+            format TEXT,
+            headline TEXT,
+            image TEXT,
+            language TEXT,
+            ocha_product TEXT,
+            origin TEXT,
+            primary_country TEXT,
+            source TEXT,
+            status TEXT,
+            theme TEXT,
+            title TEXT,
+            url TEXT,
+            url_alias TEXT,
+            vulnerable_group TEXT,
+            body TEXT,
+            body_html TEXT
+            )"""
         )
 
         self.c.execute(
             """
             CREATE TABLE IF NOT EXISTS pdfs (
-            id NOT NULL,
-            file_id NOT NULL UNIQUE,
-            description,
-            filename NOT NULL,
-            filesize NOT NULL,
-            url NOT NULL UNIQUE,
-            mimetype NOT NULL,
+            id INTEGER NOT NULL,
+            file_id TEXT NOT NULL UNIQUE,
+            description TEXT,
+            filename TEXT NOT NULL,
+            filesize INTEGER NOT NULL,
+            url TEXT NOT NULL UNIQUE,
+            mimetype TEXT NOT NULL,
             FOREIGN KEY(id) REFERENCES records(id)
             )"""
         )
@@ -85,12 +87,12 @@ class Database:
         self.c.execute(
             """
             CREATE TABLE IF NOT EXISTS call_log (
-            params_hash PRIMARY KEY,
-            parameters NOT NULL UNIQUE,
-            rwapi_input NOT NULL,
-            rwapi_date NOT NULL,
-            count,
-            total_count,
+            params_hash TEXT PRIMARY KEY,
+            parameters TEXT NOT NULL UNIQUE,
+            rwapi_input TEXT NOT NULL,
+            rwapi_date TEXT NOT NULL,
+            count INTEGER,
+            total_count INTEGER,
             FOREIGN KEY(params_hash) REFERENCES records(params_hash)
             )"""
         )
