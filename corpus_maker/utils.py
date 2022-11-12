@@ -19,9 +19,12 @@ def html_to_text(html):
         def handle_data(self, data):
             self.text += data
 
-    f = HTMLFilter()
-    f.feed(html)
-    return f.text
+    if isinstance(html, str):
+        f = HTMLFilter()
+        f.feed(html)
+        return f.text
+    else:
+        return html
 
 
 def compress_tar(file):
