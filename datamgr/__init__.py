@@ -7,7 +7,7 @@ formatter = logging.Formatter(
     "%(asctime)s - %(levelname)s - %(name)s - %(funcName)s - %(message)s"
 )
 
-log_file = ".corpus-maker.log"
+log_file = ".logs/datamgr.log"
 file_handler = TimedRotatingFileHandler(log_file, "midnight", backupCount=1)
 file_handler.setFormatter(formatter)
 
