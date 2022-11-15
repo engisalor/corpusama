@@ -1,0 +1,306 @@
+{
+  "params_hash": {
+    "0": "f15673b2a912f9e0"
+  },
+  "id": {
+    "0": 1
+  },
+  "feature": {
+    "0": NaN
+  },
+  "file": {
+    "0": NaN
+  },
+  "image": {
+    "0": NaN
+  },
+  "ocha_product": {
+    "0": NaN
+  },
+  "origin": {
+    "0": "https://awebsitethatexists183756298.org"
+  },
+  "status": {
+    "0": "published"
+  },
+  "title": {
+    "0": "A title for the record"
+  },
+  "url": {
+    "0": "https://reliefweb.int/node/theidforthisrecord"
+  },
+  "vulnerable_group": {
+    "0": NaN
+  },
+  "body": {
+    "0": "Text body goes here."
+  },
+  "country__name": {
+    "0": [
+      "Iraq",
+      "Lebanon",
+      "Syrian Arab Republic"
+    ]
+  },
+  "country__id": {
+    "0": [
+      122,
+      137,
+      226
+    ]
+  },
+  "country__shortname": {
+    "0": [
+      "Iraq",
+      "Lebanon",
+      "Syria"
+    ]
+  },
+  "country__iso3": {
+    "0": [
+      "irq",
+      "lbn",
+      "syr"
+    ]
+  },
+  "country__primary": {
+    "0": [
+      NaN,
+      true,
+      NaN
+    ]
+  },
+  "country__location.lon": {
+    "0": [
+      43.4,
+      35.89,
+      38.51
+    ]
+  },
+  "country__location.lat": {
+    "0": [
+      33.05,
+      33.92,
+      35.01
+    ]
+  },
+  "date__changed": {
+    "0": "1500-10-27T05:13:38+00:00"
+  },
+  "date__created": {
+    "0": "1500-10-27T00:01:00+00:00"
+  },
+  "date__original": {
+    "0": "1500-10-26T00:00:00+00:00"
+  },
+  "disaster__name": {
+    "0": [
+      "Lebanon: disaster name - Date",
+      "Syria: disaster name - Date",
+      "Syria: disaster name - Date"
+    ]
+  },
+  "disaster__id": {
+    "0": [
+      1,
+      2,
+      3
+    ]
+  },
+  "disaster__glide": {
+    "0": [
+      "EP-1500-000001-LBN",
+      "EP-1500-000002-SYR",
+      "DR-1500-000003-SYR"
+    ]
+  },
+  "disaster__type": {
+    "0": [
+      [
+        {
+          "code": "EP",
+          "name": "Epidemic",
+          "id": 4642,
+          "primary": true
+        }
+      ],
+      [
+        {
+          "code": "EP",
+          "name": "Epidemic",
+          "id": 3,
+          "primary": true
+        }
+      ],
+      [
+        {
+          "code": "DR",
+          "name": "Drought",
+          "id": 4,
+          "primary": true
+        }
+      ]
+    ]
+  },
+  "disaster__status": {
+    "0": [
+      "ongoing",
+      "ongoing",
+      "ongoing"
+    ]
+  },
+  "disaster_type__code": {
+    "0": [
+      "DR",
+      "EP"
+    ]
+  },
+  "disaster_type__name": {
+    "0": [
+      "Drought",
+      "Epidemic"
+    ]
+  },
+  "disaster_type__id": {
+    "0": [
+      4672,
+      4642
+    ]
+  },
+  "format__name": {
+    "0": [
+      "Situation Report"
+    ]
+  },
+  "format__id": {
+    "0": [
+      10
+    ]
+  },
+  "headline__summary": {
+    "0": "A summary sentence"
+  },
+  "headline__title": {
+    "0": "Title"
+  },
+  "headline__image.copyright": {
+    "0": "Owner"
+  },
+  "headline__image.filename": {
+    "0": "image.jpg"
+  },
+  "headline__image.url-thumb": {
+    "0": "https://awebsitethatexists183756298.org/file.jpg"
+  },
+  "headline__image.url-small": {
+    "0": "https://awebsitethatexists183756298.org/file.jpg"
+  },
+  "headline__image.width": {
+    "0": "1170"
+  },
+  "headline__image.mimetype": {
+    "0": "image/jpeg"
+  },
+  "headline__image.url-large": {
+    "0": "https://awebsitethatexists183756298.org/file.jpg"
+  },
+  "headline__image.id": {
+    "0": "1614642"
+  },
+  "headline__image.filesize": {
+    "0": "157490"
+  },
+  "headline__image.url": {
+    "0": "https://awebsitethatexists183756298.org/file.jpg"
+  },
+  "headline__image.height": {
+    "0": "530"
+  },
+  "language__code": {
+    "0": [
+      "en"
+    ]
+  },
+  "language__name": {
+    "0": [
+      "English"
+    ]
+  },
+  "language__id": {
+    "0": [
+      267
+    ]
+  },
+  "primary_country__name": {
+    "0": "Lebanon"
+  },
+  "primary_country__id": {
+    "0": 137
+  },
+  "primary_country__shortname": {
+    "0": "Lebanon"
+  },
+  "primary_country__iso3": {
+    "0": "lbn"
+  },
+  "primary_country__location.lon": {
+    "0": 35.89
+  },
+  "primary_country__location.lat": {
+    "0": 33.92
+  },
+  "source__longname": {
+    "0": [
+      "Organization longname"
+    ]
+  },
+  "source__spanish_name": {
+    "0": [
+      "Nombre de la organizaci\u00f3n"
+    ]
+  },
+  "source__name": {
+    "0": [
+      "Organization name"
+    ]
+  },
+  "source__id": {
+    "0": [
+      1
+    ]
+  },
+  "source__shortname": {
+    "0": [
+      "Org. shortname"
+    ]
+  },
+  "source__homepage": {
+    "0": [
+      "https://awebsitethatexists183756298.org/"
+    ]
+  },
+  "source__type.name": {
+    "0": [
+      "Non-governmental Organization"
+    ]
+  },
+  "source__type.id": {
+    "0": [
+      1
+    ]
+  },
+  "theme__name": {
+    "0": [
+      "Health",
+      "Protection and Human Rights",
+      "Water Sanitation Hygiene"
+    ]
+  },
+  "theme__id": {
+    "0": [
+      4595,
+      4600,
+      4604
+    ]
+  }
+}

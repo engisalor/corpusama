@@ -1,0 +1,220 @@
+{
+  "params_hash": {
+    "2": "f15673b2a912f9e0"
+  },
+  "id": {
+    "2": 1
+  },
+  "country": {
+    "2": [
+      {
+        "name": "Iraq",
+        "location": {
+          "lon": 43.4,
+          "lat": 33.05
+        },
+        "id": 122,
+        "shortname": "Iraq",
+        "iso3": "irq"
+      },
+      {
+        "name": "Lebanon",
+        "location": {
+          "lon": 35.89,
+          "lat": 33.92
+        },
+        "id": 137,
+        "shortname": "Lebanon",
+        "iso3": "lbn",
+        "primary": true
+      },
+      {
+        "name": "Syrian Arab Republic",
+        "location": {
+          "lon": 38.51,
+          "lat": 35.01
+        },
+        "id": 226,
+        "shortname": "Syria",
+        "iso3": "syr"
+      }
+    ]
+  },
+  "date": {
+    "2": {
+      "changed": "1500-10-27T05:13:38+00:00",
+      "created": "1500-10-27T00:01:00+00:00",
+      "original": "1500-10-26T00:00:00+00:00"
+    }
+  },
+  "disaster": {
+    "2": [
+      {
+        "name": "Lebanon: disaster name - Date",
+        "id": 1,
+        "glide": "EP-1500-000001-LBN",
+        "type": [
+          {
+            "code": "EP",
+            "name": "Epidemic",
+            "id": 4642,
+            "primary": true
+          }
+        ],
+        "status": "ongoing"
+      },
+      {
+        "name": "Syria: disaster name - Date",
+        "id": 2,
+        "glide": "EP-1500-000002-SYR",
+        "type": [
+          {
+            "code": "EP",
+            "name": "Epidemic",
+            "id": 3,
+            "primary": true
+          }
+        ],
+        "status": "ongoing"
+      },
+      {
+        "name": "Syria: disaster name - Date",
+        "id": 3,
+        "glide": "DR-1500-000003-SYR",
+        "type": [
+          {
+            "code": "DR",
+            "name": "Drought",
+            "id": 4,
+            "primary": true
+          }
+        ],
+        "status": "ongoing"
+      }
+    ]
+  },
+  "disaster_type": {
+    "2": [
+      {
+        "code": "DR",
+        "name": "Drought",
+        "id": 4672
+      },
+      {
+        "code": "EP",
+        "name": "Epidemic",
+        "id": 4642
+      }
+    ]
+  },
+  "feature": {
+    "2": null
+  },
+  "file": {
+    "2": null
+  },
+  "format": {
+    "2": [
+      {
+        "name": "Situation Report",
+        "id": 10
+      }
+    ]
+  },
+  "headline": {
+    "2": {
+      "summary": "A summary sentence",
+      "image": {
+        "copyright": "Owner",
+        "filename": "image.jpg",
+        "url-thumb": "https://awebsitethatexists183756298.org/file.jpg",
+        "url-small": "https://awebsitethatexists183756298.org/file.jpg",
+        "width": "1170",
+        "mimetype": "image/jpeg",
+        "url-large": "https://awebsitethatexists183756298.org/file.jpg",
+        "id": "1614642",
+        "filesize": "157490",
+        "url": "https://awebsitethatexists183756298.org/file.jpg",
+        "height": "530"
+      },
+      "title": "Title"
+    }
+  },
+  "image": {
+    "2": null
+  },
+  "language": {
+    "2": [
+      {
+        "code": "en",
+        "name": "English",
+        "id": 267
+      }
+    ]
+  },
+  "ocha_product": {
+    "2": null
+  },
+  "origin": {
+    "2": "https://awebsitethatexists183756298.org"
+  },
+  "primary_country": {
+    "2": {
+      "name": "Lebanon",
+      "location": {
+        "lon": 35.89,
+        "lat": 33.92
+      },
+      "id": 137,
+      "shortname": "Lebanon",
+      "iso3": "lbn"
+    }
+  },
+  "source": {
+    "2": [
+      {
+        "longname": "Organization longname",
+        "spanish_name": "Nombre de la organizaci\u00f3n",
+        "name": "Organization name",
+        "id": 1,
+        "type": {
+          "name": "Non-governmental Organization",
+          "id": 1
+        },
+        "shortname": "Org. shortname",
+        "homepage": "https://awebsitethatexists183756298.org/"
+      }
+    ]
+  },
+  "status": {
+    "2": "published"
+  },
+  "theme": {
+    "2": [
+      {
+        "name": "Health",
+        "id": 4595
+      },
+      {
+        "name": "Protection and Human Rights",
+        "id": 4600
+      },
+      {
+        "name": "Water Sanitation Hygiene",
+        "id": 4604
+      }
+    ]
+  },
+  "title": {
+    "2": "A title for the record"
+  },
+  "url": {
+    "2": "https://reliefweb.int/node/theidforthisrecord"
+  },
+  "vulnerable_group": {
+    "2": null
+  },
+  "body": {
+    "2": "Text body goes here."
+  }
+}
