@@ -1,0 +1,12 @@
+{
+    "query":
+{
+    "value": "earthquake"
+},
+"limit": 100,
+"offset": 0,
+"profile": "full",
+"sort": [
+    "date:asc"
+]
+}

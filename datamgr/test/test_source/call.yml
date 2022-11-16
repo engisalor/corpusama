@@ -1,0 +1,7 @@
+limit: 100
+offset: 0
+profile: full
+query:
+  value: earthquake
+sort:
+- date:asc
