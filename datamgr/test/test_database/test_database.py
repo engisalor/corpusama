@@ -86,7 +86,7 @@ class Test_Database_Mock_DF(unittest.TestCase):
     def tearDownClass(cls):
         cls.db.path.unlink(missing_ok=True)
 
-    def test_get_df(self):
+    def test_insert_and_get_df(self):
         """Compares inserted df with retrieved df.
 
         Since insert() cleans and standardizes data and

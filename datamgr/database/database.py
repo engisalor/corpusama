@@ -94,7 +94,7 @@ class Database:
             records,
         )
         self.conn.commit()
-        logger.debug(f"{len(df)} rows into {table}")
+        logger.debug(f"{len(df)} row(s) into {table}")
 
     def __repr__(self):
         return ""
