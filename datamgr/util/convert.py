@@ -1,9 +1,23 @@
 import ast
 import json
+import lzma
 from html.parser import HTMLParser
 
 import numpy as np
 import pandas as pd
+
+from datamgr.util.dataclass import DocBundle
+
+
+def to_json_or_str(item):
+    """Converts lists/dicts to JSON str and other types to str."""
+
+    if isinstance(item, (list, dict)):
+        return json.dumps(item)
+    elif isinstance(item, bytes):
+        return item
+    else:
+        return str(item)
 
 
 def str_to_obj(item):
@@ -79,3 +93,18 @@ def html_to_text(html):
         return f.text
     else:
         return html
+
+
+def docbundle_to_df(bundle: DocBundle) -> pd.DataFrame:
+    """Converts a DocBundle to a DataFrame."""
+
+    df = pd.DataFrame({"id": bundle.id, "vert": bundle.doc})
+    df["vert_date"] = bundle.date
+    df["attr"] = None
+    return df
+
+
+def xz_to_str(obj):
+    """Converts an xz compressed bytes object to a string."""
+
+    return lzma.decompress(obj)
