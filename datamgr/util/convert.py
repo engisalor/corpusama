@@ -11,7 +11,7 @@ def str_to_obj(item):
 
     if not item:
         return item
-    elif isinstance(item, (int, float)):
+    elif isinstance(item, (int, float, bytes)):
         return item
     else:
         try:
