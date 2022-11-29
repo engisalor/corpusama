@@ -70,7 +70,7 @@ class ReliefWeb(Call):
         """Inserts a log entry for a call."""
 
         record = {
-            "params_hash": self.hash,
+            "api_params_hash": self.hash,
             "parameters": self.parameters,
             "api_input": self.input.name,
             "api_date": self.now,
@@ -78,10 +78,10 @@ class ReliefWeb(Call):
             "total_count": self.response_json["totalCount"],
         }
         self.df_log = pd.DataFrame.from_records([record])
-        self.db.insert(self.df_log, "rw_log")
+        self.db.insert(self.df_log, "_log")
 
     def _insert_pdf(self):
-        """Updates rw_pdf table after each call."""
+        """Updates pdf table after each call."""
 
         df = self.df_raw.loc[self.df_raw["file"].notna()].copy()
         if not df.empty:
@@ -91,8 +91,7 @@ class ReliefWeb(Call):
             # add report id column
             ids = [[df.iloc[x]["id"]] * len(df.iloc[x]["file"]) for x in range(len(df))]
             df_flat["id"] = [x for y in ids for x in y]
-            self.db.insert(df_flat, "rw_pdf")
-        self.df_pdf = df_flat
+            self.db.insert(df_flat, "_pdf")
 
     def insert(self):
         """Reshapes and inserts ReliefWeb JSON data into db."""
@@ -108,11 +107,11 @@ class ReliefWeb(Call):
         df.rename(columns=renamed_columns, inplace=True)
         df["api_input"] = self.input.name
         df["api_date"] = self.now
-        df["params_hash"] = self.hash
-        for x in [x for x in self.db.tables["rw_raw"] if x not in df.columns]:
+        df["api_params_hash"] = self.hash
+        for x in [x for x in self.db.tables["_raw"] if x not in df.columns]:
             df[x] = None
         self.df_raw = df
-        self.db.insert(df, "rw_raw")
+        self.db.insert(df, "_raw")
         self._insert_log()
         self._insert_pdf()
 
@@ -148,7 +147,7 @@ class ReliefWeb(Call):
         if database:
             self.db = Database(database)
             if not self.db.tables:
-                self.db.c.executescript(self.db.queries["rw_create"]["query"])
+                self.db.c.executescript(self.db.schema["reliefweb"]["query"])
                 self.db.get_tables()
         self.url = "".join([self.url, self.appname])
         self._set_wait()
