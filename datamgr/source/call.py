@@ -4,11 +4,11 @@ import logging
 import pathlib
 import time
 
-import pandas as pd
 import requests
-import yaml
 
 from datamgr import log_file
+from datamgr.util import io as _io
+from datamgr.util import util
 
 logger = logging.getLogger(__name__)
 
@@ -29,17 +29,14 @@ class Call:
     def _calls_made(self):
         """Calculates the number of calls already made in log_file."""
 
-        self.calls_made = 0
-        if pathlib.Path(self.log_file).exists():
-            with open(pathlib.Path(self.log_file), "r") as f:
-                daily_log = f.readlines()
-            for x in daily_log:
-                if f"_calls_made - {self.source}" in x:
-                    self.calls_made += 1
+        message = f"_calls_made - {self.source}"
+        self.calls_made = util.count_log_lines(message, log_file)
         logger.debug(f"{self.source} - {self.calls_made}")
 
     def _enforce_quota(self):
-        """Enforces API usage quota."""
+        """Enforces API usage quota.
+
+        self.quota must be set in inherited class."""
 
         self._calls_made()
         self.calls_remaining = self.quota - self.calls_made
@@ -65,34 +62,23 @@ class Call:
         logger.debug(f"{min(waits)} second(s)")
         self.wait = min(waits)
 
-    def _parse_input_file(self):
-        """Loads API call parameters from a JSON or YAML file."""
-
-        self.input = pathlib.Path(self.input)
-        if self.input.suffix in [".yml", ".yaml"]:
-            with open(self.input, "r") as stream:
-                self.parameters = yaml.safe_load(stream)
-        elif self.input.suffix == ".json":
-            with open(self.input, "r") as f:
-                self.parameters = json.load(f)
-        else:
-            raise ValueError("Bad file format (must be <filepath>.<json|yml|yaml>).")
-
-    def _parse_input_dict(self):
+    def _get_parameters(self):
         """Loads API call parameters from a dict."""
 
-        self.parameters = self.input
-        self.input = "dict"
-
-    def _get_parameters(self):
-        """Loads parameters from an input file or dict."""
-
-        if isinstance(self.input, str):
-            self._parse_input_file()
-        elif isinstance(self.input, dict):
-            self._parse_input_dict
+        if isinstance(self.input, dict):
+            self.parameters = self.input
+            self.input = "dict"
+        elif isinstance(self.input, str):
+            self.input = pathlib.Path(self.input)
+            if self.input.suffix in [".yml", ".yaml"]:
+                self.parameters = _io.load_yaml(self.input)
+            elif self.input.suffix == ".json":
+                self.input = pathlib.Path(self.input)
+                self.parameters = _io.load_json(self.input)
+            else:
+                raise ValueError("Input files must be JSON or YAML.")
         else:
-            raise TypeError("Input must be a dict of parameters or filepath.")
+            raise TypeError("Input must be dict or filename (JSON or YAML).")
 
     def _hash(self):
         params = json.dumps(self.parameters, sort_keys=True)
@@ -108,7 +94,7 @@ class Call:
     def _request(self):
         """Executes an API call."""
 
-        self.now = pd.Timestamp.now().round("S").isoformat()
+        self.now = util.now()
         self.response = requests.post(self.url, json.dumps(self.parameters))
         self._check_response()
 
