@@ -6,5 +6,5 @@ build-backend = "setuptools.build_meta"
 profile = "black"
 
 [project]
-name = "he-datamgr"
+name = "corpusama"
 version = "0.0.1"
