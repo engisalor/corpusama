@@ -81,6 +81,28 @@ class Database:
         self.conn.commit()
         logger.debug(f"{len(df)} row(s) into {table}")
 
+    def update_column(self, table, column, series, rowids):
+        """Updates the values for a table column according to rowid."""
+
+        series = series.apply(convert.to_json_or_str)
+        series = convert.nan_to_none(series)
+        self.c.executemany(
+            f"UPDATE {table} SET {column} = ? WHERE rowid = ?", zip(series, rowids)
+        )
+        self.conn.commit()
+        logger.debug(f"{len(series)} values into {table}.{column}")
+
+    def fetch_batch(self, run, size, query):
+        """Fetches SQL batches using a limit and offset.
+
+        - run, int, current run in while loop
+        - size, int, max number of rows to select
+        - query, str, SQL query to repeat in loop"""
+
+        offset = run * size
+        batch = self.c.execute(query, (offset, size)).fetchall()
+        return batch, offset
+
     def __repr__(self):
         return ""
 
