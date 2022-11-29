@@ -68,8 +68,8 @@ class Database:
         Converts nan-like values to None, then converts all values to str."""
 
         # standardize datatypes
-        df = df.astype(str)
-        df = convert.nan_to_none(df)
+        df = df.applymap(convert.to_json_or_str)
+        df = df.apply(convert.nan_to_none)
         # insert into SQL
         records = df[self.tables[table]].to_records(index=False)
         n_columns = len(self.tables[table])
