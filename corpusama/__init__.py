@@ -1,6 +1,8 @@
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
+from corpusama import _version
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
@@ -16,3 +18,4 @@ stream_handler.setFormatter(formatter)
 
 logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
+_version.current()
