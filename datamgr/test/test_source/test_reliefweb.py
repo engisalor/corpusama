@@ -5,6 +5,7 @@ import unittest
 import pandas as pd
 
 from datamgr.source.reliefweb import ReliefWeb
+from datamgr.util import util
 
 input_yml = "datamgr/test/test_source/call.yml"
 database = "3kd82kc843ke1la0.db"
@@ -27,17 +28,19 @@ def save_example_call():
     job.df_raw.to_json(example_raw, indent=2)
     job.df_log.to_json(example_log, indent=2)
     job.df_pdf.to_json(example_pdf, indent=2)
-    pathlib.Path(database).unlink(missing_ok=True)
+    pathlib.Path(f"data/{database}").unlink(missing_ok=True)
 
 
-class Test_Call(unittest.TestCase):
+class Test_ReliefWeb(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.job = ReliefWeb(input_yml)
 
     @classmethod
     def tearDownClass(cls):
-        pathlib.Path("data/" + database).unlink(missing_ok=True)
+        dir = pathlib.Path("data")
+        filepath = dir / database
+        filepath.unlink(missing_ok=True)
 
     def test_get_field_names(self):
         self.job.response_json = {"data": [{"fields": {"a": 1, "b": 2}}]}
@@ -50,25 +53,35 @@ class Test_Call(unittest.TestCase):
         self.job._offset()
         self.assertEqual(self.job.parameters["offset"], 10)
 
-    def test_insert_df_creation(self):
-        """Tests that dfs for data insertion are properly constructed.
+    def test_inserted_values_match_source(self):
+        """Tests that API data has identical columns before and after insertion.
 
-        Does not test successful insertion into a database.
-        (See the tests in test_database regarding insert commands.)"""
+        Does not test insertion itself - see test_database instead"""
 
         job = ReliefWeb(input_yml, database)
         with open(example_response, "r") as f:
             job.response_json = json.load(f)
-        job.now = pd.Timestamp.now().round("S").isoformat()
+        job.now = util.now()
         job._get_field_names()
         job._hash()
         job.insert()
         raw = pd.read_json(example_raw)
         log = pd.read_json(example_log)
         pdf = pd.read_json(example_pdf)
-        self.assertTrue(job.df_raw["id"].equals(raw["id"]))
-        self.assertTrue(job.df_log["params_hash"].equals(log["params_hash"]))
-        self.assertTrue(job.df_pdf["id"].equals(pdf["id"]))
+        sql_raw = pd.read_sql("""SELECT id from _raw""", job.db.conn)
+        sql_log = pd.read_sql("""SELECT api_params_hash from _log""", job.db.conn)
+        sql_pdf = pd.read_sql("""SELECT id from _pdf""", job.db.conn)
+
+        self.assertEqual(
+            str(raw["id"].sort_values().values), str(sql_raw["id"].sort_values().values)
+        )
+        self.assertEqual(
+            str(log["api_params_hash"].sort_values().values),
+            str(sql_log["api_params_hash"].sort_values().values),
+        )
+        self.assertEqual(
+            str(pdf["id"].sort_values().values), str(sql_pdf["id"].sort_values().values)
+        )
 
     @unittest.skip("WARNING: comment this line or logging will break.")
     def test_run_no_database(self):

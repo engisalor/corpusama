@@ -33,12 +33,12 @@ class Test_Convert(unittest.TestCase):
             }
         )
 
-        df_clean = convert.nan_to_none(df, strip=True)
+        df_clean = df.apply(convert.nan_to_none, strip=True)
         self.assertEqual(
             list(df_clean.a[:4]),
             ["nonexistent", "Not-None", {"b": ""}, [np.nan, "null"]],
         )
-        df_clean_no_strip = convert.nan_to_none(df, strip=False)
+        df_clean_no_strip = df.apply(convert.nan_to_none, strip=False)
         self.assertEqual(
             list(df_clean_no_strip.a[:4]),
             ["nonexistent", " Not-None ", {"b": ""}, [np.nan, "null"]],
