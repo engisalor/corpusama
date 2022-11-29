@@ -18,4 +18,5 @@ stream_handler.setFormatter(formatter)
 
 logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
+__version__ = _version.__version__
 _version.current()
