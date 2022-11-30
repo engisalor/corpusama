@@ -37,8 +37,53 @@ class ReliefWeb(Call):
                 raise UserWarning("Call aborted: no more results.")
         logger.debug(self.parameters["offset"])
 
-    def run(self):
-        """Makes API call(s) and stores response_json in dict self.raw."""
+    def all(self, limit=1):
+        """Executes API calls from parameters."""
+
+        self.limit = limit
+        self.call_n = 0
+        self._set_wait()
+        self.one()
+
+    def new(self, limit=1):
+        """Executes calls starting from the latest date.changed value."""
+
+        latest = None
+        self.parameters["offset"] = 0
+        # ensure proper sorting parameters
+        if self.parameters.get("sort", None) != ["date.changed:asc"]:
+            m = """Input parameters must be set to retrieve results sorted
+            by date.changed in ascending order. Add `"sort": ["date.changed:asc"]`"""
+            raise ValueError(m)
+        # get most recent date.changed value
+        res = self.db.c.execute("SELECT json_extract(_raw.date,'$.changed') FROM _raw")
+        self.date_changed_vals = pd.Series(
+            [pd.Timestamp(x[0]) for x in res.fetchall()], dtype=object
+        )
+        self._update_filter()
+        # make call
+        logger.debug(f"starting from {latest}")
+        self.all(limit)
+
+    def _update_filter(self):
+        """Updates parameter filters to start from the latest date.changed value."""
+
+        # update if database is not empty
+        if self.date_changed_vals.any():
+            latest = self.date_changed_vals.max().isoformat()
+            # combine new and old conditions
+            old_conditions = self.original_parameters.get("filter", {}).get(
+                "conditions", []
+            )
+            new_conditions = [{"field": "date.changed", "value": {"from": latest}}]
+            # update parameters
+            update = {
+                "filter": {
+                    "operator": "AND",
+                    "conditions": old_conditions + new_conditions,
+                }
+            }
+            self.parameters = self.original_parameters | update
 
     @decorator.while_loop
     def one(self):
