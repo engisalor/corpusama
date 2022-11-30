@@ -82,7 +82,7 @@ class ReliefWeb(Call):
 
         record = {
             "api_params_hash": self.hash,
-            "parameters": self.parameters,
+            "api_params": self.parameters,
             "api_input": self.input.name,
             "api_date": self.now,
             "count": self.response_json["count"],
@@ -136,7 +136,6 @@ class ReliefWeb(Call):
         self,
         input,
         database=None,
-        n_calls=1,
         appname=None,
         url="https://api.reliefweb.int/v1/reports?appname=",
         quota=1000,
@@ -145,7 +144,6 @@ class ReliefWeb(Call):
         super().__init__(source="reliefweb")
         # variables
         self.input = input
-        self.n_calls = n_calls
         self.url = url
         self.quota = quota
         self.wait_dict = wait_dict
@@ -164,5 +162,5 @@ class ReliefWeb(Call):
                 self.db.c.executescript(self.db.schema["reliefweb"]["query"])
                 self.db.get_tables()
         self.url = "".join([self.url, self.appname])
-        self._set_wait()
         self._get_parameters()
+        self.original_parameters = self.parameters.copy()
