@@ -122,7 +122,10 @@ class ReliefWeb(Call):
         df["api_params_hash"] = self.hash
         df = self.db._add_missing_columns(df, "_raw")
         self.df_raw = df
-        self.db.insert(df, "_raw")
+        if not df.empty:
+            self.db.insert(df, "_raw")
+        else:
+            raise UserWarning("Call aborted: no more results.")
         self._insert_log()
         self._insert_pdf()
 
