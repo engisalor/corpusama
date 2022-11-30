@@ -4,6 +4,7 @@ import pandas as pd
 
 from corpusama.database.database import Database
 from corpusama.source.call import Call
+from corpusama.util import decorator
 
 logger = logging.getLogger(__name__)
 
@@ -39,23 +40,33 @@ class ReliefWeb(Call):
     def run(self):
         """Makes API call(s) and stores response_json in dict self.raw."""
 
-        for call_n in range(self.n_calls):
-            # execute call and prepare data
-            self.call_n = call_n
-            self._enforce_quota()
-            self._offset()
-            self._request()
-            self._get_field_names()
-            self._hash()
-            keys = ["time", "took", "totalCount", "count"]
-            summary = {k: v for k, v in self.response_json.items() if k in keys}
-            logger.debug(f"{summary}")
-            # store output
-            if not self.db:
-                self.raw[call_n] = self.response_json
-            else:
-                self.insert()
-            self._wait()
+    @decorator.while_loop
+    def one(self):
+        # set variables
+        if "call_n" not in self.__dict__:
+            self.call_n = 0
+        if "limit" not in self.__dict__:
+            self.limit = 1
+        if self.call_n >= self.limit:
+            return False
+        # prepare call
+        self._enforce_quota()
+        self._offset()
+        # make call
+        self._request()
+        self._get_field_names()
+        self._hash()
+        keys = ["time", "took", "totalCount", "count"]
+        summary = {k: v for k, v in self.response_json.items() if k in keys}
+        logger.debug(f"{summary}")
+        # store output
+        if not self.db:
+            self.raw[self.call_n] = self.response_json
+        else:
+            self.insert()
+        self._wait()
+        self.call_n += 1
+        return True
 
     def _get_field_names(self):
         """Makes a set of field names from response data."""
