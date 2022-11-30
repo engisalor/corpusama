@@ -37,7 +37,7 @@ class ReliefWeb(Call):
                 raise UserWarning("Call aborted: no more results.")
         logger.debug(self.parameters["offset"])
 
-    def all(self, limit=1):
+    def all(self, limit: int = 1000):
         """Executes API calls from parameters."""
 
         self.limit = limit
@@ -45,7 +45,7 @@ class ReliefWeb(Call):
         self._set_wait()
         self.one()
 
-    def new(self, limit=1):
+    def new(self, limit: int = 1000):
         """Executes calls starting from the latest date.changed value."""
 
         latest = None
