@@ -1,12 +1,27 @@
 {
-    "query":
-{
+  "filter": {
+    "conditions": [
+      {
+        "field": "language",
+        "value": "English"
+      },
+      {
+        "field": "date",
+        "value": {
+          "from": "2000-01-01T00:00:00+00:00",
+          "to": "2005-09-01T00:00:00+00:00"
+        }
+      }
+    ],
+    "operator": "AND"
+  },
+  "limit": 100,
+  "offset": 0,
+  "profile": "full",
+  "query": {
     "value": "earthquake"
-},
-"limit": 100,
-"offset": 0,
-"profile": "full",
-"sort": [
-    "date:asc"
-]
+  },
+  "sort": [
+    "date.changed:asc"
+  ]
 }
