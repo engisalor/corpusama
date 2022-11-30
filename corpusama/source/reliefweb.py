@@ -99,9 +99,10 @@ class ReliefWeb(Call):
             # make 1 row per file
             df_flat = pd.json_normalize(df["file"].explode())
             df_flat.rename(columns={"id": "file_id"}, inplace=True)
-            # add report id column
+            # add columns
             ids = [[df.iloc[x]["id"]] * len(df.iloc[x]["file"]) for x in range(len(df))]
             df_flat["id"] = [x for y in ids for x in y]
+            df_flat = self.db._add_missing_columns(df_flat, "_pdf")
             self.db.insert(df_flat, "_pdf")
 
     def insert(self):
@@ -110,7 +111,7 @@ class ReliefWeb(Call):
         # normalize data
         df = pd.json_normalize(self.response_json["data"], sep="_", max_level=1)
         # manage columns
-        df.drop(["id"], axis=1, inplace=True, errors=False)
+        df.drop(["fields_id"], axis=1, inplace=True, errors="ignore")
         df.columns = [x.replace("fields_", "") for x in df.columns]
         renamed_columns = {
             col: col.replace("-", "_") for col in df.columns if "-" in col
@@ -119,8 +120,7 @@ class ReliefWeb(Call):
         df["api_input"] = self.input.name
         df["api_date"] = self.now
         df["api_params_hash"] = self.hash
-        for x in [x for x in self.db.tables["_raw"] if x not in df.columns]:
-            df[x] = None
+        df = self.db._add_missing_columns(df, "_raw")
         self.df_raw = df
         self.db.insert(df, "_raw")
         self._insert_log()
