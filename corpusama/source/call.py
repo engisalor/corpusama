@@ -44,7 +44,7 @@ class Call:
             raise UserWarning(f"Daily API quota reached {self.calls_made}")
 
     def _set_wait(self):
-        """Sets a wait time between API calls given n_calls and wait_dict.
+        """Sets a wait time between API calls.
 
         Example wait_dict: `{0: 1, 5: 49, 10: 99, 20: 499, 30: None}`
         Where: keys = seconds to wait and values = the maximum number of
@@ -54,7 +54,7 @@ class Call:
         waits = []
         for k, v in self.wait_dict.items():
             if v:
-                if self.n_calls <= v:
+                if self.limit <= v:
                     waits.append(k)
         if not waits:
             waits.append(max([k for k in self.wait_dict.keys()]))
@@ -87,7 +87,7 @@ class Call:
     def _wait(self):
         """Waits between calls."""
 
-        if self.call_n < (self.n_calls - 1):
+        if self.call_n < (self.limit - 1):
             logger.debug(f"{self.wait}")
             time.sleep(self.wait)
 
