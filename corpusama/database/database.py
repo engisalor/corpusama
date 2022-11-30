@@ -103,6 +103,13 @@ class Database:
         batch = self.c.execute(query, (offset, size)).fetchall()
         return batch, offset
 
+    def _add_missing_columns(self, df, table):
+        """Adds database table columns to a df if missing."""
+
+        for x in [x for x in self.tables[table] if x not in df.columns]:
+            df[x] = None
+        return df
+
     def __repr__(self):
         return ""
 
