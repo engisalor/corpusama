@@ -1,5 +1,6 @@
 import ast
 import json
+import logging
 import lzma
 from html.parser import HTMLParser
 
@@ -7,6 +8,8 @@ import numpy as np
 import pandas as pd
 
 from corpusama.util.dataclass import DocBundle
+
+logger = logging.getLogger(__name__)
 
 
 def to_json_or_str(item):
