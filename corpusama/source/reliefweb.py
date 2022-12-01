@@ -34,7 +34,8 @@ class ReliefWeb(Call):
         if self.call_n > 0:
             self.parameters["offset"] += self.response_json["count"]
             if self.response_json["count"] == 0:
-                raise UserWarning("Call aborted: no more results.")
+                logger.debug("no more results")
+                raise SystemExit()
         logger.debug(self.parameters["offset"])
 
     def all(self, limit: int = 1000):
@@ -169,10 +170,11 @@ class ReliefWeb(Call):
         self.df_raw = df
         if not df.empty:
             self.db.insert(df, "_raw")
+            self._insert_log()
+            self._insert_pdf()
         else:
-            raise UserWarning("Call aborted: no more results.")
-        self._insert_log()
-        self._insert_pdf()
+            logger.debug("no more results")
+            raise SystemExit()
 
     def __repr__(self):
         return ""
