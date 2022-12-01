@@ -41,7 +41,8 @@ class Call:
         self._calls_made()
         self.calls_remaining = self.quota - self.calls_made
         if self.calls_made >= self.quota:
-            raise UserWarning(f"Daily API quota reached {self.calls_made}")
+            logger.debug(f"reached {self.calls_made}")
+            raise SystemExit()
 
     def _set_wait(self):
         """Sets a wait time between API calls.
@@ -108,4 +109,5 @@ class Call:
     def __init__(self, config_file=".config.json", source=None):
         self.log_file = log_file
         self.source = source
+        self.call_n = 0
         self.load_config(config_file)
