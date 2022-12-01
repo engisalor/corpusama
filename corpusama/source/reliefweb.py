@@ -37,6 +37,8 @@ class ReliefWeb(Call):
 
         self.call_n = 0
         self.limit = limit
+        if limit == 0:
+            self.limit = self.quota
         self.one()
 
     def new(self, limit: int = 0):
@@ -63,18 +65,23 @@ class ReliefWeb(Call):
 
     @decorator.while_loop
     def one(self):
+        # check whether to abort
         if self.call_n >= self.limit:
             logger.debug(f"limit reached {self.limit}")
             return False
-        # automatically set limit
-        if self.call_n == 1 and self.limit == 0:
-            limit = self.response_json["totalCount"] / self.parameters["limit"]
-            self.limit = math.ceil(limit)
-        # prepare call
-        self._set_wait()
         self._enforce_quota()
-        self._offset()
+        # automatically set limit
+        if self.call_n == 1 and self.limit >= self.quota:
+            limit = self.response_json["totalCount"] / self.parameters["limit"]
+            limit = math.ceil(limit)
+            self.limit = min([limit, self.calls_remaining]) + 1
+        # prevent excessive wait for second call
+        if self.call_n == 0:
+            self._set_wait(5)
+        else:
+            self._set_wait()
         # make call
+        self._offset()
         self._request()
         self._get_field_names()
         self._hash()
@@ -175,7 +182,6 @@ class ReliefWeb(Call):
         self.raw = {}
         self.log = {}
         self.limit = 1
-        self._set_wait()
         if not appname:
             self.appname = self.config["reliefweb"]["appname"]
         else:
