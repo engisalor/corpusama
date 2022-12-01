@@ -20,4 +20,4 @@ offset: 0
 profile: full
 slim: 1
 sort:
-- date:asc
+- date.changed:asc
