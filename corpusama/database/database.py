@@ -3,6 +3,7 @@ import pathlib
 import re
 import sqlite3 as sql
 
+from corpusama._version import __version__
 from corpusama.util import convert
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ class Database:
         # get tables if db not empty
         if [x[0] for x in res.fetchall()]:
             queries = [
+                "SELECT * FROM _about",
                 "SELECT * FROM _log",
                 "SELECT * FROM _pdf",
                 "SELECT * FROM _raw",
@@ -110,6 +112,16 @@ class Database:
             df[x] = None
         return df
 
+    def set_about(self):
+        """Records metadata about a database."""
+
+        query = """CREATE TABLE IF NOT EXISTS _about
+            ('key' TEXT PRIMARY KEY, 'value' TEXT)"""
+        self.c.execute(query)
+        values = ("version", __version__)
+        self.c.execute("INSERT OR REPLACE INTO _about VALUES (?,?)", values)
+        self.conn.commit()
+
     def __repr__(self):
         return ""
 
@@ -126,3 +138,4 @@ class Database:
         self.open_db()
         self.get_schema()
         self.get_tables()
+        self.set_about()
