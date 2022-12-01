@@ -21,7 +21,7 @@ class Corpus:
     from corpusama.corpus.archive import export_archive, make_archive
     from corpusama.corpus.attribute import export_attribute, make_attribute
     from corpusama.corpus.tagset import export_tagset
-    from corpusama.corpus.vertical import make_vertical
+    from corpusama.corpus.vertical import make_vertical, outdated_vert
 
     def __init__(
         self,

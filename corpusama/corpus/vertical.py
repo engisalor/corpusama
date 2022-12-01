@@ -54,17 +54,15 @@ def stanza_to_vert(bundle: DocBundle, tagset) -> DocBundle:
 def make_vertical(self, size=10, runs=0):
     """Processes raw data and inserts vertical files into corpus.
 
-    Destructive: replaces existing vertical content
+    Does nothing if all vertical files exist and are up to date.
 
+    - self, Corpus object
     - size, int, documents to process at a time
     - runs, int, maximum batches to run"""
 
     @decorator.while_loop
     def batch(self):
         """Manages creation of vertical content in batches."""
-
-        # FIXME debug and use 'AND NOT IN (SELECT id FROM _vert)'
-        # instead of lines in # skip existing
 
         # get batch
         query = """SELECT * FROM _raw
@@ -73,9 +71,10 @@ def make_vertical(self, size=10, runs=0):
         batch, offset = self.db.fetch_batch(self.vert_run, self.vert_size, query)
         if not batch:
             return False
-        # skip existing
+        # skip up-to-date existing records
+        changed = outdated_vert(self)
         exists = self.db.c.execute("SELECT id FROM _vert").fetchall()
-        exists = [x[0] for x in exists]
+        exists = [x[0] for x in exists if x[0] not in changed]
         batch = [x for x in batch if x[1] not in exists]
         if not batch:
             self.vert_run += 1
@@ -94,7 +93,7 @@ def make_vertical(self, size=10, runs=0):
 
     @decorator.timer
     def batch_run(self, batch) -> int:
-        """Runs stanza, converts to vertical, and inserts into database.
+        """Runs stanza, converts to vertical, and inserts records.
 
         Returns the number of tokens processed."""
 
@@ -109,3 +108,21 @@ def make_vertical(self, size=10, runs=0):
     self.vert_run = 0
     self.vert_runs = runs
     batch(self)
+
+
+def outdated_vert(self):
+    """Returns a list of out-of-date vertical files.
+
+    Compares vertical file creation date with record date_changed.
+
+    - self, Corpus object"""
+
+    query = """SELECT _vert.id, json_extract(_raw.date,'$.changed'), vert_date
+        FROM _vert LEFT JOIN _raw ON _vert.id = _raw.id"""
+    df = pd.read_sql(query, self.db.conn)
+    df.columns = ["id", "date_changed", "vert_date"]
+    for col in ["date_changed", "vert_date"]:
+        df[col] = df[col].apply(pd.Timestamp)
+    df = df.query("date_changed > vert_date")
+    changed = df["id"].tolist()
+    return changed
