@@ -6,11 +6,24 @@ wait_dict = {0: 1, 5: 49, 10: 99, 20: 499, 30: None}
 input_yml = "corpusama/test/test_source/call.yml"
 input_json = "corpusama/test/test_source/call.json"
 input_dict = {
-    "query": {"value": "earthquake"},
+    "filter": {
+        "conditions": [
+            {"field": "language", "value": "English"},
+            {
+                "field": "date",
+                "value": {
+                    "from": "2000-01-01T00:00:00+00:00",
+                    "to": "2005-09-01T00:00:00+00:00",
+                },
+            },
+        ],
+        "operator": "AND",
+    },
     "limit": 100,
     "offset": 0,
     "profile": "full",
-    "sort": ["date:asc"],
+    "query": {"value": "earthquake"},
+    "sort": ["date.changed:asc"],
 }
 
 
@@ -23,7 +36,7 @@ class Test_Call(unittest.TestCase):
     # def test_enforce_quota(self):
     #     self.job.quota = 1000
     #     self.job.calls_made = 1000
-    #     with self.assertRaises(UserWarning):
+    #     with self.assertRaises(SystemExit):
     #         self.job._enforce_quota()
 
     def test_set_wait(self):
@@ -35,12 +48,12 @@ class Test_Call(unittest.TestCase):
                 self.assertIsNone(v)
                 v = 1000000
             # values and wait align
-            self.job.n_calls = v
+            self.job.limit = v
             self.job._set_wait()
             self.assertEqual(self.job.wait, k)
-            # n_calls+1 changes wait
+            # limit+1 changes wait
             if v != 1000000:
-                self.job.n_calls = v + 1
+                self.job.limit = v + 1
                 self.job._set_wait()
                 self.assertNotEqual(self.job.wait, k)
 

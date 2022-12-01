@@ -1,5 +1,6 @@
 import json
 import pathlib
+import time
 import unittest
 
 import pandas as pd
@@ -22,12 +23,16 @@ def save_example_call():
     Example data must contain at least one value for the file field."""
 
     job = ReliefWeb(input_yml, database)
-    job.run()
+    job.one()
     with open(example_response, "w") as f:
         json.dump(job.response_json, f)
-    job.df_raw.to_json(example_raw, indent=2)
-    job.df_log.to_json(example_log, indent=2)
-    job.df_pdf.to_json(example_pdf, indent=2)
+
+    tables = ["_raw", "_pdf", "_log"]
+    queries = ["SELECT * FROM _raw", "SELECT * FROM _pdf", "SELECT * FROM _log"]
+    for x in range(len(tables)):
+        df = pd.read_sql(queries[x], job.db.conn)
+        name = f"corpusama/test/test_source/.call{tables[x]}.json"
+        df.to_json(name, indent=2)
     pathlib.Path(f"data/{database}").unlink(missing_ok=True)
 
 
@@ -83,11 +88,46 @@ class Test_ReliefWeb(unittest.TestCase):
             str(pdf["id"].sort_values().values), str(sql_pdf["id"].sort_values().values)
         )
 
-    @unittest.skip("WARNING: comment this line or logging will break.")
-    def test_run_no_database(self):
-        job = ReliefWeb(input_yml)
-        job.run()
+
+@unittest.skip("WARNING: comment this line or logging will break when testing.")
+class Test_ReliefWeb_Making_Calls(unittest.TestCase):
+    """Superficially tests that API calls function properly."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.job = ReliefWeb(input_yml)
+
+    def setUp(cls):
+        time.sleep(2)
+        dir = pathlib.Path("data")
+        filepath = dir / database
+        filepath.unlink(missing_ok=True)
+
+    def test_run_one(self):
+        self.job.one()
+        self.assertIsNotNone(self.job.response_json["time"])
+
+    def test_run_all(self):
+        self.job.all(1)
+        self.assertIsNotNone(self.job.response_json["time"])
+
+    def test_run_new(self):
+        # job works
+        job = ReliefWeb(input_yml, database)
+        job.new(1)
         self.assertIsNotNone(job.response_json["time"])
+        # filter gets updated
+        job.new(2)
+        conditions = job.parameters.get("filter").get("conditions")
+        has_filter = [x for x in conditions if x.get("field", None) == "date.changed"]
+        self.assertEqual(len(has_filter), 1)
+
+    def test_new_raise_bad_sort_method(self):
+        job = ReliefWeb(input_yml, database)
+        job.new(1)
+        del job.parameters["sort"]
+        with self.assertRaises(ValueError):
+            job.new(1)
 
 
 if __name__ == "__main__":
