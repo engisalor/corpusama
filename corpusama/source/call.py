@@ -44,13 +44,14 @@ class Call:
             logger.debug(f"reached {self.calls_made}")
             raise SystemExit()
 
-    def _set_wait(self):
+    def _set_wait(self, manual=None):
         """Sets a wait time between API calls.
 
         Example wait_dict: `{0: 1, 5: 49, 10: 99, 20: 499, 30: None}`
         Where: keys = seconds to wait and values = the maximum number of
         calls allowed before increasing the wait time.
-        A `None` value indicates the largest possible wait time."""
+        A `None` value indicates the largest possible wait time.
+        Manual, int, overrides the wait dict"""
 
         waits = []
         for k, v in self.wait_dict.items():
@@ -60,8 +61,10 @@ class Call:
         if not waits:
             waits.append(max([k for k in self.wait_dict.keys()]))
 
-        logger.debug(f"{min(waits)} second(s)")
         self.wait = min(waits)
+        if manual:
+            self.wait = manual
+        logger.debug(f"{self.wait}")
 
     def _get_parameters(self):
         """Loads API call parameters from a dict."""
