@@ -8,9 +8,9 @@ logger = logging.getLogger(__name__)
 
 
 def now():
-    """Returns an ISO timestamp rounded to the second."""
+    """Returns an ISO timestamp in UTC time rounded to the second."""
 
-    return pd.Timestamp.now().round("S").isoformat()
+    return pd.Timestamp.now(tz="UTC").round("S").isoformat()
 
 
 def join_results(results: tuple, columns: list) -> pd.DataFrame:
