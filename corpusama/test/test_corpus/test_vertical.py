@@ -35,3 +35,10 @@ class Test_Vertical(unittest.TestCase):
         self.assertTrue(vert.token, 22)
         self.assertTrue(type(pd.Timestamp(vert.date)), pd.Timestamp)
         self.assertIn("NN", vert.xpos)
+
+
+class Test_Vertical_Functions(unittest.TestCase):
+    def test_drop_empty_vert(self):
+        df = pd.DataFrame({"vert": ["a", ""], "id": [0, 1]})
+        df = vertical.drop_empty_vert(df)
+        self.assertEqual(len(df), 1)

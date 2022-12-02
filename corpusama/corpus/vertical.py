@@ -100,6 +100,7 @@ def make_vertical(self, size=10, runs=0):
         stan = _stanza.run(batch[self.text_column].values, batch["id"].values, self.nlp)
         vert = stanza_to_vert(stan, self.tagset)
         df = convert.docbundle_to_df(vert)
+        df = drop_empty_vert(df)
         self.db.insert(df, "_vert")
         return vert.token
 
@@ -108,6 +109,17 @@ def make_vertical(self, size=10, runs=0):
     self.vert_run = 0
     self.vert_runs = runs
     batch(self)
+
+
+def drop_empty_vert(df):
+    """Drops rows if no content after running stanza.
+
+    This can occur when an XML string only contains images or other non-text."""
+
+    drops = df.query("vert.str.len() == 0")
+    if not drops.empty:
+        logger.warning(f'{drops["id"].values}')
+    return df.query("vert.str.len() > 0")
 
 
 def outdated_vert(self):
