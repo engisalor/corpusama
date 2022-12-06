@@ -1,1 +1,1 @@
-"""This package contains methods for accessing and manipulating a SQL database."""
+"""Methods for accessing and manipulating an SQL database."""
