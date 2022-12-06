@@ -1,3 +1,4 @@
+"A corpus management tool."
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
