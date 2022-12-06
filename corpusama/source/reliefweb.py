@@ -1,3 +1,4 @@
+"""A module for managing ReliefWeb API calls."""
 import logging
 import math
 
@@ -13,17 +14,36 @@ logger = logging.getLogger(__name__)
 class ReliefWeb(Call):
     """Manages API calls made to ReliefWeb.
 
-    Options
-    - input, JSON/YML filepath or dict with parameters
-    - database, None or database filename
-    - appname, unique identifier for using ReliefWeb's API
-    - url, base url for making POST calls
-    - quota, daily usage limit (see ReliefWeb API documentation)
-    - wait_dict, dictionary of wait times
-    (default `{0: 1, 5: 49, 10: 99, 20: 499, 30: None}`)"""
+    Args:
+        input: A JSON/YML filepath or dictionary with parameters.
+        database: A database filename, e.g., ``mycorpus.db``.
+        appname: A unique identifier for using ReliefWeb's API.
+        url: A base url for making POST calls.
+        quota: A daily usage limit (see ReliefWeb API documentation).
+        wait_dict: A dictionary of wait times.
 
-    def _offset(self):
-        """Adjusts offset parameter and halts job if no more results."""
+    Methods:
+        one: Makes one API call.
+        all: Makes repeated API calls by increasing ``offset``.
+        new: Makes API calls for data that hasn't been retrieved yet.
+
+    Attributes:
+        raw: Stores API call data (may be overwritten depending on calls made).
+
+    Notes:
+        - The maximum number of daily calls defaults to 1,000.
+        - The default wait dictionary is: ``{0: 1, 5: 49, 10: 99, 20: 499, 30: None}``.
+        - If ``db=None``, data is only stored in ``ReliefWeb.raw``.
+
+    See Also:
+        - ``source.call.Call`` (parent class with inherited methods/attributes).
+        - Repository documentation for tips on making ReliefWeb calls.
+
+        https://reliefweb.int/help/api
+        https://reliefweb.int/terms-conditions"""
+
+    def _offset(self) -> None:
+        """Adjusts the offset parameter and halts a job if no more results."""
 
         if self.call_n > 0:
             self.parameters["offset"] += self.response_json["count"]
@@ -32,8 +52,17 @@ class ReliefWeb(Call):
                 raise SystemExit()
         logger.debug(self.parameters["offset"])
 
-    def all(self, limit: int = 0):
-        """Makes repeated calls by incrementing the offset field."""
+    def all(self, limit: int = 0) -> None:
+        """Makes repeated calls by incrementing the offset field.
+
+        Args:
+            limit: The maximum number of calls to make (0 = as many as possible).
+
+        Notes:
+            - Makes calls exactly as parameters indicate and increments ``offset``
+                with each call.
+            - Overwrites existing database raw content and starts over again if
+                aborted (not usable to progressively download content)."""
 
         self.call_n = 0
         self.limit = limit
@@ -41,17 +70,29 @@ class ReliefWeb(Call):
             self.limit = self.quota
         self.one()
 
-    def new(self, limit: int = 0):
-        """Makes repeated calls starting from the latest date.changed."""
+    def new(self, limit: int = 0) -> None:
+        """Makes repeated calls starting from the latest ``date.changed``.
+
+        Args:
+            limit: The maximum number of calls to make (0 = as many as possible).
+
+        Notes:
+            - Requires use with a ``Database`` and that API parameters include
+                ``"sort": ["date.changed:asc"]``.
+            - Calls are made starting with the oldest ``date.changed`` value.
+            - Modified content is overwritten if its ``date.changed`` is newer
+                than the latest value.
+            - Can be aborted and restarted and will safely continue at
+                the job's previous state."""
 
         self.parameters["offset"] = 0
         if self.parameters.get("sort", None) != ["date.changed:asc"]:
-            raise ValueError('Add `"sort": ["date.changed:asc"]` to parameters first.')
+            raise ValueError('Add "sort": ["date.changed:asc"] to parameters first.')
         self._start_from()
         self.all(limit)
 
     def _start_from(self):
-        """Updates filter parameter to start from the latest date.changed."""
+        """Updates ``filter`` to start from the latest ``date.changed``."""
 
         res = self.db.c.execute("SELECT json_extract(_raw.date,'$.changed') FROM _raw")
         date_changed = [pd.Timestamp(x[0]) for x in res.fetchall()]
@@ -64,7 +105,21 @@ class ReliefWeb(Call):
             logger.debug(latest)
 
     @decorator.while_loop
-    def one(self):
+    def one(self) -> None:
+        """Makes a single ReliefWeb API call.
+
+        Notes:
+            - Aborts if the daily quota or user-defined limit are reached.
+            - Is used as the basic building block for other call methods
+                (gets repeated in a while loop).
+
+            Wait times for multiple calls are computed based on ``wait_dict``
+            and the ``totalCount`` field from the first API call made. E.g., a
+            ``totalCount`` of 1000 and a ``parameters.limit`` of 100 means 10 calls
+            need to be made, which defaults to a 5-second wait period.
+
+            Inserts data into the ``_raw`` table after each call."""
+
         # check whether to abort
         if self.call_n >= self.limit:
             logger.debug(f"limit reached {self.limit}")
@@ -107,7 +162,7 @@ class ReliefWeb(Call):
         logger.debug(f"{len(self.field_names)} {sorted(self.field_names)}")
 
     def _insert_log(self):
-        """Inserts a log entry for a call."""
+        """Inserts a log entry for a call into the ``_log`` table."""
 
         record = {
             "api_params_hash": self.hash,
@@ -121,7 +176,7 @@ class ReliefWeb(Call):
         self.db.insert(self.df_log, "_log")
 
     def _insert_pdf(self):
-        """Updates pdf table after each call."""
+        """Updates the ``_pdf`` table after each call."""
 
         df = self.df_raw.loc[self.df_raw["file"].notna()].copy()
         if not df.empty:
@@ -134,8 +189,15 @@ class ReliefWeb(Call):
             df_flat = self.db._add_missing_columns(df_flat, "_pdf")
             self.db.insert(df_flat, "_pdf")
 
-    def insert(self):
-        """Reshapes and inserts ReliefWeb JSON data into db."""
+    def insert(self) -> None:
+        """Reshapes and inserts ReliefWeb JSON data into a database.
+
+        Notes:
+            - Normalizes JSON data and reshapes to a DataFrame.
+            - Replaces ``-`` with ``_`` in column names.
+            - Adds empty columns from the ``_raw`` table if missing from
+                response data.
+            - Adds API metadata columns."""
 
         # normalize data
         df = pd.json_normalize(self.response_json["data"], sep="_", max_level=1)
