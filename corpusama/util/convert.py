@@ -66,7 +66,7 @@ def nan_to_none(
     if series.any():
         series = series.replace(to_replace=bad_NAs, value=None, regex=True)
     else:
-        series = [None for x in series]
+        series = pd.Series([None for x in series], dtype=object)
     return series
 
 
