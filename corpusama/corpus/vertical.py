@@ -10,19 +10,21 @@ from corpusama.util.dataclass import DocBundle
 logger = logging.getLogger(__name__)
 
 
-def stanza_to_vert(bundle: DocBundle, tagset) -> DocBundle:
+def stanza_to_vert(bundle: DocBundle, tagset: dict) -> DocBundle:
     """Replaces a bundle of stanza documents with vertical content.
 
-    - tagset, dict, defines how to create lempos tags"""
+    Args:
+        bundle: A ``DocBundle`` to process.
+        tagset: Rules defining how to create lempos tags from xpos values."""
 
-    def lemmatize_fail(sent, x) -> None:
+    def lemmatize_fail(sent, x: int) -> None:
         """Logs a warning when lemmatization fails."""
 
         for w in sent.words:
             if w.lemma is None:
                 logger.warning(f"{bundle.id[x]}: {w.text}")
 
-    def make_lines(sent):
+    def make_lines(sent) -> list:
         """Makes a list of vertical lines for a sentence."""
 
         return [
@@ -30,8 +32,8 @@ def stanza_to_vert(bundle: DocBundle, tagset) -> DocBundle:
             for w in sent.words
         ]
 
-    def make_sentence(sent, x) -> list:
-        "Makes a vertical sentence."
+    def make_sentence(sent, x: int) -> list:
+        """Makes a list of vertical-formatted sentence segments."""
 
         sentence = ["<s>\n"]
         lemmatize_fail(sent, x)
@@ -41,7 +43,7 @@ def stanza_to_vert(bundle: DocBundle, tagset) -> DocBundle:
         return "".join(sentence)
 
     def make_docs(bundle: DocBundle) -> DocBundle:
-        """Overwrites bundle documents with vertical equivalent."""
+        """Overwrites bundle documents with their vertical equivalent."""
 
         for x in range(bundle.len):
             _list = [make_sentence(sent, x) for sent in bundle.doc[x].sentences]
@@ -51,17 +53,20 @@ def stanza_to_vert(bundle: DocBundle, tagset) -> DocBundle:
     return make_docs(bundle)
 
 
-def make_vertical(self, size=10, runs=0):
-    """Processes raw data and inserts vertical files into corpus.
+def make_vertical(self, size: int = 50, runs: int = 0, update: bool = False) -> None:
+    """Processes raw data and inserts vertical files into the ``_vert`` table.
 
-    Does nothing if all vertical files exist and are up to date.
+    Args:
+        self: A ``Corpus`` object.
+        size: Number of documents to process at a time.
+        runs: The maximum number of batches to run (for testing).
+        update: Whether to update newly modified records.
 
-    - self, Corpus object
-    - size, int, documents to process at a time
-    - runs, int, maximum batches to run"""
+    See also:
+        - ``outdated_vert``"""
 
     @decorator.while_loop
-    def batch(self):
+    def batch(self, update) -> bool:
         """Manages creation of vertical content in batches."""
 
         # get batch
@@ -71,10 +76,13 @@ def make_vertical(self, size=10, runs=0):
         batch, offset = self.db.fetch_batch(self.vert_run, self.vert_size, query)
         if not batch:
             return False
-        # skip up-to-date existing records
-        changed = outdated_vert(self)
+        # skip records
         exists = self.db.c.execute("SELECT id FROM _vert").fetchall()
-        exists = [x[0] for x in exists if x[0] not in changed]
+        exists = [x[0] for x in exists]
+        if update:
+            changed = outdated_vert(self)
+            exists = [x for x in exists if x not in changed]
+            logger.debug(f"updating {changed}")
         batch = [x for x in batch if x[1] not in exists]
         if not batch:
             self.vert_run += 1
@@ -95,7 +103,8 @@ def make_vertical(self, size=10, runs=0):
     def batch_run(self, batch) -> int:
         """Runs stanza, converts to vertical, and inserts records.
 
-        Returns the number of tokens processed."""
+        Returns:
+            The number of tokens processed."""
 
         stan = _stanza.run(batch[self.text_column].values, batch["id"].values, self.nlp)
         vert = stanza_to_vert(stan, self.tagset)
@@ -108,13 +117,19 @@ def make_vertical(self, size=10, runs=0):
     self.vert_size = size
     self.vert_run = 0
     self.vert_runs = runs
-    batch(self)
+    batch(self, update)
 
 
-def drop_empty_vert(df):
-    """Drops rows if no content after running stanza.
+def drop_empty_vert(df: pd.DataFrame) -> pd.DataFrame:
+    """Drops DataFrame rows without vertical content.
 
-    This can occur when an XML string only contains images or other non-text."""
+    Args:
+        df: A DataFrame to insert into the ``_vert`` table.
+
+    Note:
+        Null content should already be filtered out earlier in data processing,
+        but empty strings can still occur, e.g., when XML content only contains
+        images or other non-text."""
 
     drops = df.query("vert.str.len() == 0")
     if not drops.empty:
@@ -122,12 +137,14 @@ def drop_empty_vert(df):
     return df.query("vert.str.len() > 0")
 
 
-def outdated_vert(self):
+def outdated_vert(self) -> list:
     """Returns a list of out-of-date vertical files.
 
-    Compares vertical file creation date with record date_changed.
+    Args:
+        self: A ``Corpus`` object.
 
-    - self, Corpus object"""
+    Note:
+        Compares ``vert_date`` values with ``date_changed`` values."""
 
     query = """SELECT _vert.id, json_extract(_raw.date,'$.changed'), vert_date
         FROM _vert LEFT JOIN _raw ON _vert.id = _raw.id"""
