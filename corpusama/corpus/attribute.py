@@ -90,18 +90,28 @@ def make_attribute(self, size=100):
     attr_batch(self, size)
 
 
-def export_attribute(self, print=False):
-    """Reads _vert.attr tags and outputs a set of attributes.
+def export_attribute(
+    self,
+    print: bool = False,
+    parameters: dict = {"DYNTYPE": "index", "MULTISEP": "|", "MULTIVALUE": "y"},
+) -> None:
+    """Reads all attributes tags from the ``_vert`` table and saves to file.
 
-    Uses dataclass.Attribute to determine item format.
+    Args:
+        print: Return a list of attribute strings without saving to file.
+        parameters: Dictionary of parameters.
 
-    - print, bool, return list without saving file"""
+    Notes:
+        - Saves attributes to ``/data/<database_name>.attr.go``.
+
+    See Also:
+        - ``util.dataclass.Attribute``
+        - ``util.util.unique_xml_attrs``"""
 
     res = self.db.c.execute("SELECT attr FROM _vert")
     tags = ["".join([x[0], "</doc>"]) for x in res.fetchall()]
     all_attrs = util.unique_xml_attrs(tags)
     config = []
-    parameters = {"DYNTYPE": "index", "MULTISEP": "|", "MULTIVALUE": "y"}
     for attr in sorted(all_attrs):
         config.append(dataclass.CorpusAttribute(attr, parameters))
     filepath = self.db.path.with_suffix(".attr.go")
