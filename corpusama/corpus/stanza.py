@@ -1,4 +1,4 @@
-"""Methods to execute stanza pipelines and modify results."""
+"""Methods to execute stanza pipelines and process results."""
 import logging
 import re
 
@@ -11,8 +11,20 @@ from corpusama.util.dataclass import DocBundle
 logger = logging.getLogger(__name__)
 
 
-def load_nlp(resources, processors):
-    """Loads a stanza Processor object, updating models once a day."""
+def load_nlp(resources, processors) -> Pipeline:
+    """Returns a stanza ``Pipeline`` object, updating models once a day.
+
+    Args:
+        resources: Stanza resources.
+        processors: Stanza processors.
+
+    Notes:
+        - Uses ``util.count_log_lines`` to check if the model has been updated.
+        - Keep in mind that as stanza models are updated, segmentation,
+            lemmatization, etc., may differ over time.
+
+    See Also:
+        https://stanfordnlp.github.io/stanza/"""
 
     nlp_runs = util.count_log_lines("load_nlp", log_file)
     if nlp_runs > 0:
@@ -23,7 +35,7 @@ def load_nlp(resources, processors):
     return nlp
 
 
-def get_xpos(processed) -> list:
+def get_xpos(processed: list) -> list:
     """Returns a list of unique xpos strings from a list of processed documents."""
 
     xpos = set()
@@ -33,14 +45,18 @@ def get_xpos(processed) -> list:
 
 
 def fix_lemma(word):
-    """Replaces lemmas containing digits with [number] for lempos values.
+    """Replaces lemmas containing digits with ``[number]`` for lempos values.
 
-    Also manages bad lemma values: defaults to word.text if no word.lemma.
+    Args:
+        word: A stanza ``Word`` object.
+
+    Notes:
+        Also manages bad lemma values: defaults to ``word.text`` if no ``word.lemma``.
 
     Examples:
-    - 35	CD	[number]-m # instead of 35-m
-    - ii	CD	ii-m
-    - five	CD	five-m"""
+        - ``35	CD	[number]-m`` instead of ``35	CD	35-m``
+        - ``ii	CD	ii-m`` no change for Roman numerals
+        - ``five	CD	five-m``  no change for words"""
 
     # fix missing lemma
     if word.lemma is None:
@@ -52,13 +68,20 @@ def fix_lemma(word):
         return word.lemma
 
 
-def run(docs: list, ids: list, pipeline: Pipeline, parse_html=True) -> DocBundle:
-    """Runs stanza on [str] and returns a DocBundle object.
+def run(
+    docs: list, ids: list, pipeline: Pipeline, parse_html: bool = True
+) -> DocBundle:
+    """Runs stanza on a list of strings and returns a ``DocBundle`` object.
 
-    - docs, list, documents
-    - ids, list, unique identified for each doc
-    - pipeline, stanza.Pipeline for running nlp
-    - parse_html, bool, extract text from HTML content"""
+    Args:
+        docs: A list of strings to process.
+        ids: A list of unique IDs corresponding to ``docs``.
+        pipeline: A stanza ``Pipeline``.
+        parse_html: Whether to run docs through an XML parser.
+
+    See also:
+        - ``util.dataclass.DocBundle``
+        - ``util.convert.html_to_text``"""
 
     if parse_html:
         docs = [convert.html_to_text(x) for x in docs]

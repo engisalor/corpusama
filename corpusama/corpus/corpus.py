@@ -1,4 +1,4 @@
-"""Primary module for creating and maintaining corpora."""
+"""Stores the Corpus class, for executing operations on corpora."""
 import logging
 import pathlib
 
@@ -11,12 +11,33 @@ logger = logging.getLogger(__name__)
 class Corpus:
     """A class to make and maintain a corpus of vertical files.
 
-    - db, a database
-    - text_column, str, the column in raw with text content
-    - drop_attr, [str], columns to drop from attributes (includes text_column)
-    - resources, str, path to stanza resources
-    - processors, str, stanza resources to load
-    - tagset, str, path to corpus tagset YAML file"""
+    Args:
+        db: A database filename (``myCorpus.db``).
+        text_column: The column with raw text content.
+        drop_attr: Columns to drop from attributes.
+        resources: A path to stanza resources.
+        processors: Stanza processors to load.
+        tagset: A path to the corpus tagset YAML file.
+
+    Attributes:
+        db_name: The Database filename.
+        tagset (dict): The loaded tagset file.
+        tagset_file: The tagset filename (the initial ``tagset`` arg).
+
+    Methods:
+        Refer to modules in See Also.
+
+    Notes:
+        - Preset for use with ReliefWeb data.
+        - Combines methods from other modules that together constitute.
+            all the steps needed for making and maintaining a corpus
+            (after raw data has been downloaded from a source).
+
+    See Also:
+        ``archive``: Producing compressed archives of vertical files.
+        ``attribute``: Generating document attributes.
+        ``tagset``: Managing corpus tagsets.
+        ``vertical``: Generating vertical content from raw documents."""
 
     from corpusama.corpus.archive import export_archive, make_archive
     from corpusama.corpus.attribute import export_attribute, make_attribute
@@ -25,12 +46,12 @@ class Corpus:
 
     def __init__(
         self,
-        db,
-        text_column="body_html",
-        drop_attr=["body", "disaster__type"],
-        resources=".local-only/stanza_resources",
-        processors="tokenize,pos,lemma",
-        tagset="corpusama/corpus/tagset/ud_en_ewt.yml",
+        db: str,
+        text_column: str = "body_html",
+        drop_attr: list = ["body", "disaster__type"],
+        resources: str = ".local-only/stanza_resources",
+        processors: str = "tokenize,pos,lemma",
+        tagset: str = "corpusama/corpus/tagset/ud_en_ewt.yml",
     ):
         # variables
         self.text_column = text_column

@@ -1,3 +1,4 @@
+"""A module for managing archived corpus content."""
 import logging
 import lzma
 
@@ -9,13 +10,29 @@ from corpusama.util import convert, decorator, util
 logger = logging.getLogger(__name__)
 
 
-def make_archive(self, mode: str, note=None, size=10, runs=0):
-    """Makes an xz compressed version of vertical documents.
+def make_archive(self, mode: str, note=None, size=10, runs=0) -> None:
+    """Makes an xz version of vertical documents in the ``_archive`` table.
 
-    - version, int, corpus version that documents belong to
-    - note, str, comments about the archive
-    - size, int, documents to process at a time
-    - runs, int, maximum batches to run (for testing)"""
+    Args:
+        self: A ``Corpus`` object.
+        mode: What to archive (``full`` or ``add``).
+        note: Comments about the archive.
+        size: Number of documents to process at a time.
+        runs: Maximum number of batches to run (for testing).
+
+    Notes:
+        - ``full`` creates a single archive with all available content.
+        - ``add`` creates an archive of new content only.
+
+        A version number is set based on the mode and existing content.
+        Full archives are given a new version number: ``1.0``, ``2.0``, etc.
+        Partial archives keep the major version number and increment
+        the minor version number: adding to ``1.0`` will make archive ``1.1``.
+        A whole corpus is the set of archives with the same version
+        number: Corpus Version 1 is made up of ``1.0``, ``1.1``, etc.
+
+    See Also:
+        ``util.util.increment_version``"""
 
     # variables
     self.size = size
@@ -52,8 +69,8 @@ def make_archive(self, mode: str, note=None, size=10, runs=0):
 
 @decorator.timer
 @decorator.while_loop
-def _batch(self, mode: str):
-    """Combines vert content/doc tags and appends to a compressed xz object."""
+def _batch(self, mode: str) -> None:
+    """Combines vertical documents with their tags, then archives."""
 
     # get vertical data
     query = """SELECT * FROM _vert
@@ -90,10 +107,19 @@ def _batch(self, mode: str):
     return repeat
 
 
-def export_archive(self, version=None, date=None):
-    """Exports archives matching a version (int) or date (str).
+def export_archive(self, version=None, date=None) -> None:
+    """Exports archives matching a version or date.
 
-    Destination: `data/<db_name>_<version>_<corpus_date>.vert.xz`."""
+    Args:
+        self: A ``Corpus`` object.
+        version (str): The major.minor version to export.
+        date (str): The date of the archive to export.
+
+    Notes:
+        Use one argument only, ``version`` or ``date``.
+
+        Generates an .xz archive at the path:
+        ``data/<db_name>_<version>.vert.xz``."""
 
     # make query
     if version:
