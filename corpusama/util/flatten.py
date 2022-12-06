@@ -1,10 +1,18 @@
+"""Functions to flatten nested lists and dictionaries."""
+import logging
+
 import pandas as pd
 
 from corpusama.util import convert
 
+logger = logging.getLogger(__name__)
 
-def list_of_dict(ls: list):
-    """Recursively converts a list of dicts to a dict of lists."""
+
+def list_of_dict(ls: list) -> dict:
+    """Recursively converts a list of dicts to a dict of lists.
+
+    Notes:
+        Returns objects as-is if they're not lists or dicts."""
 
     def _flatten(ls):
         if not isinstance(ls, list):
@@ -26,10 +34,18 @@ def list_of_dict(ls: list):
     return _flatten(ls)
 
 
-def dataframe(df: pd.DataFrame, separator="__", reset_index=True):
-    """Flattens a dataframe with list and dict objects, pops source columns.
+def dataframe(
+    df: pd.DataFrame, separator: str = "__", reset_index: bool = True
+) -> pd.DataFrame:
+    """Flattens a DataFrame with list and dictionary objects.
 
-    New column names are labelled by <source column name><separator><new key>."""
+    Args:
+        df: The DataFrame to flatten.
+        separator: The character(s) to add between parent and child column names.
+        reset_index: Reset the DataFrame index if needed before continuing.
+
+    Notes:
+        Deletes nested source columns after completion."""
 
     # flatten data
     if reset_index:

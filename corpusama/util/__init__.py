@@ -1,1 +1,1 @@
-"""This package contains the library's shared methods."""
+"""A package with shared methods."""

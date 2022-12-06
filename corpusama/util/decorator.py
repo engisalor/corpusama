@@ -1,3 +1,4 @@
+"""Decorator functions."""
 import functools
 import time
 
