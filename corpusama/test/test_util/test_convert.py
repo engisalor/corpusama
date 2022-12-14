@@ -60,7 +60,7 @@ class Test_Convert(unittest.TestCase):
         self.assertEqual(convert.list_to_string(1), 1)
         self.assertEqual(convert.list_to_string({1: 1}), {1: 1})
         with self.assertRaises(ValueError):
-            convert.list_to_string(["a|b|c"])
+            convert.list_to_string(["a|b|c"], separator="|")
 
     def test_html_to_text(self):
         html = "<p>Encyclopedias have existed for around 2,000 years. (Wikipedia)</p>"

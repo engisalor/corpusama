@@ -12,7 +12,7 @@ class Test_Corpus_(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.db_file = "sk1827dj3kc9sl29.db"
-        df_prepped = {"id": {0: 1}, "new__a__1": {0: "9"}}
+        df_prepped = {"id": {0: '"1"'}, "new__a__1": {0: '"hello"'}}
         cls.df_prepped = pd.DataFrame(df_prepped)
 
     @classmethod
@@ -22,14 +22,14 @@ class Test_Corpus_(unittest.TestCase):
         filepath.unlink()
 
     def test_prep_df(self):
-        df = pd.DataFrame({"id": [1], "new": [{"a.1": [9], "b-1": [False]}]})
+        df = pd.DataFrame({"id": [1], "new": [{"a.1": [" hello"], "b-1": ["False"]}]})
         df = attribute.prep_df(df, drop_attr=["new__b_1"])
         self.assertTrue(self.df_prepped.equals(df))
 
     def test_doc_tag(self):
-        attrs = {"id": 100, "date": "2002", "country": "wld"}
+        attrs = {"id": "100", "date": "2002", "country": "wld"}
         tag = attribute.doc_tag(attrs)
-        self.assertEqual(tag, '<doc id="100" country="wld" date="2002" >')
+        self.assertEqual(tag, "<doc id=100 country=wld date=2002 >")
 
     def test_join_vert(self):
         joined = '<doc id="1">\n1\tCD\t[number]-m\n\n</doc>\n'
@@ -40,14 +40,15 @@ class Test_Corpus_(unittest.TestCase):
         ts = now()
         year = str(pd.Timestamp(ts).year)
         dt = {
-            "id": {0: 1},
-            "new__a__1": {0: "9"},
+            "id": {0: '"1"'},
+            "new__a__1": {0: '"hello"'},
             "date__col": {0: ts},
             "date__col__year": {0: year},
         }
         result = pd.DataFrame(dt)
         new = self.df_prepped.copy()
         new["date__col"] = ts
+        new = pd.DataFrame.from_dict(new)
         attribute.add_years(new)
         self.assertTrue(result.equals(new))
 
