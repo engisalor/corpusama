@@ -2,6 +2,7 @@
 
 ## [0.1.1](https://github.com/Humanitarian-Encyclopedia/corpusama/compare/v0.1.0...v0.1.1) (2022-12-14)
 
+Includes various bug fixes and incremental improvements for making/managing a corpus.
 
 ### Bug Fixes
 
