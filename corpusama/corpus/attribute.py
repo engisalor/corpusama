@@ -1,5 +1,4 @@
 """Methods to generate and modify corpus attributes."""
-import json
 import logging
 from collections import OrderedDict
 
@@ -10,12 +9,18 @@ from corpusama.util import convert, dataclass, decorator, flatten, util
 logger = logging.getLogger(__name__)
 
 
-def prep_df(df: pd.DataFrame, drop_attr: list) -> pd.DataFrame:
+def prep_df(
+    df: pd.DataFrame,
+    drop_attr: list,
+    years: bool = True,
+) -> pd.DataFrame:
     """Prepares a DataFrame of raw content for making document attributes.
 
     Args:
         df: A slice of raw source data.
         drop_attr: A list of fields to exclude from corpus attributes.
+        years: Run ``attribute.add_years`` on data
+            (add columns simplifying timestamps to 4-digit year only).
 
     Notes:
         - Flattens data and cleans column names
@@ -24,14 +29,20 @@ def prep_df(df: pd.DataFrame, drop_attr: list) -> pd.DataFrame:
 
     See Also:
         - ``util.flatten``
+        - ``util.convert.nan_to_none``
         - ``util.util.list_to_string``
-        - ``util.convert.nan_to_none``"""
+        - ``util.util.clean_xml_tokens``
+        - ``util.util.xml_quoteattr``"""
 
     df = flatten.dataframe(df)
     df = df.applymap(convert.list_to_string)
     df.columns = [x.replace(".", "__").replace("-", "_") for x in df.columns]
     if drop_attr:
         df = df[[x for x in df.columns if x not in drop_attr]]
+    if years:
+        add_years(df)
+    df = df.applymap(util.clean_xml_tokens)
+    df = df.applymap(util.xml_quoteattr)
     df = df.apply(convert.nan_to_none)
     return df
 
@@ -40,18 +51,19 @@ def doc_tag(dt: dict) -> str:
     """Returns a document's XML tag with attributes from a dictionary.
 
     Args:
-        dt: A dictionary of tag key:value pairs.
+        dt: A dictionary of tag items
+            (pre-format with ``prep_df`` or similar first).
 
     Notes:
-        Outputs the start-tag only:
+        - Outputs the start-tag only:
             ``<doc id="12345" title="document title>``."""
 
     dt = OrderedDict(sorted(dt.items()))
-    doc_tag = [f'<doc id="{dt["id"]}" ']
+    doc_tag = [f'<doc id={dt["id"]} ']
     del dt["id"]
     for k, v in dt.items():
         if v:
-            doc_tag.append(f"{k}={json.dumps(str(v),ensure_ascii=False)} ")
+            doc_tag.append(f"{k}={v} ")
     doc_tag.append(">")
     return "".join(doc_tag)
 
@@ -96,36 +108,42 @@ def add_years(df: pd.DataFrame, separator: str = "__") -> None:
         df[separator.join([col, "year"])] = pd.to_datetime(df[col]).dt.strftime(r"%Y")
 
 
-def make_attribute(self, size: int = 100) -> None:
+def make_attribute(
+    self, size: int = 10000, drop_attr: list = ["body", "disaster__type"]
+) -> None:
     """Generates attributes for vertical files.
 
     Args:
         self: A ``Corpus`` object.
         size: The number of table rows to process at a time.
+        drop_attr: Columns to ignore (includes ``Corpus.text_column``; must include
+            other text columns, e.g., ``body``; can include other unneeded columns,
+            e.g., ``file__preview__url_thumb``).
 
     Notes:
+        - Makes attribute tags for existing _vert rows only.
         - Destructive: replaces all attributes in the ``_vert`` table.
-        - Executes ``add_years`` and ``add_doc_tags``
+        - Executes ``add_doc_tags``
             (does not require using other ``attribute`` methods beforehand)."""
 
     @decorator.while_loop
     def attr_batch(self, size) -> bool:
         """Processes a batch of table records to make attributes."""
 
-        query = "SELECT * FROM _raw LIMIT ?,?;"
+        query = "SELECT * FROM _raw WHERE id IN (SELECT id FROM _vert) LIMIT ?,?;"
         batch, offset = self.db.fetch_batch(self.attr_run, size, query)
         if not batch:
             return False
         cols = self.db.tables["_raw"]
         df = pd.DataFrame.from_records(batch, columns=cols)
         df = prep_df(df, self.drop_attr)
-        add_years(df)
         add_doc_tags(df)
         rowids = self.attr_rowids[offset : offset + size]
         self.db.update_column("_vert", "attr", df["doc_tag"], rowids)
         self.attr_run += 1
         return True
 
+    self.drop_attr = [self.text_column] + drop_attr
     self.attr_run = 0
     self.attr_rowids = [x[0] for x in self.db.c.execute("SELECT rowid FROM _vert")]
     attr_batch(self, size)
@@ -136,7 +154,7 @@ def export_attribute(
     print: bool = False,
     parameters: dict = {"DYNTYPE": "index", "MULTISEP": "|", "MULTIVALUE": "y"},
 ) -> None:
-    """Reads all attributes tags from the ``_vert`` table and saves to file.
+    """Reads attribute tags from the ``_vert`` table and saves unique keys to file.
 
     Args:
         print: Return a list of attribute strings without saving to file.
