@@ -10,7 +10,7 @@ from corpusama.util import convert, decorator, util
 logger = logging.getLogger(__name__)
 
 
-def make_archive(self, mode: str, note=None, size=10, runs=0) -> None:
+def make_archive(self, mode: str, note=None, size=10000, runs=0) -> None:
     """Makes an xz version of vertical documents in the ``_archive`` table.
 
     Args:
@@ -92,8 +92,6 @@ def _batch(self, mode: str) -> None:
     # make joined df
     cols = self.db.tables["_vert"] + self.db.tables["_raw"]
     df = util.join_results(batch, cols)
-    drops = [x for x in self.drop_attr if x in df.columns]
-    df.drop(drops, axis=1)
     # append compressed content
     df["vert"] = df.apply(lambda row: attribute.join_vert(row), axis=1)
     df["archive"] = df["vert"].apply(lambda x: self.lzc.compress(bytes(x, "utf-8")))
@@ -101,6 +99,7 @@ def _batch(self, mode: str) -> None:
     self.archive_ids.extend(df["id"].tolist())
     # continue loop
     self.archive_run += 1
+    logger.debug(f"run {self.archive_run} - offset {offset}")
     repeat = util.limit_runs(self.archive_run, self.archive_runs)
     if not repeat:
         return False
