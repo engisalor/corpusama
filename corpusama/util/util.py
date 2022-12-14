@@ -1,6 +1,8 @@
 """Utility functions."""
 import logging
 import pathlib
+import re
+from xml.sax.saxutils import quoteattr  # nosec
 
 import pandas as pd
 from defusedxml import ElementTree
@@ -95,3 +97,37 @@ def unique_xml_attrs(tags: list) -> set:
         tree = ElementTree.fromstring(tags[x])
         all_attrs.update(tree.attrib.keys())
     return all_attrs
+
+
+def clean_xml_tokens(
+    item,
+    invalid_tokens: list = ["\x0b", "\x0b", "\x0c", "\x0c", "\x1c", "\x1d", "\x1e"],
+):
+    """Removes invalid XML tokens from a string, otherwise returns as-is.
+
+    Args:
+        invalid_tokens: Tokens to remove before making XML strings.
+
+    Notes:
+        - Encodes strings with ``xml.sax.saxutils.quoteattr``:
+            may require decoding for URLs & other escaped characters"""
+
+    if isinstance(item, str):
+        return re.sub(f"[{'|'.join(invalid_tokens)}]", "", item)
+    else:
+        return item
+
+
+def xml_quoteattr(item: str) -> str:
+    """Converts item to an XML attribute string (and strips whitespace).
+
+    Args:
+        item: an object convertible to str (ignores ``None``).
+
+    See Also:
+        - ``xml.sax.saxutils.quoteattr``"""
+
+    if item:
+        return quoteattr(str(item).strip())
+    else:
+        return item
