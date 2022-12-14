@@ -48,7 +48,6 @@ class Corpus:
         self,
         db: str,
         text_column: str = "body_html",
-        drop_attr: list = ["body", "disaster__type"],
         resources: str = ".local-only/stanza_resources",
         processors: str = "tokenize,pos,lemma",
         tagset: str = "corpusama/corpus/tagset/ud_en_ewt.yml",
@@ -57,7 +56,6 @@ class Corpus:
         self.text_column = text_column
         self.resources = resources
         self.processors = processors
-        self.drop_attr = drop_attr + [text_column]
         self.db_name = pathlib.Path(db)
         self.db = Database(db)
         self.tagset_file = tagset
