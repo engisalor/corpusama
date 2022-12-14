@@ -8,8 +8,11 @@ from corpusama.util import decorator
 logger = logging.getLogger(__name__)
 
 
-def export_tagset(self) -> None:
+def export_tagset(self, size: int = 10000) -> None:
     """Exports a tagset to text file.
+
+    Args:
+        size: The number of vertical files to process in a batch.
 
     Notes:
         - Tags are found in corpus vertical content and unique values
@@ -23,11 +26,8 @@ def export_tagset(self) -> None:
         return set(re.findall(r"\n.*?\t(.*?)\t", vert))
 
     @decorator.timer
-    def save_tagset(self, size: int = 100):
-        """Runs methods to make and then save a tagset.
-
-        Args:
-            size: The number of vertical files to process in a batch."""
+    def save_tagset(self, size):
+        """Runs methods to make and then save a tagset."""
 
         self.tagset_new = set()
         self.tagset_run = 0
@@ -39,10 +39,7 @@ def export_tagset(self) -> None:
 
     @decorator.while_loop
     def tagset_batch(self, size):
-        """Gets tagsets from a batch of vertical content.
-
-        Args:
-            size: The number of vertical files to process in a batch."""
+        """Gets tagsets from a batch of vertical content."""
 
         query = "SELECT vert from _vert LIMIT ?,?;"
         batch, offset = self.db.fetch_batch(self.tagset_run, size, query)
@@ -51,6 +48,7 @@ def export_tagset(self) -> None:
         for doc in batch:
             self.tagset_new.update(find_xpos(doc[0]))
         self.tagset_run += 1
+        logger.debug(f"run {self.tagset_run} - offset {offset}")
         return True
 
     def check_tagset(self, t: int):
@@ -67,5 +65,5 @@ def export_tagset(self) -> None:
         else:
             logger.debug(f"{tags_n} tags - no new - {f.stem} - {t:,}s")
 
-    _, t = save_tagset(self)
+    _, t = save_tagset(self, size)
     check_tagset(self, t)
