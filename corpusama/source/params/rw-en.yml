@@ -6,9 +6,7 @@ filter:
     - Map
     - Interactive
     - Infographic
-    - Appeal
     - Other
-    - News and Press Release
   - field: language
     value: English
   - field: date
