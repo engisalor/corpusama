@@ -5,12 +5,12 @@ import lzma
 import pandas as pd
 
 from corpusama.corpus import attribute
-from corpusama.util import convert, decorator, util
+from corpusama.util import convert, decorator, parallel, util
 
 logger = logging.getLogger(__name__)
 
 
-def make_archive(self, mode: str, note=None, size=10000, runs=0) -> None:
+def make_archive(self, mode: str, note=None, size=10000, runs=0, cores=0) -> None:
     """Makes an xz version of vertical documents in the ``_archive`` table.
 
     Args:
@@ -19,6 +19,7 @@ def make_archive(self, mode: str, note=None, size=10000, runs=0) -> None:
         note: Comments about the archive.
         size: Number of documents to process at a time.
         runs: Maximum number of batches to run (for testing).
+        cores: Number of cores for parallel processing.
 
     Notes:
         - ``full`` creates a single archive with all available content.
@@ -41,6 +42,7 @@ def make_archive(self, mode: str, note=None, size=10000, runs=0) -> None:
     self.lzc = lzma.LZMACompressor()
     self.archive = []
     self.archive_ids = []
+    self.cores = parallel.set_cores(cores)
     # manage versions
     res = self.db.c.execute(
         "SELECT version FROM _archive WHERE ROWID = (SELECT MAX(ROWID) FROM _archive)"
@@ -65,6 +67,18 @@ def make_archive(self, mode: str, note=None, size=10000, runs=0) -> None:
         df["archive"] = b"".join(self.archive)
         self.db.insert(df, "_archive")
         logger.debug(f"v{version} - {t:,}s - {len(self.archive_ids)} docs")
+
+
+def compress_column(df: pd.DataFrame):
+    """Compresses vertical content with ``lzma`` into ``archive`` column, returns df.
+
+    Args:
+        df: DataFrame with ``vert`` and ``attr`` columns."""
+
+    lzc = lzma.LZMACompressor()
+    df["vert"] = df.apply(lambda row: attribute.join_vert(row), axis=1)
+    df["archive"] = df["vert"].apply(lambda x: lzc.compress(bytes(x, "utf-8")))
+    return df
 
 
 @decorator.timer
@@ -93,8 +107,7 @@ def _batch(self, mode: str) -> None:
     cols = self.db.tables["_vert"] + self.db.tables["_raw"]
     df = util.join_results(batch, cols)
     # append compressed content
-    df["vert"] = df.apply(lambda row: attribute.join_vert(row), axis=1)
-    df["archive"] = df["vert"].apply(lambda x: self.lzc.compress(bytes(x, "utf-8")))
+    df = parallel.dataframe(df, compress_column, self.cores)
     self.archive.extend(df["archive"].tolist())
     self.archive_ids.extend(df["id"].tolist())
     # continue loop
