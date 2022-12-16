@@ -28,9 +28,8 @@ FOREIGN KEY('id') REFERENCES _raw ('id')
 );
 
 CREATE TABLE IF NOT EXISTS _archive (
-'id' TEXT NOT NULL,
-'version' TEXT PRIMARY KEY,
-'note' TEXT,
+'year' TEXT PRIMARY KEY,
+'doc_count' TEXT NOT NULL,
 'archive_date' TEXT,
 'archive' BLOB NOT NULL
 );
