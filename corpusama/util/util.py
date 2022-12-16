@@ -41,28 +41,6 @@ def limit_runs(run: int, runs: int) -> bool:
         return True
 
 
-def increment_version(version: str, mode: str):
-    """Updates a version by major or minor depending on mode.
-
-    Args:
-        version: The current version in major.minor format: ``1.0``.
-        mode: ``full`` or ``add``.
-
-    Notes:
-        Increments the current major version if ``full``, e.g.,
-        1.0 -> 2.0, or increments the minor version if ``add``,
-        e.g., 1.0 -> 1.1."""
-
-    old = str(version).split(".")
-    if mode == "full":
-        new = f"{int(old[0]) + 1}.0"
-    elif mode == "add":
-        new = f"{old[0]}.{int(old[1]) + 1}"
-    else:
-        raise ValueError("Mode must be 'full' or 'add'.")
-    return new
-
-
 def count_log_lines(message: str, log_file: str) -> int:
     """Counts the occurrences of a message in a log file.
 
