@@ -79,7 +79,7 @@ class Archive:
 def _compress_archive(archive: list) -> bytes:
     """Compresses a list of texts into a bytes object with ``lzma``."""
 
-    archive = "\n".join(archive).lstrip()
+    archive = "".join(archive).lstrip()
     return lzma.compress(bytes(archive, "utf-8"))
 
 
