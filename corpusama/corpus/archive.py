@@ -1,151 +1,191 @@
 """A module for managing archived corpus content."""
 import logging
 import lzma
+import pathlib
 
 import pandas as pd
 
 from corpusama.corpus import attribute
-from corpusama.util import convert, decorator, parallel, util
+from corpusama.database.database import Database
+from corpusama.util import decorator, parallel, util
 
 logger = logging.getLogger(__name__)
 
 
-def make_archive(self, mode: str, note=None, size=10000, runs=0, cores=0) -> None:
-    """Makes an xz version of vertical documents in the ``_archive`` table.
+def make_archive(self, years: list = [], cores: int = 0, size: int = 1000) -> None:
+    """Adds XZ archives of vertical documents to the ``_archive`` table, by year.
 
     Args:
         self: A ``Corpus`` object.
-        mode: What to archive (``full`` or ``add``).
-        note: Comments about the archive.
-        size: Number of documents to process at a time.
-        runs: Maximum number of batches to run (for testing).
-        cores: Number of cores for parallel processing.
+        years: Year(s) to archive (defaults to all).
+        cores: Max number of cores to use in parallel.
+            (each core processes 1 year at a time).
+        size: Number of texts to process at a time while making an archive.
 
-    Notes:
-        - ``full`` creates a single archive with all available content.
-        - ``add`` creates an archive of new content only.
+    Warning:
+        If ``cores`` and/or ``size`` are too large, uses excessive
+        memory for large corpora or corpora with very large texts."""
 
-        A version number is set based on the mode and existing content.
-        Full archives are given a new version number: ``1.0``, ``2.0``, etc.
-        Partial archives keep the major version number and increment
-        the minor version number: adding to ``1.0`` will make archive ``1.1``.
-        A whole corpus is the set of archives with the same version
-        number: Corpus Version 1 is made up of ``1.0``, ``1.1``, etc.
+    def limit_cores(cores: int, years: list) -> int:
+        if cores > len(years):
+            cores = len(years)
+        return cores
 
-    See Also:
-        ``util.util.increment_version``"""
-
-    # variables
-    self.size = size
-    self.archive_runs = runs
-    self.archive_run = 0
-    self.lzc = lzma.LZMACompressor()
-    self.archive = []
-    self.archive_ids = []
-    self.cores = parallel.set_cores(cores)
-    # manage versions
-    res = self.db.c.execute(
-        "SELECT version FROM _archive WHERE ROWID = (SELECT MAX(ROWID) FROM _archive)"
-    )
-    old_version = res.fetchone()
-    if old_version:
-        version = util.increment_version(old_version[0], mode)
-    else:
-        version = "1.0"
-    # make compressed archive content
-    _, t = _batch(self, mode)
-    self.archive.append(self.lzc.flush())
-    # insert archive
-    if not self.archive_ids:
-        logger.debug("no documents to compress")
-    else:
-        df = pd.DataFrame()
-        df["id"] = [self.archive_ids]
-        df["version"] = version
-        df["note"] = note
-        df["archive_date"] = util.now()
-        df["archive"] = b"".join(self.archive)
-        self.db.insert(df, "_archive")
-        logger.debug(f"v{version} - {t:,}s - {len(self.archive_ids)} docs")
+    # set variables
+    cores = parallel.set_cores(cores)
+    years = get_years(self, years)
+    if not years:
+        raise ValueError("No valid years to archive.")
+    cores = limit_cores(cores, years)
+    # create and insert archives in parallel in batches
+    archive = Archive(size, self.db_name)
+    for i in range(0, len(years), cores):
+        _years = years[i : i + cores]
+        _cores = limit_cores(cores, _years)
+        logger.debug(f"processing {_cores}: {_years}")
+        archives = parallel.run(_years, archive.make, _cores)
+        for x in range(len(_years)):
+            _insert_archive(self, _years[x], archives[x])
 
 
-def compress_column(df: pd.DataFrame):
-    """Compresses vertical content with ``lzma`` into ``archive`` column, returns df.
+class Archive:
+    """A class to supply additional variables when making an archive.
 
-    Args:
-        df: DataFrame with ``vert`` and ``attr`` columns."""
+    Methods:
+        make: The method to execute for making an archive."""
 
-    lzc = lzma.LZMACompressor()
-    df["vert"] = df.apply(lambda row: attribute.join_vert(row), axis=1)
-    df["archive"] = df["vert"].apply(lambda x: lzc.compress(bytes(x, "utf-8")))
-    return df
+    def __init__(self, size: int, db_name: str):
+        self.size = size
+        self.db_name = db_name
+
+    def make(self, years: list) -> list:
+        """Returns a list of compressed archives with all texts for each year."""
+
+        corpus = Database(self.db_name)
+        corpus.size = self.size
+        archives = []
+        for year in years:
+            corpus.archive = []
+            corpus.archive_run = 0
+            _batch(corpus, year)
+            docs = len(corpus.archive)
+            archive, t = _compress_archive(corpus.archive)
+            archives.append(archive)
+            logger.debug(f"{t:,}s - {year} - {docs:,} docs")
+        return archives
 
 
 @decorator.timer
-@decorator.while_loop
-def _batch(self, mode: str) -> None:
-    """Combines vertical documents with their tags, then archives."""
+def _compress_archive(archive: list) -> bytes:
+    """Compresses a list of texts into a bytes object with ``lzma``."""
 
-    # get vertical data
-    query = """SELECT * FROM _vert
-    LEFT JOIN _raw
-    ON _vert.id = _raw.id
-    LIMIT ?,?;"""
-    batch, offset = self.db.fetch_batch(self.archive_run, self.size, query)
+    archive = "\n".join(archive).lstrip()
+    return lzma.compress(bytes(archive, "utf-8"))
+
+
+def _insert_archive(self, year: int, archive: str) -> None:
+    """Inserts a compressed archive of vertical texts into the ``_archive`` table.
+
+    Args:
+        self: A Corpus object.
+        year: The year to compress.
+        archive: A bytes object of compressed vertical texts.
+
+    Notes:
+        (For developers): When using multiprocessing, XZ archives are silently
+        converted to ``np.bytes_``: convert back to ``bytes`` before insertion."""
+
+    # get document count
+    query = """
+    SELECT count(_vert.id) FROM _vert
+        LEFT JOIN _raw
+        ON _vert.id = _raw.id
+        WHERE json_extract(_raw.date,'$.original')
+            LIKE ?"""
+    res = self.db.c.execute(query, ("".join([str(year), "%"]),))
+    batch = res.fetchall()
     if not batch:
-        return False
-    if mode == "add":
-        # skip existing
-        res = self.db.c.execute("SELECT id FROM _archive")
-        exists = [convert.str_to_obj(x[0]) for x in res.fetchall()]
-        exists = set([x for y in exists for x in y])
-        batch = [x for x in batch if x[0] not in exists]
-        if not batch:
-            self.archive_run += 1
-            return True
-    # make joined df
-    cols = self.db.tables["_vert"] + self.db.tables["_raw"]
-    df = util.join_results(batch, cols)
-    # append compressed content
-    df = parallel.dataframe(df, compress_column, self.cores)
-    self.archive.extend(df["archive"].tolist())
-    self.archive_ids.extend(df["id"].tolist())
-    # continue loop
-    self.archive_run += 1
-    logger.debug(f"run {self.archive_run} - offset {offset}")
-    repeat = util.limit_runs(self.archive_run, self.archive_runs)
-    if not repeat:
-        return False
-    return repeat
+        batch = [[None]]
+    # insert archive row
+    df = pd.DataFrame()
+    df["year"] = [year]
+    df["doc_count"] = [batch[0][0]]
+    df["archive_date"] = [util.now()]
+    df["archive"] = [bytes(archive)]
+    self.db.insert(df, "_archive")
 
 
-def export_archive(self, version=None, date=None) -> None:
-    """Exports archives matching a version or date.
+@decorator.while_loop
+def _batch(self, year: int) -> None:
+    """Creates ``Corpus.archive`` content for a year in batches.
 
     Args:
         self: A ``Corpus`` object.
-        version (str): The major.minor version to export.
-        date (str): The date of the archive to export.
+        year: Year to be archived."""
 
-    Notes:
-        Use one argument only, ``version`` or ``date``.
+    # get vertical data
+    query = """
+    SELECT * FROM _vert
+        LEFT JOIN _raw
+        ON _vert.id = _raw.id
+        WHERE json_extract(_raw.date,'$.original')
+            LIKE ?
+        LIMIT ?,?"""
+    offset = self.archive_run * self.size
+    batch = self.c.execute(
+        query, ("".join([str(year), "%"]), offset, self.size)
+    ).fetchall()
+    if not batch:
+        return False
+    # make joined df
+    cols = self.tables["_vert"] + self.tables["_raw"]
+    df = util.join_results(batch, cols)
+    df["vert"] = df.apply(lambda row: attribute.join_vert(row), axis=1)
+    # add vertical content archives
+    self.archive.extend(df["vert"].tolist())
+    # continue loop
+    self.archive_run += 1
+    return True
 
-        Generates an .xz archive at the path:
-        ``data/<db_name>_<version>.vert.xz``."""
 
-    # make query
-    if version:
-        res = self.db.c.execute("SELECT * FROM _archive WHERE version=?", (version,))
-    elif date:
-        _ = pd.Timestamp.fromisoformat(date)
-        res = self.db.c.execute("SELECT * FROM _archive WHERE corpus_date=?", (date,))
-    else:
-        raise ValueError("Supply a date or version to export archives.")
-    while True:
+def export_archive(self, years: list = []) -> None:
+    """Exports compressed vertical archives to ``data/<db_name>/<year>.vert.xz``.
+
+    Args:
+        self: A ``Corpus`` object.
+        years: List of years to export (defaults to all)."""
+
+    years = get_years(self, years)
+    dir = pathlib.Path(f"data/{self.db_name.stem}")
+    dir.mkdir(exist_ok=True)
+    for year in years:
+        res = self.db.c.execute("SELECT * FROM _archive WHERE year=?", (year,))
         batch = res.fetchone()
-        if not batch:
-            break
-        file = f"data/{self.db_name.stem}_{batch[1]}.vert.xz"
-        with open(file, "wb") as f:
-            f.write(batch[4])
-            logger.debug(f"{file}")
+        if batch:
+            file = dir / pathlib.Path(f"{batch[0]}.vert.xz")
+            with open(file, "wb") as f:
+                f.write(batch[3])
+                logger.debug(f"{file}")
+        else:
+            logger.debug(f"{year} - no such archive")
+
+
+def get_years(self, years: list = []):
+    """Returns an ordered set of years from ``_raw.date.original`` values.
+
+    Args:
+        self: A Corpus object.
+        years: Years to include (defaults to all;
+            ignores non-existing values; refers to the ``date.original`` field)."""
+
+    res = self.db.c.execute("SELECT json_extract(_raw.date,'$.original') FROM _raw")
+    years_exist = set([x[0][:4] for x in res.fetchall()])
+    years_exist = sorted(years_exist)
+
+    if years:
+        if isinstance(years, int):
+            years = [years]
+        years = [x for x in years if str(x) in years_exist]
+        return years
+    else:
+        return years_exist
