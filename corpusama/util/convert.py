@@ -31,14 +31,14 @@ def str_to_obj(item: str) -> object:
     """Parses an input to an object if possible.
 
     Notes:
-        - Returns ``None``, ``int``, ``float``, and ``bytes`` as-is.
-        - Otherwise tries to parse an item with ``json.loads``, then
-            ``ast.literal_eval``.
-        - Returns object as-is if parsing fails."""
+        - Returns non-strings and unparsable strings as-is.
+        - Tries to parse strings with ``json.loads``, then ``ast.literal_eval``.
+        - May print ``SyntaxWarning: invalid decimal literal`` (can ignore;
+            tends to occur when attempting to parse some URL strings)."""
 
     if not item:
         return item
-    elif isinstance(item, (int, float, bytes)):
+    elif not isinstance(item, str):
         return item
     else:
         try:
