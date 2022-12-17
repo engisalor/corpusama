@@ -82,15 +82,29 @@ def empty_list_to_none(item: list) -> None:
         return item
 
 
-def list_to_string(item: list, separator: str = "|") -> str:
-    """Joins list items with a separator (ignores other object types)."""
+def list_to_string(item: list, separator: str = "|", replacement: str = None) -> str:
+    """Joins list items with a separator (ignores other object types).
+
+    Args:
+        item: List of values.
+        separator: Symbol (corresponds to Sketch Engine's ``MULTISEP``).
+        replacement: String to replace preexisting cases of ``separator``.
+
+    Notes:
+        If ``replacement=None``, function raises an error when an input string already
+        contains ``separator``. If such an error occurs, consider excluding the
+        attribute from the corpus by adding ``drop: true`` to its entry in the
+        ``attribute.yaml``. Otherwise, consider percent encoding for replacement
+        values, e.g., ``"%7C"`` to replace ``"|"``."""
 
     if isinstance(item, list):
         if [x for x in item if separator in str(x)]:
-            raise ValueError(f"{separator} exists in {item}: use another separator")
-        return separator.join([str(x) for x in item])
-    else:
-        return item
+            if not replacement:
+                raise ValueError(f"{separator} exists in {item}")
+            item = [str(x).replace(separator, replacement) for x in item]
+            logger.warning(f"{separator} replaced with '{replacement}' in {item}")
+        item = separator.join([str(x) for x in item])
+    return item
 
 
 def html_to_text(html: str) -> str:

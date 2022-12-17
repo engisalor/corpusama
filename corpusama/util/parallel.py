@@ -31,23 +31,42 @@ def set_cores(cores: int = 0, divisor: int = 2) -> int:
             cores = 1
     else:
         cores = cores
-    logger.debug(f"{cores}")
+    logger.debug(f"{cores} max")
     return cores
 
 
-def dataframe(
-    df: pd.DataFrame, func: Callable[[pd.DataFrame], pd.DataFrame], cores: int
-) -> pd.DataFrame:
-    """Splits a DataFrame into 1 chunk per core and runs a function in parallel.
+def limit_cores(cores: int, ls: list) -> int:
+    """Limits ``cores`` to always be equal or lesser than the length of ``ls``.
 
     Args:
-        df: Input DataFrame (returns modified df).
-        func: Function to execute.
+        cores: Number of cores to use for multiprocessing.
+        ls: A list of values to process in parallel.
+
+    Notes:
+        Prevents ``parallel.run`` from trying to use more cores than necessary."""
+
+    if cores > len(ls):
+        cores = len(ls)
+    return cores
+
+
+def run(iterable: iter, func: Callable, cores: int) -> iter:
+    """Splits an iterable into 1 chunk per core and runs a function in parallel.
+
+    Args:
+        iterable: E.g., a ``list`` or ``DataFrame``.
+        func: Function to execute (returns modified iterable).
         cores: Number of cores to use."""
 
-    df_split = np.array_split(df, cores)
+    _split = np.array_split(iterable, cores)
     pool = Pool(cores)
-    df = pd.concat(pool.map(func, df_split))
+    if isinstance(iterable, pd.DataFrame):
+        iterable = pd.concat(pool.map(func, _split))
+    elif isinstance(iterable, list):
+        iterable = np.concatenate(pool.map(func, _split))
+        iterable = list(iterable)
+    else:
+        raise TypeError(f"Type {type(iterable)} not implemented for ``parallel.run``")
     pool.close()
     pool.join()
-    return df
+    return iterable
