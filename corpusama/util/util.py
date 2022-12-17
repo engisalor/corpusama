@@ -1,7 +1,6 @@
 """Utility functions."""
 import logging
 import pathlib
-import re
 from xml.sax.saxutils import quoteattr  # nosec
 
 import pandas as pd
@@ -79,7 +78,7 @@ def unique_xml_attrs(tags: list) -> set:
 
 def clean_xml_tokens(
     item,
-    invalid_tokens: list = ["\x0b", "\x0b", "\x0c", "\x0c", "\x1c", "\x1d", "\x1e"],
+    invalid_tokens: list = ["\x0b", "\x0c", "\x1c", "\x1d", "\x1e"],
 ):
     """Removes invalid XML tokens from a string, otherwise returns as-is.
 
@@ -90,10 +89,15 @@ def clean_xml_tokens(
         - Encodes strings with ``xml.sax.saxutils.quoteattr``:
             may require decoding for URLs & other escaped characters"""
 
-    if isinstance(item, str):
-        return re.sub(f"[{'|'.join(invalid_tokens)}]", "", item)
-    else:
+    def replace_invalid(item):
+        for k, v in invalid_tokens.items():
+            item = item.replace(k, v)
         return item
+
+    invalid_tokens = {x: "" for x in invalid_tokens}
+    if isinstance(item, str):
+        item = replace_invalid(item)
+    return item
 
 
 def xml_quoteattr(item: str) -> str:
