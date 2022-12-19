@@ -107,6 +107,24 @@ def list_to_string(item: list, separator: str = "|", replacement: str = None) ->
     return item
 
 
+def list_to_string_no_sep(item: list) -> str:
+    """Joins list items without a separator (ignores other object types).
+
+    Args:
+        item: List of values.
+
+    Notes:
+        Used to convert lists of ``len=1`` to strings. Logs a warning if a list has
+        multiple items (this should be resolved earlier on, e.g, with
+        ``convert.list_to_values`` and ``convert.empty_list_to_none``)."""
+
+    if isinstance(item, list):
+        if len(item) > 1:
+            logger.warning(f"list values joined without a separator: {item}")
+        item = "".join(item)
+    return item
+
+
 def html_to_text(html: str) -> str:
     """Extracts text from an HTML string."""
 
