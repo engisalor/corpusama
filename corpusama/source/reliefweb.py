@@ -34,6 +34,8 @@ class ReliefWeb(Call):
         - The maximum number of daily calls defaults to 1,000.
         - The default wait dictionary is: ``{0: 1, 5: 49, 10: 99, 20: 499, 30: None}``.
         - If ``db=None``, data is only stored in ``ReliefWeb.raw``.
+        - Logs a warning if a database is missing columns (update schema
+            to save such data or ignore by updating ``missing_columns.ignore``).
 
     See Also:
         - ``source.call.Call`` (parent class with inherited methods/attributes).
@@ -187,7 +189,30 @@ class ReliefWeb(Call):
             ids = [[df.iloc[x]["id"]] * len(df.iloc[x]["file"]) for x in range(len(df))]
             df_flat["id"] = [x for y in ids for x in y]
             df_flat = self.db._add_missing_columns(df_flat, "_pdf")
+            # warn for missing columns
+            ignore = [
+                "preview.url-thumb",
+                "preview.url-small",
+                "preview.url-large",
+                "preview.version",
+                "preview.url",
+            ]
+            self.missing_columns(df_flat, "_pdf", ignore)
+            # insert
             self.db.insert(df_flat, "_pdf")
+
+    def missing_columns(self, df: pd.DataFrame, table: str, ignore: list = []) -> None:
+        """Warns if any incoming data is missing a dest. column for a database table.
+
+        Args:
+            df: The DataFrame with data to insert.
+            table: The destination table.
+            ignore: List of unwanted columns to ignore."""
+
+        missing_cols = [x for x in df.columns if x not in self.db.tables[table]]
+        missing_cols = [x for x in missing_cols if x not in ignore]
+        if missing_cols:
+            logger.warning(f"{table} has missing columns: {missing_cols}")
 
     def insert(self) -> None:
         """Reshapes and inserts ReliefWeb JSON data into a database.
@@ -208,10 +233,11 @@ class ReliefWeb(Call):
             col: col.replace("-", "_") for col in df.columns if "-" in col
         }
         df.rename(columns=renamed_columns, inplace=True)
-        df["api_input"] = self.input.name
-        df["api_date"] = self.now
         df["api_params_hash"] = self.hash
         df = self.db._add_missing_columns(df, "_raw")
+        # warn for missing columns
+        self.missing_columns(df, "_raw", ["score", "vulnerable_groups"])
+        # insert data
         self.df_raw = df
         if not df.empty:
             self.db.insert(df, "_raw")
