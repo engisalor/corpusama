@@ -26,22 +26,17 @@ def make_archive(self, years: list = [], cores: int = 0, size: int = 1000) -> No
         If ``cores`` and/or ``size`` are too large, uses excessive
         memory for large corpora or corpora with very large texts."""
 
-    def limit_cores(cores: int, years: list) -> int:
-        if cores > len(years):
-            cores = len(years)
-        return cores
-
     # set variables
     cores = parallel.set_cores(cores)
     years = get_years(self, years)
     if not years:
         raise ValueError("No valid years to archive.")
-    cores = limit_cores(cores, years)
+    cores = parallel.limit_cores(cores, years)
     # create and insert archives in parallel in batches
     archive = Archive(size, self.db_name)
     for i in range(0, len(years), cores):
         _years = years[i : i + cores]
-        _cores = limit_cores(cores, _years)
+        _cores = parallel.limit_cores(cores, _years)
         logger.debug(f"processing {_cores}: {_years}")
         archives = parallel.run(_years, archive.make, _cores)
         for x in range(len(_years)):
