@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS _raw  (
 'title' TEXT,
 'url' TEXT,
 'url_alias' TEXT,
-'vulnerable_group' TEXT,
+'vulnerable_groups' TEXT,
 'body' TEXT,
 'body_html' TEXT
 );
