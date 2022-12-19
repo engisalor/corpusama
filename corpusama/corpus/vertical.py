@@ -53,12 +53,16 @@ def stanza_to_vert(bundle: DocBundle, tagset: dict) -> DocBundle:
     return make_docs(bundle)
 
 
-def make_vertical(self, size: int = 50, runs: int = 0, update: bool = False) -> None:
+def make_vertical(
+    self, language: str, size: int = 1000, runs: int = 0, update: bool = True
+) -> None:
     """Processes raw data and inserts vertical files into the ``_vert`` table.
 
     Args:
         self: A ``Corpus`` object.
-        size: Number of documents to process at a time.
+        language: The ``stanza.Pipeline`` language.
+        size: Number of documents to process at a time (larger batches
+            can improve overall performance).
         runs: The maximum number of batches to run (for testing).
         update: Whether to update newly modified records.
 
@@ -82,7 +86,7 @@ def make_vertical(self, size: int = 50, runs: int = 0, update: bool = False) -> 
         if update:
             changed = outdated_vert(self)
             exists = [x for x in exists if x not in changed]
-            logger.debug(f"updating {changed}")
+            logger.debug(f"existing vert content to update: {changed}")
         batch = [x for x in batch if x[1] not in exists]
         if not batch:
             self.vert_run += 1
@@ -113,7 +117,7 @@ def make_vertical(self, size: int = 50, runs: int = 0, update: bool = False) -> 
         self.db.insert(df, "_vert")
         return vert.token
 
-    self.nlp = _stanza.load_nlp(self.resources, self.processors)
+    self.nlp = _stanza.load_nlp(self.resources, self.processors, language)
     self.vert_size = size
     self.vert_run = 0
     self.vert_runs = runs
