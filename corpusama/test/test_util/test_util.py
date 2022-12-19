@@ -22,3 +22,7 @@ class Test_Util(unittest.TestCase):
             '"A str w/ &amp; and trailing whitespace"',
         )
         self.assertEqual(util.xml_quoteattr(None), None)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -42,3 +42,7 @@ class Test_Vertical_Functions(unittest.TestCase):
         df = pd.DataFrame({"vert": ["a", ""], "id": [0, 1]})
         df = vertical.drop_empty_vert(df)
         self.assertEqual(len(df), 1)
+
+
+if __name__ == "__main__":
+    unittest.main()

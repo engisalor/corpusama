@@ -62,6 +62,11 @@ class Test_Convert(unittest.TestCase):
         with self.assertRaises(ValueError):
             convert.list_to_string(["a|b|c"], separator="|")
 
+    def test_list_to_string_no_sep(self):
+        self.assertEqual(convert.list_to_string_no_sep(["a"]), "a")
+        self.assertEqual(convert.list_to_string_no_sep(["a", "b"]), "ab")
+        self.assertEqual(convert.list_to_string_no_sep(1), 1)
+
     def test_html_to_text(self):
         html = "<p>Encyclopedias have existed for around 2,000 years. (Wikipedia)</p>"
         text = "Encyclopedias have existed for around 2,000 years. (Wikipedia)"

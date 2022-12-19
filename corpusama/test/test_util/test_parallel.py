@@ -49,3 +49,7 @@ class Test_Parallel(unittest.TestCase):
         ls1 = ls_func(list(ls))
         ls2 = parallel.run(ls.copy(), ls_func, cores)
         self.assertListEqual(ls1, ls2)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -5,14 +5,20 @@ import pandas as pd
 
 from corpusama.corpus import attribute
 from corpusama.corpus.corpus import Corpus
+from corpusama.util import io as _io
 from corpusama.util.util import now
 
 
-class Test_Corpus_(unittest.TestCase):
+class Test_Attribute_(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.db_file = "sk1827dj3kc9sl29.db"
-        df_prepped = {"id": {0: '"1"'}, "new__a__1": {0: '"hello"'}}
+        df_prepped = {
+            "id": {0: '"1"'},
+            "multi": {0: '"a|b|c"'},
+            "disaster__a__1": {0: '"hello"'},
+            "doc_tag": '<doc id="1" disaster__a__1="hello" multi="a|b|c" >',
+        }
         cls.df_prepped = pd.DataFrame(df_prepped)
 
     @classmethod
@@ -21,9 +27,23 @@ class Test_Corpus_(unittest.TestCase):
         filepath = dir / cls.db_file
         filepath.unlink()
 
+    def test_get_params(self):
+        attributes = _io.load_yaml("corpusama/source/params/rw-attribute.yml")
+        attr_params = attribute.get_params(attributes)
+        self.assertIn("drop", attr_params.keys())
+
     def test_prep_df(self):
-        df = pd.DataFrame({"id": [1], "new": [{"a.1": [" hello"], "b-1": ["False"]}]})
-        df = attribute.prep_df(df, drop_attr=["new__b_1"])
+        attrs = {"disaster__type": {"drop": True}}
+        attr_params = {"drop": ["disaster__type"], "single": ["id"]}
+        df = pd.DataFrame(
+            {"id": [1], "disaster": [{"a.1": [" hello"], "type": ["False"]}]}
+        )
+        df["multi"] = ['["a", "b", "c"]']
+        prep_df = attribute.Prep_DF(attrs, attr_params)
+        df = prep_df.make(df)
+        self.assertEqual(self.df_prepped["disaster__a__1"][0], df["disaster__a__1"][0])
+        self.assertEqual(self.df_prepped["id"][0], df["id"][0])
+        self.assertEqual(self.df_prepped["multi"][0], df["multi"][0])
         self.assertTrue(self.df_prepped.equals(df))
 
     def test_doc_tag(self):
@@ -41,20 +61,21 @@ class Test_Corpus_(unittest.TestCase):
         year = str(pd.Timestamp(ts).year)
         dt = {
             "id": {0: '"1"'},
-            "new__a__1": {0: '"hello"'},
+            "disaster__a__1": {0: '"hello"'},
             "date__col": {0: ts},
             "date__col__year": {0: year},
         }
         result = pd.DataFrame(dt)
-        new = self.df_prepped.copy()
-        new["date__col"] = ts
-        new = pd.DataFrame.from_dict(new)
-        attribute.add_years(new)
-        self.assertTrue(result.equals(new))
+        df2 = self.df_prepped.copy()
+        df2["date__col"] = ts
+        df2 = pd.DataFrame.from_dict(df2)
+        attribute.add_years(df2)
+        self.assertEqual(result["date__col__year"][0], df2["date__col__year"][0])
 
     def test_export_attribute(self):
+        # FIXME still requires default attribute.yaml file to exist
         # make mock data
-        tag = '<doc id="1" hash="sk182kdk" date="2022" source="A source" >'
+        tag = '<doc id="1" >'
         # check attributes
         corpus = Corpus(self.db_file)
         corpus.db.c.execute(
@@ -70,6 +91,10 @@ class Test_Corpus_(unittest.TestCase):
             (tag,),
         )
         config = corpus.export_attribute(print=True)
-        for substr in ["hash", "id", "date", "source", "ATTRIBUTE"]:
-            self.assertIn(substr, str(config))
+        for substr in ["id", "ATTRIBUTE", "DYNTYPE"]:
+            self.assertIn(substr, config)
         pathlib.Path(self.db_file).unlink(missing_ok=True)
+
+
+if __name__ == "__main__":
+    unittest.main()

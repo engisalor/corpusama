@@ -22,7 +22,7 @@ Another sentence could include a URL, like www.google.com."""
 
 class Test_Stanza_Load(unittest.TestCase):
     def test_load_nlp(self):
-        nlp = _stanza.load_nlp(resources, processors)
+        nlp = _stanza.load_nlp(resources, processors, "en")
         self.assertEqual(type(nlp), stanza.Pipeline)
 
 
@@ -53,3 +53,7 @@ class Test_Stanza_Usage(unittest.TestCase):
     def test_run(self):
         bundle = _stanza.run([text], [1], self.nlp)
         self.assertIsInstance(bundle, DocBundle)
+
+
+if __name__ == "__main__":
+    unittest.main()
