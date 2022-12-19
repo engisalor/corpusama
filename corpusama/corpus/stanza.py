@@ -11,12 +11,13 @@ from corpusama.util.dataclass import DocBundle
 logger = logging.getLogger(__name__)
 
 
-def load_nlp(resources, processors) -> Pipeline:
+def load_nlp(resources, processors, language) -> Pipeline:
     """Returns a stanza ``Pipeline`` object, updating models once a day.
 
     Args:
         resources: Stanza resources.
         processors: Stanza processors.
+        language: Current language.
 
     Notes:
         - Uses ``util.count_log_lines`` to check if the model has been updated.
@@ -28,9 +29,9 @@ def load_nlp(resources, processors) -> Pipeline:
 
     nlp_runs = util.count_log_lines("load_nlp", log_file)
     if nlp_runs > 0:
-        nlp = Pipeline("en", resources, processors=processors, download_method=None)
+        nlp = Pipeline(language, resources, processors=processors, download_method=None)
     else:
-        nlp = Pipeline("en", resources, processors=processors)
+        nlp = Pipeline(language, resources, processors=processors)
     logger.debug("done")
     return nlp
 
