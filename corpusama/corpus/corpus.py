@@ -40,7 +40,11 @@ class Corpus:
         ``vertical``: Generating vertical content from raw documents."""
 
     from corpusama.corpus.archive import export_archive, make_archive
-    from corpusama.corpus.attribute import export_attribute, make_attribute
+    from corpusama.corpus.attribute import (
+        export_attribute,
+        make_attribute,
+        unique_attribute,
+    )
     from corpusama.corpus.tagset import export_tagset
     from corpusama.corpus.vertical import make_vertical, outdated_vert
 
