@@ -64,3 +64,4 @@ class Corpus:
         self.db = Database(db)
         self.tagset_file = tagset
         self.tagset = _io.load_yaml(tagset)
+        self.changed = []

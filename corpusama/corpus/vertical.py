@@ -22,7 +22,11 @@ def stanza_to_vert(bundle: DocBundle, tagset: dict) -> DocBundle:
 
         for w in sent.words:
             if w.lemma is None:
-                logger.warning(f"{bundle.id[x]}: {w.text}")
+                logger.warning(f"lemma=None {bundle.id[x]}: {w.text}")
+            if w.xpos is None:
+                logger.warning(f"xpos=None {bundle.id[x]}: {w.text}")
+            if w.text is None:
+                logger.warning(f"text=None {bundle.id[x]}: {w.text}")
 
     def make_lines(sent) -> list:
         """Makes a list of vertical lines for a sentence."""
@@ -85,8 +89,10 @@ def make_vertical(
         exists = [x[0] for x in exists]
         if update:
             changed = outdated_vert(self)
+            if changed and not self.changed:
+                self.changed = changed
+                logger.debug(f"{len(changed)} records to update (see Corpus.changed)")
             exists = [x for x in exists if x not in changed]
-            logger.debug(f"existing vert content to update: {changed}")
         batch = [x for x in batch if x[1] not in exists]
         if not batch:
             self.vert_run += 1
