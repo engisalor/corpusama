@@ -42,7 +42,7 @@ def get_xpos(processed: list) -> list:
     xpos = set()
     for doc in processed:
         xpos.update([word.xpos for sent in doc.sentences for word in sent.words])
-    return sorted(xpos)
+    return sorted([str(x) for x in xpos])
 
 
 def fix_lemma(word):
