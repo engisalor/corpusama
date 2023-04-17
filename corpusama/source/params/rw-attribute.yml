@@ -22,12 +22,16 @@ country__shortname:
   MULTIVALUE: 1
 date__changed:
   MULTIVALUE: 1
+  drop: true
 date__changed__year:
   MULTIVALUE: 1
+  drop: true
 date__created:
   MULTIVALUE: 1
+  drop: true
 date__created__year:
   MULTIVALUE: 1
+  drop: true
 date__original:
   MULTIVALUE: 1
 date__original__year:
@@ -67,6 +71,7 @@ file__filesize:
   drop: true
 file__id:
   MULTIVALUE: 1
+  drop: true
 file__mimetype:
   MULTIVALUE: 1
   drop: true
@@ -131,8 +136,10 @@ headline__image__width:
   drop: true
 headline__summary:
   MULTIVALUE: 1
+  drop: true
 headline__title:
   MULTIVALUE: 1
+  drop: true
 id:
   MULTIVALUE: 0
 image__caption:
@@ -204,6 +211,7 @@ primary_country__shortname:
   MULTIVALUE: 1
 source__disclaimer:
   MULTIVALUE: 1
+  drop: true
 source__homepage:
   MULTIVALUE: 1
 source__id:
