@@ -1,5 +1,7 @@
+import pathlib
 import unittest
 
+import fasttext
 import stanza
 
 from corpusama.util import langid
@@ -13,7 +15,9 @@ class Test_LangID(unittest.TestCase):
             processors="langid",
             download_method=None,
         )
+        cls.model = fasttext.load_model("./fastText/lid.176.bin")
         cls.file = "test/test_util/text-file.txt"
+        cls.files = [cls.file, "test/test_util/text-file-2.txt"]
         cls.empty_file = "test/test_util/empty-file.txt"
         cls.clean_kwargs = dict(
             min_len=3,
@@ -44,34 +48,49 @@ class Test_LangID(unittest.TestCase):
         self.assertEqual(dt["langs"], {})
 
     def test_fasttext_full(self):
-        dt = langid.fasttext_full(
-            self.file, langid.sample_kwargs, langid.fasttext_source
-        )
+        dt = langid.fasttext_full(self.file, langid.sample_kwargs, self.model)
         self.assertTrue("en" in dt["langs"].keys())
 
     def test_fasttext_empty_full(self):
-        dt = langid.fasttext_full(
-            self.empty_file, langid.sample_kwargs, langid.fasttext_source
-        )
+        dt = langid.fasttext_full(self.empty_file, langid.sample_kwargs, self.model)
         self.assertEqual(dt["langs"], {})
 
     def test_identify(self):
-        df = langid.identify(
-            self.file,
-            langid.sample_kwargs,
-            self.nlp,
-            fasttext_source=langid.fasttext_source,
-        )
+        df = langid.identify(self.file, langid.sample_kwargs, self.nlp, self.model)
         self.assertEqual(df["top"][0], "en")
 
-    def test_identify_empty(self):
+    def test_identify_empty_no_fa(self):
         df = langid.identify(
             self.empty_file,
             langid.sample_kwargs,
             self.nlp,
-            fasttext_source=None,
+            None,
         )
         self.assertEqual(df["langs"][0], {})
+
+    def test_file_concat(self):
+        out = [
+            "test/test_util/.file-concat.xml",
+            "test/test_util/.file-concat-clean.xml",
+        ]
+        langid.file_concat(self.files, "test/test_util/.file-concat", self.clean_kwargs)
+        for file in out:
+            with open(file) as f:
+                text = f.read()
+            tag = '<file path="test/test_util/text-file.txt">'
+            tag2 = '<file path="test/test_util/text-file-2.txt">'
+            self.assertIn(tag, text)
+            self.assertIn(tag2, text)
+            pathlib.Path(file).unlink(missing_ok=True)
+
+    def test_file_stats(self):
+        out = "test/test_util/.file-stats"
+        langid.file_stats(self.files, out)
+        with open(out + ".csv") as f:
+            text = f.read()
+        _string = "chars_q0,chars_q1,chars_q2,chars_q3,chars_q4"
+        self.assertIn(_string, text)
+        pathlib.Path(out + ".csv").unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

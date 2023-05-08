@@ -1,0 +1,3 @@
+This is another text file to runs tests on.
+
+It's a short text without much going for it.
