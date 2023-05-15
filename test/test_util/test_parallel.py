@@ -1,3 +1,4 @@
+import time
 import unittest
 from multiprocessing import cpu_count
 
@@ -20,6 +21,12 @@ def ls_func(ls):
     """A test function for ``test_run_ls``."""
 
     return [x / 13 for x in ls]
+
+
+def slow_func(wait):
+    """A test function that requires N seconds to execute."""
+    time.sleep(wait)
+    return wait
 
 
 class Test_Parallel(unittest.TestCase):
@@ -49,6 +56,25 @@ class Test_Parallel(unittest.TestCase):
         ls1 = ls_func(list(ls))
         ls2 = parallel.run(ls.copy(), ls_func, cores)
         self.assertListEqual(ls1, ls2)
+
+    def test_run_with_timeout_stops(self):
+        wait = 10
+        timeout = 1
+        t0 = time.perf_counter()
+        out = parallel.run_with_timeout(slow_func, (wait,), timeout)
+        t1 = time.perf_counter()
+        self.assertEqual(out, None)
+        self.assertGreaterEqual(t1 - t0, timeout)
+        self.assertLess(t1 - t0, wait)
+
+    def test_run_with_timeout_passes(self):
+        wait = 0.5
+        timeout = 1
+        t0 = time.perf_counter()
+        out = parallel.run_with_timeout(slow_func, (wait,), timeout)
+        t1 = time.perf_counter()
+        self.assertEqual(out, wait)
+        self.assertLess(t1 - t0, timeout)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 import logging
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, TimeoutError, cpu_count
 from typing import Callable
 
 import numpy as np
@@ -70,3 +70,28 @@ def run(iterable: iter, func: Callable, cores: int) -> iter:
     pool.close()
     pool.join()
     return iterable
+
+
+def run_with_timeout(func: Callable, args: tuple, timeout: int = 5):
+    """Runs a function with multiprocessing and terminates if needed.
+
+    Args:
+        func: A function.
+        args: Function args.
+        timeout: Maximum allowed execution time.
+
+    Notes:
+        Intended for cases where other timeout methods fail to stop a function.
+    """
+    pool = Pool(1)
+    result = pool.apply_async(func, args)
+    try:
+        val = result.get(timeout=timeout)
+    except TimeoutError:
+        pool.terminate()
+        logger.warning("timeout")
+        return None
+    else:
+        pool.close()
+        pool.join()
+        return val
