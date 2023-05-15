@@ -1,10 +1,14 @@
 """A module for managing ReliefWeb API calls."""
 import logging
 import math
+import pathlib
+from multiprocessing import cpu_count
+from time import perf_counter
 
 import pandas as pd
 
 from corpusama.database.database import Database
+from corpusama.source import pdf
 from corpusama.source.call import Call
 from corpusama.util import decorator
 
@@ -16,7 +20,7 @@ class ReliefWeb(Call):
 
     Args:
         input: A JSON/YML filepath or dictionary with parameters.
-        database: A database filename, e.g., ``mycorpus.db``.
+        database: A database filename, e.g., `mycorpus.db`.
         appname: A unique identifier for using ReliefWeb's API.
         url: A base url for making POST calls.
         quota: A daily usage limit (see ReliefWeb API documentation).
@@ -24,7 +28,7 @@ class ReliefWeb(Call):
 
     Methods:
         one: Makes one API call.
-        all: Makes repeated API calls by increasing ``offset``.
+        all: Makes repeated API calls by increasing `offset`.
         new: Makes API calls for data that hasn't been retrieved yet.
 
     Attributes:
@@ -32,21 +36,21 @@ class ReliefWeb(Call):
 
     Notes:
         - The maximum number of daily calls defaults to 1,000.
-        - The default wait dictionary is: ``{0: 1, 5: 49, 10: 99, 20: 499, 30: None}``.
-        - If ``db=None``, data is only stored in ``ReliefWeb.raw``.
+        - The default wait dictionary is: `{0: 1, 5: 49, 10: 99, 20: 499, 30: None}`.
+        - If `db=None`, data is only stored in `ReliefWeb.raw`.
         - Logs a warning if a database is missing columns (update schema
-            to save such data or ignore by updating ``missing_columns.ignore``).
+            to save such data or ignore by updating `missing_columns.ignore`).
 
     See Also:
-        - ``source.call.Call`` (parent class with inherited methods/attributes).
+        - `source.call.Call` (parent class with inherited methods/attributes).
         - Repository documentation for tips on making ReliefWeb calls.
 
-        https://reliefweb.int/help/api
-        https://reliefweb.int/terms-conditions"""
+        <https://reliefweb.int/help/api>
+        <https://reliefweb.int/terms-conditions>
+    """
 
     def _offset(self) -> None:
         """Adjusts the offset parameter and halts a job if no more results."""
-
         if self.call_n > 0:
             self.parameters["offset"] += self.response_json["count"]
             if self.response_json["count"] == 0:
@@ -54,39 +58,39 @@ class ReliefWeb(Call):
                 raise SystemExit()
         logger.debug(self.parameters["offset"])
 
-    def all(self, limit: int = 0) -> None:
+    def get_all_records(self, limit: int = 0) -> None:
         """Makes repeated calls by incrementing the offset field.
 
         Args:
             limit: The maximum number of calls to make (0 = as many as possible).
 
         Notes:
-            - Makes calls exactly as parameters indicate and increments ``offset``
+            - Makes calls exactly as parameters indicate and increments `offset`
                 with each call.
             - Overwrites existing database raw content and starts over again if
-                aborted (not usable to progressively download content)."""
-
+                aborted (not usable to progressively download content).
+        """
         self.call_n = 0
         self.limit = limit
         if limit == 0:
             self.limit = self.quota
-        self.one()
+        self.get_record()
 
-    def new(self, limit: int = 0) -> None:
-        """Makes repeated calls starting from the latest ``date.changed``.
+    def get_new_records(self, limit: int = 0) -> None:
+        """Makes repeated calls starting from the latest `date.changed`.
 
         Args:
             limit: The maximum number of calls to make (0 = as many as possible).
 
         Notes:
-            - Requires use with a ``Database`` and that API parameters include
-                ``"sort": ["date.changed:asc"]``.
-            - Calls are made starting with the oldest ``date.changed`` value.
-            - Modified content is overwritten if its ``date.changed`` is newer
+            - Requires use with a `Database` and that API parameters include
+                `"sort": ["date.changed:asc"]`.
+            - Calls are made starting with the oldest `date.changed` value.
+            - Modified content is overwritten if its `date.changed` is newer
                 than the latest value.
             - Can be aborted and restarted and will safely continue at
-                the job's previous state."""
-
+                the job's previous state.
+        """
         self.parameters["offset"] = 0
         if self.parameters.get("sort", None) != ["date.changed:asc"]:
             raise ValueError('Add "sort": ["date.changed:asc"] to parameters first.')
@@ -94,8 +98,7 @@ class ReliefWeb(Call):
         self.all(limit)
 
     def _start_from(self):
-        """Updates ``filter`` to start from the latest ``date.changed``."""
-
+        """Updates `filter` to start from the latest `date.changed`."""
         res = self.db.c.execute("SELECT json_extract(_raw.date,'$.changed') FROM _raw")
         date_changed = [pd.Timestamp(x[0]) for x in res.fetchall()]
         if date_changed:
@@ -107,7 +110,7 @@ class ReliefWeb(Call):
             logger.debug(latest)
 
     @decorator.while_loop
-    def one(self) -> None:
+    def get_record(self) -> None:
         """Makes a single ReliefWeb API call.
 
         Notes:
@@ -115,13 +118,15 @@ class ReliefWeb(Call):
             - Is used as the basic building block for other call methods
                 (gets repeated in a while loop).
 
-            Wait times for multiple calls are computed based on ``wait_dict``
-            and the ``totalCount`` field from the first API call made. E.g., a
-            ``totalCount`` of 1000 and a ``parameters.limit`` of 100 means 10 calls
+            Wait times for multiple calls are computed based on `wait_dict`
+            and the `totalCount` field from the first API call made. E.g., a
+            `totalCount` of 1000 and a `parameters.limit` of 100 means 10 calls
             need to be made, which defaults to a 5-second wait period.
 
-            Inserts data into the ``_raw`` table after each call."""
-
+            Inserts data into the `_raw` table after each call.
+        """
+        if not self.appname:
+            raise ValueError(f"appname must be set to make API calls ({self.appname})")
         # check whether to abort
         if self.call_n >= self.limit:
             logger.debug(f"limit reached {self.limit}")
@@ -149,14 +154,13 @@ class ReliefWeb(Call):
         if not self.db:
             self.raw[self.call_n] = self.response_json
         else:
-            self.insert()
+            self._insert()
         self._wait()
         self.call_n += 1
         return True
 
     def _get_field_names(self):
         """Makes a set of field names from response data."""
-
         self.field_names = set()
         for x in self.response_json["data"]:
             self.field_names.update(list(x["fields"].keys()))
@@ -164,8 +168,7 @@ class ReliefWeb(Call):
         logger.debug(f"{len(self.field_names)} {sorted(self.field_names)}")
 
     def _insert_log(self):
-        """Inserts a log entry for a call into the ``_log`` table."""
-
+        """Inserts a log entry for a call into the `_log` table."""
         record = {
             "api_params_hash": self.hash,
             "api_params": self.parameters,
@@ -178,8 +181,7 @@ class ReliefWeb(Call):
         self.db.insert(self.df_log, "_log")
 
     def _insert_pdf(self):
-        """Updates the ``_pdf`` table after each call."""
-
+        """Updates the `_pdf` table after each call."""
         df = self.df_raw.loc[self.df_raw["file"].notna()].copy()
         if not df.empty:
             # make 1 row per file
@@ -197,33 +199,33 @@ class ReliefWeb(Call):
                 "preview.version",
                 "preview.url",
             ]
-            self.missing_columns(df_flat, "_pdf", ignore)
+            self._missing_columns(df_flat, "_pdf", ignore)
             # insert
             self.db.insert(df_flat, "_pdf")
 
-    def missing_columns(self, df: pd.DataFrame, table: str, ignore: list = []) -> None:
+    def _missing_columns(self, df: pd.DataFrame, table: str, ignore: list = []) -> None:
         """Warns if any incoming data is missing a dest. column for a database table.
 
         Args:
             df: The DataFrame with data to insert.
             table: The destination table.
-            ignore: List of unwanted columns to ignore."""
-
+            ignore: List of unwanted columns to ignore.
+        """
         missing_cols = [x for x in df.columns if x not in self.db.tables[table]]
         missing_cols = [x for x in missing_cols if x not in ignore]
         if missing_cols:
             logger.warning(f"{table} has missing columns: {missing_cols}")
 
-    def insert(self) -> None:
+    def _insert(self) -> None:
         """Reshapes and inserts ReliefWeb JSON data into a database.
 
         Notes:
             - Normalizes JSON data and reshapes to a DataFrame.
-            - Replaces ``-`` with ``_`` in column names.
-            - Adds empty columns from the ``_raw`` table if missing from
+            - Replaces `-` with `_` in column names.
+            - Adds empty columns from the `_raw` table if missing from
                 response data.
-            - Adds API metadata columns."""
-
+            - Adds API metadata columns.
+        """
         # normalize data
         df = pd.json_normalize(self.response_json["data"], sep="_", max_level=1)
         # manage columns
@@ -236,7 +238,7 @@ class ReliefWeb(Call):
         df["api_params_hash"] = self.hash
         df = self.db._add_missing_columns(df, "_raw")
         # warn for missing columns
-        self.missing_columns(df, "_raw", ["score", "vulnerable_groups"])
+        self._missing_columns(df, "_raw", ["score", "vulnerable_groups"])
         # insert data
         self.df_raw = df
         if not df.empty:
@@ -247,14 +249,103 @@ class ReliefWeb(Call):
             logger.debug("no more results")
             raise SystemExit()
 
+    def get_pdfs(self, min: int = 0, max: int = 0, wait: int = 5) -> None:
+        """Downloads ReliefWeb PDFs based on records in the _pdf table.
+
+        Args:
+            min: List start index.
+            max: List stop index.
+            wait: Minimum seconds to throttle PDF requests (applies if download
+                time < `min_wait`).
+
+        Notes:
+            - Compares file sizes of downloaded PDFs with Database _pdf.filesize values
+                and if changed re-downloads file.
+            -Set min and max to run small tests or start from a certain index to ignore
+                already downloaded content.
+        """
+        df = pd.read_sql("SELECT * from _pdf", self.db.conn)
+        df["local_file"] = (
+            df["id"].astype(str) + "/" + df["file_id"].astype(str) + ".pdf"
+        )
+        if min > len(df):
+            min = len(df)
+        if max > len(df) or max == 0:
+            max = len(df)
+        logger.info(f"downloading files {min}-{max}")
+        for x in range(min, max):
+            url = df.iloc[x]["url"]
+            file = self.pdf_dir / pathlib.Path(df.iloc[x]["local_file"])
+            file.parent.mkdir(parents=True, exist_ok=True)
+            msg = ""
+            if file.exists():
+                # size comparison to determine changed content
+                if df.iloc[x]["filesize"] == file.stat().st_size:
+                    logger.info(f"{x} - skip")
+                else:
+                    msg = pdf.get_request(file, url, wait)
+                    logger.info(f"{x} - {msg}")
+            else:
+                msg = pdf.get_request(file, url, wait)
+                logger.info(f"{x} - {msg}")
+
+    def extract_pdfs(
+        self,
+        min=0,
+        max=0,
+        clean: bool = True,
+        overwrite: bool = False,
+        timeout: int = 30,
+    ):
+        """Extracts text for PDFs in `ReliefWeb.pdf_dir` and saves to filesystem.
+
+        Args:
+            self: ReliefWeb object.
+            min: Starting list index.
+            max: Ending list index.
+            clean: Whether to clean text (see `pdf.clean_text`).
+            overwrite: Whether to overwrite if TXT file exists.
+            cores: Cores to run in parallel (use `0` to set automatically).
+
+        Notes:
+            See `pdf.extract_text` for extracting individual files. Collects file
+            list on first execution. Subsequent executions reuse the same file list:
+            changes on filesystem won't be detected unless re-instantiated.
+        """
+        # manage files
+        if not self.pdfs:
+            pdfs = self.pdf_dir.rglob("*.pdf")
+            self.pdfs = [f for f in pdfs]
+            logger.info(f"found {len(self.pdfs)} in {self.pdf_dir}")
+        nfiles = len(self.pdfs)
+        nfiles_total = nfiles
+        if min > nfiles:
+            min = nfiles
+        if max > nfiles or max == 0:
+            max = nfiles
+        pdfs = self.pdfs[min:max]
+        if not overwrite:
+            pdfs = [f for f in pdfs if not f.with_suffix(".txt").exists()]
+            nfiles = len(pdfs)
+            logger.info(f"remaining {len(pdfs)} files")
+        else:
+            logger.info(f"overwrite {len(pdfs)} files")
+        # run extraction
+        t0 = perf_counter()
+        extractor = pdf.ExtractFiles(clean, overwrite)
+        _ = extractor.run(pdfs, timeout)
+        t1 = perf_counter()
+        logger.info(f"{nfiles} files: {round(t1-t0,2)}s ({nfiles_total} total)")
+
     def __repr__(self):
         return ""
 
     def __init__(
         self,
         input,
-        database=None,
+        database,
         appname=None,
+        pdf_dir=None,
         url="https://api.reliefweb.int/v1/reports?appname=",
         quota=1000,
         wait_dict={0: 1, 5: 49, 10: 99, 20: 499, 30: None},
@@ -267,13 +358,15 @@ class ReliefWeb(Call):
         self.wait_dict = wait_dict
         self.db_name = database
         self.db = None
+        self.pdfs = None
         self.raw = {}
+        self.cores = int(cpu_count() / 2)
         self.log = {}
         self.limit = 1
         if not appname:
             self.appname = self.config["reliefweb"]["appname"]
-        else:
-            self.appname = appname
+        if not pdf_dir:
+            self.pdf_dir = pathlib.Path(self.config["reliefweb"]["pdf_dir"])
         # prepare job
         if database:
             self.db = Database(database)
