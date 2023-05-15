@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS _pdf (
 'file_id' TEXT NOT NULL UNIQUE,
 'description' TEXT,
 'filename' TEXT NOT NULL,
-'filesize' INTEGER NOT NULL,
+'filesize' INTEGER,
 'url' TEXT NOT NULL UNIQUE,
 'mimetype' TEXT NOT NULL,
 FOREIGN KEY('id') REFERENCES _raw ('id')
@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS _raw  (
 'ocha_product' TEXT,
 'origin' TEXT,
 'primary_country' TEXT,
+'redirects' TEXT,
 'source' TEXT,
 'status' TEXT,
 'theme' TEXT,
