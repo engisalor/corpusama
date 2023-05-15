@@ -17,18 +17,18 @@ text = """This is an example sentence with the number 5 and symbol &.
 class Test_Vertical(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.nlp = _stanza.load_nlp(resources, processors)
+        cls.nlp = _stanza.load_nlp(resources, processors, "en")
         cls.bundle = _stanza.run([text], [1], cls.nlp)
         cls.tagset = load_yaml("corpusama/corpus/tagset/ud_en_ewt.yml")
 
     def test_run_vertical(self):
         vert = vertical.stanza_to_vert(self.bundle, self.tagset)
         vert_head = "<s>\nThis\tDT\tthis-x"
-        vert_tail = "www.google.com.\t.\twww.google.com.-x\n</s>\n"
+        vert_tail = "www.google.com.\tADD\twww.google.com.-x\n</s>\n"
         # doc first line
         self.assertEqual(vert.doc[0][:18], vert_head)
         # doc last line
-        self.assertEqual(vert.doc[0][-41:], vert_tail)
+        self.assertEqual(vert.doc[0][-43:], vert_tail)
         # other attributes
         self.assertTrue(vert.id, [1])
         self.assertTrue(vert.len, 1)

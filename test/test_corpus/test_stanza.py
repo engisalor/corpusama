@@ -29,7 +29,7 @@ class Test_Stanza_Load(unittest.TestCase):
 class Test_Stanza_Usage(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.nlp = _stanza.load_nlp(resources, processors)
+        cls.nlp = _stanza.load_nlp(resources, processors, "en")
         cls.doc = cls.nlp.process(text)
 
     def test_get_xpos(self):

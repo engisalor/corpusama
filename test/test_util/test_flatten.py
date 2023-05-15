@@ -43,8 +43,8 @@ class Test_Flatten(unittest.TestCase):
         self.assertEqual(str(flatten.list_of_dict(ls_of_dict)), str(flat_dict))
 
     def test_flatten_dataframe(self):
-        df_nested = pd.read_json("corpusama/test/test_util/test_flatten-0.json")
-        df_flattened = pd.read_json("corpusama/test/test_util/test_flatten-1.json")
+        df_nested = pd.read_json("test/test_util/test_flatten-0.json")
+        df_flattened = pd.read_json("test/test_util/test_flatten-1.json")
         df = flatten.dataframe(df_nested)
         self.assertEqual(str(df), str(df_flattened))
 

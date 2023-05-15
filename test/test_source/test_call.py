@@ -3,8 +3,8 @@ import unittest
 from corpusama.source.call import Call
 
 wait_dict = {0: 1, 5: 49, 10: 99, 20: 499, 30: None}
-input_yml = "corpusama/test/test_source/call.yml"
-input_json = "corpusama/test/test_source/call.json"
+input_yml = "test/test_source/call.yml"
+input_json = "test/test_source/call.json"
 input_dict = {
     "filter": {
         "conditions": [

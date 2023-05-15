@@ -8,12 +8,12 @@ import pandas as pd
 from corpusama.source.reliefweb import ReliefWeb
 from corpusama.util import util
 
-input_yml = "corpusama/test/test_source/call.yml"
+input_yml = "test/test_source/call.yml"
 database = "3kd82kc843ke1la0.db"
-example_response = "corpusama/test/test_source/.call_response.json"
-example_raw = "corpusama/test/test_source/.call_raw.json"
-example_log = "corpusama/test/test_source/.call_log.json"
-example_pdf = "corpusama/test/test_source/.call_pdf.json"
+example_response = "test/test_source/.call_response.json"
+example_raw = "test/test_source/.call_raw.json"
+example_log = "test/test_source/.call_log.json"
+example_pdf = "test/test_source/.call_pdf.json"
 
 
 def save_example_call():
@@ -31,7 +31,7 @@ def save_example_call():
     queries = ["SELECT * FROM _raw", "SELECT * FROM _pdf", "SELECT * FROM _log"]
     for x in range(len(tables)):
         df = pd.read_sql(queries[x], job.db.conn)
-        name = f"corpusama/test/test_source/.call{tables[x]}.json"
+        name = f"test/test_source/.call{tables[x]}.json"
         df.to_json(name, indent=2)
     pathlib.Path(f"data/{database}").unlink(missing_ok=True)
 
@@ -69,7 +69,7 @@ class Test_ReliefWeb(unittest.TestCase):
         job.now = util.now()
         job._get_field_names()
         job._hash()
-        job.insert()
+        job._insert()
         raw = pd.read_json(example_raw)
         log = pd.read_json(example_log)
         pdf = pd.read_json(example_pdf)
