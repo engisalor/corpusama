@@ -1,4 +1,11 @@
-"""Methods to execute stanza pipelines and process results."""
+"""Methods to execute stanza pipelines and process results.
+
+Notes:
+    `ADD` tag:
+        This is applied to URLs and emails but is somewhat variable. `google.com` may
+        be tagged as a noun and `www.google.com` as `ADD`. When a token is labeled
+        `ADD`, following punctuation may be included in the token. Tested w/ EWT model.
+"""
 import logging
 import re
 
@@ -12,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def load_nlp(resources, processors, language) -> Pipeline:
-    """Returns a stanza ``Pipeline`` object, updating models once a day.
+    """Returns a stanza ``Pipeline`` object, updating models at most once a day.
 
     Args:
         resources: Stanza resources.
@@ -25,7 +32,7 @@ def load_nlp(resources, processors, language) -> Pipeline:
             lemmatization, etc., may differ over time.
 
     See Also:
-        https://stanfordnlp.github.io/stanza/"""
+        <https://stanfordnlp.github.io/stanza/>"""
 
     nlp_runs = util.count_log_lines("load_nlp", log_file)
     if nlp_runs > 0:
