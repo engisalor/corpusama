@@ -1,10 +1,10 @@
 """Language identification module.
 
 This module contains methods to identify the languages of texts with several LI tools.
-`identify()` is the main function to run. See the example below for general usage.
+The `LangID` class is the main entry point. See the example below for usage.
 
 !!! note
-    If pip fails to install fasttext, try downloading and building it locally:
+    If pip fails to install `fasttext`, try downloading and building it locally:
     see their [website](https://fasttext.cc/docs/en/language-identification.html).
 
     ```bash
@@ -20,15 +20,11 @@ Example:
     ```py
     >>> files = ["README.md","license"]
 
-    >>> clean_kwargs = dict(
-    ...    min_len = 10,  # exclude lines under N characters
-    ...    drops = drop_all,  # characters to exclude from LI
-    ... )
-
     >>> sample_kwargs = dict(
-    ...    sample_size = 0,  # desired number of random lines to collect
-    ...    tries = 5,  # number of attempts to find suitable lines
-    ...    clean_kwargs = clean_kwargs
+    ...    sample_size = 0,  # desired number of random lines to collect (0=everything)
+    ...    tries = 5,        # max number of attempts to find suitable lines
+    ...    min_len = 10,     # ignore lines under n characters long
+    ...    drops = drop_all, # string of characters to remove before language detection
     ... )
 
     >>> nlp = stanza.Pipeline(
@@ -39,19 +35,20 @@ Example:
 
     >>> model = fasttext.load_model("./fastText/lid.176.bin")
 
-    >>> df = identify(
+    >>> lid = LangID(
     ...    files,
     ...    sample_kwargs,
     ...    nlp,
     ...    model,
+    ...    threshold=0.6  # ignore low-confidence lines (fastText only)
     ... )
 
-    >>> df["top"][0]
-    'en'
+    >>> len(lid.df)  # generates a DataFrame at `LangiD.df`
+    4
 
+    # view the df and inspect it w/ class methods like `get_top_lang_is()`
     ```
 """
-import collections
 import functools
 import logging
 import pathlib
@@ -76,25 +73,21 @@ logging.basicConfig(
 pathlib.Path(".temp/").mkdir(exist_ok=True)
 digit = "".join([string.digits])
 punct = "".join([string.punctuation])
-symbol = "•�…►▼‐■》∗✔⇤"
+symbol = "•�…►▼‐■》∗✔⇤–●▪➔­­;«»◊›➢“©□"
 whitespace = "\t\n\r\x0b\x0c"
 drop_all = "".join([digit, punct, symbol, whitespace])
-clean_kwargs = dict(
-    min_len=10,
-    drops=drop_all,
-)
-sample_kwargs = dict(sample_size=0, tries=5, clean_kwargs=clean_kwargs)
 summary_cols = {x: None for x in ["file", "top", "weight", "sample", "langs", "time"]}
+li_columns = ["file", "tool", "id", "time", "top"]
 
 
-def clean_lines(lines: list, min_len: int, drops: str = drop_all) -> list:
+def clean_lines(lines: list, min_len: int = 10, drops: str = drop_all) -> list:
     """Cleans a list of lines, removing `drops`, extra spaces and short lines.
 
     Args:
-        lines: Document lines.
+        lines: List of document lines.
         min_len: Remove lines if character length < N.
         drops: String of unwanted characters (punctuation, digits, symbols, \\t, etc.).
-            See langid.digit, langid.drop_all, etc (add others as needed).
+            See `langid.digit`, `langid.drop_all`, etc (add others as needed).
 
     !!! warning
         `drops` is set to `langid.drop_all` by default:
@@ -109,23 +102,31 @@ def clean_lines(lines: list, min_len: int, drops: str = drop_all) -> list:
     return lines
 
 
-def sample_lines(lines: list, sample_size: int, tries: int, clean_kwargs: dict) -> list:
+def sample_lines(
+    lines: list,
+    sample_size: int,
+    tries: int = 5,
+    min_len: int = 10,
+    drops: str = drop_all,
+) -> list:
     """Returns a random sample of cleaned, unique lines, or all if fewer exist.
 
     Args:
-        lines: List of strings.
-        sample_size: Desired sample size.
+        lines: List of lines from a text.
+        sample_size: Desired sample size (`0` includes everything).
         tries: Rounds of randomized sample collection to try collecting desired size.
-        clean_kwargs: Dict of args passed to clean_lines().
+        min_len: Remove lines if character length < N.
+        drops: String of unwanted characters (punctuation, digits, symbols, \\t, etc.).
+            See `langid.digit`, `langid.drop_all`, etc (add others as needed).
     """
     if sample_size > len(lines) or sample_size == 0:
-        return clean_lines(lines, **clean_kwargs)
+        return clean_lines(lines, min_len, drops)
     else:
         clean = set()
         while sample_size > len(clean) and tries > 0:
             tries -= 1
             lines = random.sample(lines, len(lines))
-            clean.update(clean_lines(lines, **clean_kwargs))
+            clean.update(clean_lines(lines, min_len, drops))
         return list(clean)[:sample_size]
 
 
@@ -155,7 +156,7 @@ def _li_wrapper(func: Callable) -> dict:
         func: A language identification function with the name `<LI tool>_raw`.
 
     See:
-        For an example, see `stanza.raw`. New LI tools must follow this structure.
+        For an example see `identify_stanza()`.
     """
 
     @functools.wraps(func)
@@ -169,118 +170,100 @@ def _li_wrapper(func: Callable) -> dict:
             raise ValueError(f"couldn't determine LI tool type from {func}")
         # run LI
         t0 = perf_counter()
-        langs = func(*args, **kwargs)
+        dt = func(*args, **kwargs)
         t1 = perf_counter()
         time = round(t1 - t0, 3)
-        # process result
-        langs_dt = {i: c for i, c in collections.Counter(langs["labels"]).items()}
-        langs_dt = dict(
-            sorted(langs_dt.items(), key=lambda item: item[1], reverse=True)
-        )
-        dt = {
-            "file": str(args[0]),
-            "tool": tool,
-            "langs": langs_dt,
-            "time": time,
-            "params": args[1],
-        }
-        return _lang_analysis(dt)
+        # add info
+        dt |= {"file": str(args[0]), "tool": tool, "time": time, "params": args[1]}
+        return dt
 
     return _inner
 
 
-def stanza_raw(file: str, sample_kwargs: dict, nlp: stanza.Pipeline) -> dict:
-    """Runs Stanza LI on a file, returns a dict of detected languages.
-
-    See:
-        The docstring for stanza_full() has more details."""
-    sample = _get_lines(file, sample_kwargs)
-    if not sample:
-        return {"labels": []}
-    docs = [stanza.Document([], text=t) for t in sample]
-    nlp(docs)
-    return {"labels": [doc.lang for doc in docs]}
-
-
 @_li_wrapper
-def stanza_full(file: str, sample_kwargs: dict, nlp: stanza.Pipeline) -> dict:
-    """Runs Stanza LI on a file, returns a dict with analysis details.
+def identify_stanza(file: str, sample_kwargs: dict, nlp: stanza.Pipeline) -> dict:
+    """Runs Stanza LI on a file, returns a dict with results.
 
     Args:
         file: Filepath to text file.
-        sample_kwargs: Args passed to sample_lines().
+        sample_kwargs: Args passed to `sample_lines()` and `clean_lines()`.
         nlp: Stanza NLP pipeline.
-    """
-    return stanza_raw(file, sample_kwargs, nlp)
-
-
-def fasttext_raw(
-    file: str,
-    sample_kwargs: dict,
-    model: fasttext.FastText._FastText,
-    scores: bool = False,
-) -> dict:
-    """Runs fastText LI on a file, returns a dict of detected languages and scores.
-
-    See:
-        The docstring for fasttext_full() has more details.
     """
     sample = _get_lines(file, sample_kwargs)
     if not sample:
-        return {"labels": []}
-    res = model.predict(sample)
-    dt = {"labels": [y.replace("__label__", "") for x in res[0] for y in x]}
-    if sample and scores:
-        dt["scores"] = [y for x in res[1] for y in x]
-    return dt
+        return {"langs": [], "bytes": []}
+    docs = [stanza.Document([], text=t) for t in sample]
+    nlp(docs)
+    return {
+        "langs": [doc.lang for doc in docs],
+        "bytes": [len(x.encode("utf8")) for x in sample],
+    }
 
 
 @_li_wrapper
-def fasttext_full(
+def identify_fasttext(
     file: str,
     sample_kwargs: dict,
     model: fasttext.FastText._FastText,
-    scores: bool = False,
 ) -> dict:
-    """Runs fasttext LI on a file, returns a dict with analysis details.
+    """Runs fasttext LI on a file, returns a dict with results.
 
     Args:
         file: Text file.
-        sample_kwargs: Args passes to sample_lines().
-        model: A _FastText object.
-        scores: Include scores for every line (discarded by default).
-
-    !!! note
-        fastText can provide scores for every text (line) by passing `scores=True`.
+        sample_kwargs: Args passes to `sample_lines()` and `clean_lines()`.
+        model: A `_FastText` object.
     """
-    return fasttext_raw(file, sample_kwargs, model, scores)
+    sample = _get_lines(file, sample_kwargs)
+    if not sample:
+        return {"langs": [], "scores": [], "bytes": []}
+    res = model.predict(sample)
+    return {
+        "langs": [y.replace("__label__", "") for x in res[0] for y in x],
+        "scores": [y for x in res[1] for y in x],
+        "bytes": [len(x.encode("utf8")) for x in sample],
+    }
 
 
-def _lang_analysis(dt: dict) -> dict:
-    """Runs a simple analysis on raw LI data and returns a more detailed dict.
+def analyze(dt: dict, threshold: float = 0.6, columns: list = li_columns) -> dict:
+    """Runs an analysis on raw LI data and returns a more detailed dict.
 
     Args:
-        dt: A dictionary produced within the _li_wrapper function.
+        dt: A dictionary produced with `_li_wrapper()`.
+        threshold: (0-1.0) Minimum confidence needed to consider an LI result valid
+            (fastText only).
+        columns: Data to include in output. Use `[]` to get everything.
+
+    Notes:
+        Computations modeled off of Abadji et al. (2022).
+            <https://aclanthology.org/2022.lrec-1.463>
     """
-    langs = dt["langs"]
-    if not langs:
-        return dt
-    top = max([v for v in langs.values()])
-    size = sum([v for v in langs.values()])
-    if len(langs) < 2:
-        weight = None
-    else:
-        ls = [v for v in langs.values()]
-        first = float(ls[0]) / size
-        second = float(ls[1]) / size
-        weight = round(first / second, 1)
-    dt |= {
-        "top": list(langs.keys())[list(langs.values()).index(top)],
-        "weight": weight,
-        "sample": sum([v for v in langs.values()]),
-        "langs": {k: (v, round(v / size, 3)) for k, v in langs.items()},
+    if not columns:
+        columns = [k for k in dt.keys()]
+    if not dt["langs"]:
+        return {k: v for k, v in dt.items() if k in columns}
+    # label lines as "unknown" if score < threshold
+    if "scores" in dt.keys():
+        dt["langs"] = [
+            dt["langs"][x] if dt["scores"][x] > threshold else "unknown"
+            for x in range(len(dt["langs"]))
+        ]
+    # get sum of bytes per language
+    langs = set(dt["langs"])
+    _bytes = {
+        x: sum([dt["bytes"][y] for y in range(len(dt["langs"])) if dt["langs"][y] == x])
+        for x in langs
     }
-    return dt
+    # summarize top languages
+    filesize = sum([v for v in _bytes.values()])
+    multilingual_threshold = 1 / (len(langs) + 1)
+    ids = {}
+    for k in langs:
+        bytes_size = round(_bytes[k] / filesize, 2)
+        if bytes_size >= multilingual_threshold:
+            ids[k] = bytes_size
+    # sort top languages and add to output
+    dt["id"] = dict(sorted(ids.items(), key=lambda item: item[1], reverse=True))
+    return {k: v for k, v in dt.items() if k in columns}
 
 
 def identify(
@@ -288,35 +271,176 @@ def identify(
     sample_kwargs: dict,
     nlp: stanza.Pipeline | None,
     model: fasttext.FastText._FastText | None,
+    threshold: float = 0.6,
+    columns: list = li_columns,
 ) -> pd.DataFrame:
     """Runs language identification on files and makes a DataFrame of results.
 
     Args:
         files: Filepath(s) to text file(s).
-        sample_kwargs: Args passed to sample_lines() in each LI pipeline.
+        sample_kwargs: Args passed to `sample_lines()` and `clean_lines()`.
         nlp: (Optional) A Stanza NLP pipeline.
         model: (Optional) A _FastText object.
+        threshold: (0.0<1.0) Minimum confidence needed to consider an LI result valid
+            (fastText only).
+        columns: Data to include in output. Use `[]` to get everything.
     """
     t0 = perf_counter()
     df = pd.DataFrame()
     if isinstance(files, str):
         files = [files]
+    n = 0
     for file in files:
         dt_st = {}
         dt_fa = {}
         # run LI
         if nlp:
-            dt_st = stanza_full(file, sample_kwargs, nlp)
+            dt_st = identify_stanza(file, sample_kwargs, nlp)
+            dt_st = analyze(dt_st, threshold, columns)
         if model:
-            dt_fa = fasttext_full(file, sample_kwargs, model)
+            dt_fa = identify_fasttext(file, sample_kwargs, model)
+            dt_fa = analyze(dt_fa, threshold, columns)
+
         # make DataFrame
         temp = pd.DataFrame.from_records([dt_st, dt_fa])
         df = pd.concat([df, temp])
+        n += 1
+        logging.info(f"... file {n}/{len(files)}")
 
+    df.drop(df[df["tool"].isna()].index, inplace=True)
     t1 = perf_counter()
     t = round(t1 - t0, 2)
     logging.info(f"... {round(t,3)}s - {round(t/len(df), 2)}s / file")
     return df.reset_index(drop=True)
+
+
+def _has_lang(dt: dict, lang: str) -> bool:
+    """Returns `True` if a language exists in a dict of LI results.
+
+    Args:
+        dt: A dictionary of LI results, e.g., from `identify_stanza()`.
+        lang: 2-3 letter ISO of a language to detect.
+    """
+    return lang in dt.keys()
+
+
+def _is_top_lang(dt: dict, lang: str) -> bool:
+    """Returns `True` if a language is the top result in a dict of LI results.
+
+    Args:
+        dt: A dictionary of LI results, e.g., from `identify_stanza()`.
+        lang: 2-3 letter ISO of a language to detect.
+    """
+    top = list(dt.keys())[list(dt.values()).index(max(dt.values()))]
+    return lang == top
+
+
+def _multiling(dt: dict) -> bool:
+    """Returns `True` if 2+ languages are in a dict of LI results (excludes `unknown`).
+
+    Args:
+        dt: A dictionary of LI results, e.g., from `identify_stanza()`.
+    """
+    return len([x for x in dt.keys() if x != "unknown"]) > 1
+
+
+def _top_lang(dt: dict) -> bool:
+    """Returns the top language for a in a dict of LI results.
+
+    Args:
+        dt: A dictionary of LI results, e.g., from `identify_stanza()`.
+    """
+    return list(dt.keys())[list(dt.values()).index(max(dt.values()))]
+
+
+class LangID:
+    """A class to run language identification on files and inspect results.
+
+    Args:
+        files: Filepath(s) to text file(s).
+        sample_kwargs: Args passed to `sample_lines()` and `clean_lines()`.
+        nlp: (Optional) A Stanza NLP pipeline.
+        model: (Optional) A _FastText object.
+        threshold: (0-1.0) Minimum confidence needed to consider an LI result valid
+            (fastText only).
+        columns: Data to include in output. Use `[]` to get everything.
+
+    Attributes:
+        df (pd.Dataframe): Non-empty language analysis results.
+        na (pd.Dataframe): Empty results (if files have no content or sampling/cleaning
+            is too restrictive).
+
+    Notes:
+        - Methods beginning with `add_` generate a column in `LangID.df` (may be run
+            automatically on instantiation).
+        - Methods beginning with `get_` return a slice of `LangID.df` w/ a filter.
+        - Languages are given a two- or three-letter ISO label  (`en`, `es`, etc.).
+            Labels tend to match between Stanza and fastText, but compare their
+            documentation to verify.
+        - `size`: The proportion of a document in bytes that's in X language (0-1.0).
+        - `top_lang`: The language with the highest proportion in a text.
+        - `multiling`: Whether a text has two or more languages (excluding `unknown`).
+    """
+
+    def add_top_lang(self):
+        """Adds a column indicating the top language for each text."""
+        self.df["top_lang"] = self.df["id"].apply(_top_lang)
+
+    def add_top_size(self):
+        """Adds a column indicating the top language's size (0-1.0) for each text."""
+        if "top_lang" not in self.df.columns:
+            self.add_top_lang()
+        self.df["top_size"] = self.df.apply(
+            lambda row: row["id"].get(row["top_lang"]), axis=1
+        )
+
+    def add_multiling(self):
+        """Adds a column indicating whether each text may be multilingual."""
+        self.df["multiling"] = self.df["id"].apply(_multiling)
+
+    def get_has_lang(self, iso: str) -> pd.DataFrame:
+        """Returns rows containing `iso` language."""
+        return self.df.loc[self.df["id"].apply(_has_lang, lang=iso)]
+
+    def get_top_lang_is(self, iso: str) -> pd.DataFrame:
+        """Returns rows where `iso` is the top language."""
+        return self.df.loc[self.df["id"].apply(_is_top_lang, lang=iso)]
+
+    def get_size_lt(self, size: float) -> pd.DataFrame:
+        """Returns rows where `top_size` is lesser than `size`."""
+        if "top_size" not in self.df.columns:
+            self.add_top_size()
+        return self.df.loc[self.df["top_size"] <= size]
+
+    def get_size_gt(self, size: float):
+        """Returns rows where `top_size` is greater than `size`."""
+        if "top_size" not in self.columns:
+            self.add_top_size()
+        return self.df.loc[self.df["top_size"] >= size]
+
+    def get_size_between(self, low: float, high: float):
+        """Returns rows where `top_size` is between `low` and `high`."""
+        if "top_size" not in self.df.columns:
+            self.add_top_size(self.df)
+        return self.df.loc[(self.df["top_size"] >= low) & (self.df["top_size"] <= high)]
+
+    def __init__(
+        self,
+        files: str | list,
+        sample_kwargs: dict,
+        nlp: stanza.Pipeline | None,
+        model: fasttext.FastText._FastText | None,
+        threshold: float,
+        columns: list = li_columns,
+    ):
+        self.df = identify(files, sample_kwargs, nlp, model, threshold, columns)
+        self.na = self.df[self.df["id"].isna()].copy()
+        self.na.reset_index(drop=True, inplace=True)
+        self.df.dropna(subset=["id"], inplace=True)
+        self.df.reset_index(drop=True, inplace=True)
+        self.add_multiling()
+        self.add_top_lang()
+        self.add_top_size()
 
 
 def file_stats(files: list, out: str = "file-stats") -> None:
@@ -362,18 +486,20 @@ def file_stats(files: list, out: str = "file-stats") -> None:
 
 
 def file_concat(
-    files: list, out: str = "file-concat", clean_kwargs: dict = clean_kwargs
+    files: list, out: str = "file-concat", min_len: int = 10, drops: str = drop_all
 ) -> None:
     """Combines text files into raw and cleaned versions w/ XML tags.
 
     Args:
         files: List of filenames to read and analyze.
         out: Stem of output file name.
-        clean_kwargs: Dict of args passed to `clean_lines()`.
+        min_len: Remove lines if character length < N.
+        drops: String of unwanted characters (punctuation, digits, symbols, \\t, etc.).
+            See `langid.digit`, `langid.drop_all`, etc (add others as needed).
 
     Notes:
-        Use this to test various parameters for `clean_lines()` before running LI
-        methods. Output files can be large if working with many texts.
+        Use this to test various parameters for `clean_lines()` before running LI.
+        Output files can be large if working with many texts.
     """
     dest = open(f"{out}.xml", "w")
     dest_clean = open(f"{out}-clean.xml", "w")
@@ -383,7 +509,7 @@ def file_concat(
             dest.write(f'<file path="{file}">\n')
             dest.write("".join(lines))
             dest.write("\n</file>\n")
-            lines = clean_lines(lines, **clean_kwargs)
+            lines = clean_lines(lines, min_len, drops)
             dest_clean.write(f'<file path="{file}">\n')
             dest_clean.write("\n".join(lines))
             dest_clean.write("\n</file>\n")
