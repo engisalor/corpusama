@@ -1,24 +1,14 @@
 # Corpusama
 
-Corpusama is a terminal-based language corpus management tool. It's designed to integrate open-source corpus software and APIs into a single Python library.
-
-Corpusama is a research tool supported by the [Humanitarian Encyclopedia](https://humanitarianencyclopedia.org/) and University of Granada [LexiCon research group](https://lexicon.ugr.es/). Its initial goal is to develop a semi-automated pipeline for creating corpora from the [ReliefWeb](https://reliefweb.int/) database of humanitarian texts.
-
-## Installation
-
-Clone this repo and install dependencies. Note that the [Stanza NLP package](https://github.com/stanfordnlp/stanza) can require several GB of space.
-
-```python
-pip install defusedxml pandas pdfminer.six pyyaml requests stanza
-```
+Corpusama is a Python-based language corpus management tool. Its initial goal is to develop a semi-automated pipeline for creating corpora from the [ReliefWeb](https://reliefweb.int/) database of humanitarian texts.
 
 ## Usage
 
-Corpusama is currently designed for building corpora with texts from the ReliefWeb API. So far, it focuses on English HTML content. The project is still under development and can be expected to change significantly.
+Corpusama is currently designed for building corpora with texts from the ReliefWeb API. The project is still under development and can be expected to change significantly during its beta phase.
 
-Researchers interested in humanitarian discourse can use Corpusama to reproduce ReliefWeb corpora and undertake linguistic analyses. Note that efforts are being made to offer a family of ReliefWeb corpora publicly.
+Clone this repo and install dependencies. Note that the [Stanza NLP package](https://github.com/stanfordnlp/stanza) can require several GB of space.
 
-More intrepid users could reconfigure it to include new types of data sources. Draft documentation is located in [usage.md](/usage.md). The overall workflow currently looks something like this:
+Example workflow:
 
 ```python
 from corpusama.corpus.corpus import Corpus
@@ -57,3 +47,8 @@ corpus.export_archive()
 # compile the corpus with NoSketch Engine
 # run NoSketch Engine and run queries
 ```
+
+
+## Acknowledgements
+
+Corpusama has received support from the [Humanitarian Encyclopedia](https://humanitarianencyclopedia.org/) and the [LexiCon research group](https://lexicon.ugr.es/) at the University of Granada. Its dependencies include the [Stanza NLP package](https://github.com/stanfordnlp/stanza), [PyMuPDF](https://github.com/pymupdf/PyMuPDF), and [fastText](https://github.com/facebookresearch/fastText).
