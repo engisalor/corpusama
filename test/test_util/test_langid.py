@@ -2,6 +2,7 @@ import pathlib
 import unittest
 
 import fasttext
+import pandas as pd
 import stanza
 
 from corpusama.util import langid
@@ -69,6 +70,19 @@ class Test_LangID(unittest.TestCase):
             None,
         )
         self.assertEqual(df["tool"][0], "stanza")
+
+    def test_LangID_texts_only_fa(self):
+        # NOTE: could break if text languages aren't predicted correctly
+        texts = [
+            "hello, my name is John\nand I speak English",
+            "hola, mi nombre es José\ny hablo español",
+        ]
+        lid = langid.LangID(
+            texts, self.sample_kwargs, None, self.model, 0.6, is_file=False
+        )
+        self.assertTrue(pd.isnull(lid.df["file"][0]))
+        self.assertEqual(lid.df["top_lang"][0], "en")
+        self.assertEqual(lid.df["top_lang"][1], "es")
 
     def test_file_concat(self):
         out = [

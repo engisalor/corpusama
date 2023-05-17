@@ -54,6 +54,7 @@ import logging
 import pathlib
 import random
 import string
+from logging.handlers import TimedRotatingFileHandler
 from time import perf_counter
 from typing import Callable
 
@@ -62,11 +63,15 @@ import numpy as np
 import pandas as pd
 import stanza
 
+log_file = ".logs/langid.log"
+file_handler = TimedRotatingFileHandler(log_file, "midnight", backupCount=1)
+stream_handler = logging.StreamHandler()
+
 logging.basicConfig(
     encoding="utf-8",
-    level=logging.INFO,
-    format="%(levelname)s - %(module)s.%(funcName)s - %(message)s",
-    handlers=[logging.FileHandler(".logs/langid.log"), logging.StreamHandler()],
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(module)s - %(funcName)s - %(message)s",
+    handlers=[stream_handler, file_handler],
 )
 
 # default settings
@@ -130,20 +135,23 @@ def sample_lines(
         return list(clean)[:sample_size]
 
 
-def _get_lines(file: str, sample_kwargs: dict) -> dict:
+def _get_lines(s: str, is_file: bool, sample_kwargs: dict) -> dict:
     """Opens a file and runs sample_lines(): logs a warning if there's no content.
 
     Args:
-        file: Filename.
+        s: Filename or text string.
+        is_file: Whether `s` is a filepath `True` or a text `False`.
         sample_kwargs: args for sample_lines.
     """
-    file = pathlib.Path(file)
-    with open(file) as f:
-        lines = f.readlines()
+    if is_file:
+        with open(s) as f:
+            lines = f.readlines()
+    else:
+        lines = s.split("\n")
     sample = sample_lines(lines, **sample_kwargs)
     # check for content
     if not len(sample):
-        logging.warning(f"empty - {file}")
+        logging.warning(f"empty - {s}")
         return {}
     else:
         return sample
@@ -173,23 +181,30 @@ def _li_wrapper(func: Callable) -> dict:
         dt = func(*args, **kwargs)
         t1 = perf_counter()
         time = round(t1 - t0, 3)
-        # add info
-        dt |= {"file": str(args[0]), "tool": tool, "time": time, "params": args[1]}
+        # make dict
+        if args[1] is True:
+            file = str(args[0])
+        else:
+            file = None
+        dt |= {"file": file, "tool": tool, "time": time, "params": args[2]}
         return dt
 
     return _inner
 
 
 @_li_wrapper
-def identify_stanza(file: str, sample_kwargs: dict, nlp: stanza.Pipeline) -> dict:
-    """Runs Stanza LI on a file, returns a dict with results.
+def identify_stanza(
+    s: str, is_file: bool, sample_kwargs: dict, nlp: stanza.Pipeline
+) -> dict:
+    """Runs Stanza LI on `s`, returns a dict with results.
 
     Args:
-        file: Filepath to text file.
+        s: Filename or text string.
+        is_file: Whether `s` is a filepath `True` or a text `False`.
         sample_kwargs: Args passed to `sample_lines()` and `clean_lines()`.
         nlp: Stanza NLP pipeline.
     """
-    sample = _get_lines(file, sample_kwargs)
+    sample = _get_lines(s, is_file, sample_kwargs)
     if not sample:
         return {"langs": [], "bytes": []}
     docs = [stanza.Document([], text=t) for t in sample]
@@ -202,18 +217,20 @@ def identify_stanza(file: str, sample_kwargs: dict, nlp: stanza.Pipeline) -> dic
 
 @_li_wrapper
 def identify_fasttext(
-    file: str,
+    s: str,
+    is_file: bool,
     sample_kwargs: dict,
     model: fasttext.FastText._FastText,
 ) -> dict:
-    """Runs fasttext LI on a file, returns a dict with results.
+    """Runs fasttext LI on `s`, returns a dict with results.
 
     Args:
-        file: Text file.
+        s: Filename or text string.
+        is_file: Whether `s` is a filepath `True` or a text `False`.
         sample_kwargs: Args passes to `sample_lines()` and `clean_lines()`.
         model: A `_FastText` object.
     """
-    sample = _get_lines(file, sample_kwargs)
+    sample = _get_lines(s, is_file, sample_kwargs)
     if not sample:
         return {"langs": [], "scores": [], "bytes": []}
     res = model.predict(sample)
@@ -267,50 +284,52 @@ def analyze(dt: dict, threshold: float = 0.6, columns: list = li_columns) -> dic
 
 
 def identify(
-    files: str | list,
+    s: str | list,
     sample_kwargs: dict,
     nlp: stanza.Pipeline | None,
     model: fasttext.FastText._FastText | None,
     threshold: float = 0.6,
     columns: list = li_columns,
+    is_file: bool = True,
 ) -> pd.DataFrame:
-    """Runs language identification on files and makes a DataFrame of results.
+    """Runs language identification on or more `s` and makes a DataFrame of results.
 
     Args:
-        files: Filepath(s) to text file(s).
+        s: Filepath(s) or text(s).
         sample_kwargs: Args passed to `sample_lines()` and `clean_lines()`.
         nlp: (Optional) A Stanza NLP pipeline.
         model: (Optional) A _FastText object.
         threshold: (0.0<1.0) Minimum confidence needed to consider an LI result valid
             (fastText only).
         columns: Data to include in output. Use `[]` to get everything.
+        is_file: Whether `s` is a filepath `True` or a text `False`.
     """
     t0 = perf_counter()
     df = pd.DataFrame()
-    if isinstance(files, str):
-        files = [files]
+    if isinstance(s, str):
+        s = [s]
     n = 0
-    for file in files:
+    for t in s:
         dt_st = {}
         dt_fa = {}
         # run LI
         if nlp:
-            dt_st = identify_stanza(file, sample_kwargs, nlp)
+            dt_st = identify_stanza(t, is_file, sample_kwargs, nlp)
             dt_st = analyze(dt_st, threshold, columns)
         if model:
-            dt_fa = identify_fasttext(file, sample_kwargs, model)
+            dt_fa = identify_fasttext(t, is_file, sample_kwargs, model)
             dt_fa = analyze(dt_fa, threshold, columns)
 
         # make DataFrame
         temp = pd.DataFrame.from_records([dt_st, dt_fa])
         df = pd.concat([df, temp])
         n += 1
-        logging.info(f"... file {n}/{len(files)}")
+        logging.info(f"... {n}/{len(s)}")
 
     df.drop(df[df["tool"].isna()].index, inplace=True)
     t1 = perf_counter()
     t = round(t1 - t0, 2)
-    logging.info(f"... {round(t,3)}s - {round(t/len(df), 2)}s / file")
+    logging.info(f"... {round(t,3)}s - {round(t/len(df), 2)}s / text")
     return df.reset_index(drop=True)
 
 
@@ -357,13 +376,14 @@ class LangID:
     """A class to run language identification on files and inspect results.
 
     Args:
-        files: Filepath(s) to text file(s).
+        s: Filepath(s) or text(s).
         sample_kwargs: Args passed to `sample_lines()` and `clean_lines()`.
         nlp: (Optional) A Stanza NLP pipeline.
         model: (Optional) A _FastText object.
         threshold: (0-1.0) Minimum confidence needed to consider an LI result valid
             (fastText only).
         columns: Data to include in output. Use `[]` to get everything.
+        is_file: Whether `s` is a filepath `True` or a text `False`.
 
     Attributes:
         df (pd.Dataframe): Non-empty language analysis results.
@@ -426,14 +446,15 @@ class LangID:
 
     def __init__(
         self,
-        files: str | list,
+        s: str | list,
         sample_kwargs: dict,
         nlp: stanza.Pipeline | None,
         model: fasttext.FastText._FastText | None,
         threshold: float,
         columns: list = li_columns,
+        is_file: bool = True,
     ):
-        self.df = identify(files, sample_kwargs, nlp, model, threshold, columns)
+        self.df = identify(s, sample_kwargs, nlp, model, threshold, columns, is_file)
         self.na = self.df[self.df["id"].isna()].copy()
         self.na.reset_index(drop=True, inplace=True)
         self.df.dropna(subset=["id"], inplace=True)
