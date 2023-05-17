@@ -1,7 +1,6 @@
 CREATE TABLE IF NOT EXISTS _log (
 'api_params_hash' TEXT PRIMARY KEY,
 'api_params' TEXT NOT NULL UNIQUE,
-'api_input' TEXT NOT NULL,
 'api_date' TEXT NOT NULL,
 'count' INTEGER,
 'total_count' INTEGER,
@@ -10,7 +9,7 @@ FOREIGN KEY('api_params_hash') REFERENCES _raw ('api_params_hash')
 
 CREATE TABLE IF NOT EXISTS _pdf (
 'id' INTEGER NOT NULL,
-'file_id' TEXT NOT NULL UNIQUE,
+'file_id' INTEGER NOT NULL UNIQUE,
 'description' TEXT,
 'filename' TEXT NOT NULL,
 'filesize' INTEGER,
