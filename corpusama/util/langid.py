@@ -144,8 +144,12 @@ def _get_lines(s: str, is_file: bool, sample_kwargs: dict) -> dict:
         sample_kwargs: args for sample_lines.
     """
     if is_file:
-        with open(s) as f:
-            lines = f.readlines()
+        if pathlib.Path(s).exists():
+            with open(s) as f:
+                lines = f.readlines()
+        else:
+            lines = []
+            logging.error(f"no such file - {s}")
     else:
         lines = s.split("\n")
     sample = sample_lines(lines, **sample_kwargs)
@@ -350,6 +354,8 @@ def _is_top_lang(dt: dict, lang: str) -> bool:
         dt: A dictionary of LI results, e.g., from `identify_stanza()`.
         lang: 2-3 letter ISO of a language to detect.
     """
+    if not dt or not isinstance(dt, dict):
+        return np.NaN
     top = list(dt.keys())[list(dt.values()).index(max(dt.values()))]
     return lang == top
 
@@ -360,15 +366,19 @@ def _multiling(dt: dict) -> bool:
     Args:
         dt: A dictionary of LI results, e.g., from `identify_stanza()`.
     """
+    if not dt or not isinstance(dt, dict):
+        return np.NaN
     return len([x for x in dt.keys() if x != "unknown"]) > 1
 
 
-def _top_lang(dt: dict) -> bool:
+def _top_lang(dt: dict) -> str:
     """Returns the top language for a in a dict of LI results.
 
     Args:
         dt: A dictionary of LI results, e.g., from `identify_stanza()`.
     """
+    if not dt or not isinstance(dt, dict):
+        return np.NaN
     return list(dt.keys())[list(dt.values()).index(max(dt.values()))]
 
 
@@ -386,9 +396,7 @@ class LangID:
         is_file: Whether `s` is a filepath `True` or a text `False`.
 
     Attributes:
-        df (pd.Dataframe): Non-empty language analysis results.
-        na (pd.Dataframe): Empty results (if files have no content or sampling/cleaning
-            is too restrictive).
+        df (pd.Dataframe): Language analysis results.
 
     Notes:
         - Methods beginning with `add_` generate a column in `LangID.df` (may be run
@@ -410,9 +418,9 @@ class LangID:
         """Adds a column indicating the top language's size (0-1.0) for each text."""
         if "top_lang" not in self.df.columns:
             self.add_top_lang()
-        self.df["top_size"] = self.df.apply(
-            lambda row: row["id"].get(row["top_lang"]), axis=1
-        )
+        self.df.loc[self.df["top_lang"].notna(), "top_size"] = self.df.loc[
+            self.df["top_lang"].notna()
+        ].apply(lambda row: row["id"].get(row["top_lang"]), axis=1)
 
     def add_multiling(self):
         """Adds a column indicating whether each text may be multilingual."""
@@ -455,10 +463,6 @@ class LangID:
         is_file: bool = True,
     ):
         self.df = identify(s, sample_kwargs, nlp, model, threshold, columns, is_file)
-        self.na = self.df[self.df["id"].isna()].copy()
-        self.na.reset_index(drop=True, inplace=True)
-        self.df.dropna(subset=["id"], inplace=True)
-        self.df.reset_index(drop=True, inplace=True)
         self.add_multiling()
         self.add_top_lang()
         self.add_top_size()
