@@ -19,6 +19,15 @@ CREATE TABLE IF NOT EXISTS _pdf (
 FOREIGN KEY('id') REFERENCES _raw ('id')
 );
 
+CREATE TABLE IF NOT EXISTS _lang (
+'id' INTEGER NOT NULL,
+'file_id' INTEGER NOT NULL,
+'top_lang' TEXT,
+'top_size' REAL,
+FOREIGN KEY('id') REFERENCES _raw ('id')
+PRIMARY KEY ('id', 'file_id')
+);
+
 CREATE TABLE IF NOT EXISTS _vert (
 'id' INTEGER PRIMARY KEY,
 'vert_date' TEXT NOT NULL,

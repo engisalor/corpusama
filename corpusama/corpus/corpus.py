@@ -30,6 +30,7 @@ class Corpus:
         make_attribute,
         unique_attribute,
     )
+    from corpusama.corpus.langid import make_langid
     from corpusama.corpus.tagset import export_tagset
     from corpusama.corpus.vertical import make_vertical, outdated_vert
 
