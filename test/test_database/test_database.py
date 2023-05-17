@@ -1,55 +1,38 @@
+import pathlib
 import unittest
 
 import pandas as pd
 
-from corpusama._version import __version__
 from corpusama.database.database import Database
 
 
-class Test_Database_Variables(unittest.TestCase):
+class Test_Database(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.db = Database(".temp-28dk37sh2ld83j38.db")
-        cls.table_names = ["_about", "_log", "_pdf", "_raw", "_vert", "_archive"]
+        cls.table_names = sorted(["_log", "_pdf", "_raw", "_vert", "_archive"])
+        cls.config_file = "test/config-example.yml"
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.db.path.unlink(missing_ok=True)
+    def tearDown(self):
+        file = pathlib.Path(self.db.config.get("db_name"))
+        file.unlink(missing_ok=True)
 
-    def test_database_instantiate(self):
+    def test_instantiate(self):
+        """Also tests `get_tables()` superficially."""
+        self.db = Database(self.config_file)
         self.assertTrue(self.db.path.exists())
-        self.assertEqual(self.db.tables, {})
-
-    def test_get_tables_reliefweb(self):
-        self.db.c.executescript(self.db.schema["reliefweb"]["query"])
-        self.db.get_tables()
-        self.assertListEqual(list(self.db.tables.keys()), self.table_names)
-
-    def test_set_about(self):
-        res = self.db.c.execute("SELECT * FROM _about")
-        fetched = res.fetchall()
-        self.assertEqual(__version__, fetched[0][1])
-
-
-class Test_Database_Mock_DF(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.db = Database(".temp-dk38fj217udksi28.db")
-        cls.db.c.executescript(cls.db.schema["reliefweb"]["query"])
-        cls.db.get_tables()
-        cls.df = pd.DataFrame(
-            {x: [10, {"A": True}, [None, 1.3]] for x in cls.db.tables["_log"]}
-        )
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.db.path.unlink(missing_ok=True)
+        table_names = sorted(list(self.db.tables.keys()))
+        self.assertListEqual(table_names, self.table_names)
+        for v in self.db.tables.values():
+            self.assertTrue(len(v))
 
     def test_insert(self):
-        """Checks insertion query."""
-
-        self.db.insert(self.df, "_log")
-        # TODO
+        self.db = Database(self.config_file)
+        df = pd.DataFrame(
+            {x: [10, {"A": True}, [None, 1.3]] for x in self.db.tables["_log"]}
+        )
+        self.db.insert(df, "_log")
+        df = pd.read_sql("SELECT * from _log", self.db.conn)
+        self.assertTrue(len(df) == 3)
 
 
 if __name__ == "__main__":

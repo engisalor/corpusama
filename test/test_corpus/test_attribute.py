@@ -9,9 +9,10 @@ from corpusama.util import io as _io
 from corpusama.util.util import now
 
 
-class Test_Attribute_(unittest.TestCase):
+class Test_Attribute(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.config_file = "test/config-example.yml"
         cls.db_file = "sk1827dj3kc9sl29.db"
         df_prepped = {
             "id": {0: '"1"'},
@@ -20,12 +21,6 @@ class Test_Attribute_(unittest.TestCase):
             "doc_tag": '<doc id="1" disaster__a__1="hello" multi="a|b|c" >',
         }
         cls.df_prepped = pd.DataFrame(df_prepped)
-
-    @classmethod
-    def tearDownClass(cls):
-        dir = pathlib.Path("data")
-        filepath = dir / cls.db_file
-        filepath.unlink()
 
     def test_get_params(self):
         attributes = _io.load_yaml("corpusama/source/params/rw-attribute.yml")
@@ -77,15 +72,7 @@ class Test_Attribute_(unittest.TestCase):
         # make mock data
         tag = '<doc id="1" >'
         # check attributes
-        corpus = Corpus(self.db_file)
-        corpus.db.c.execute(
-            """
-        CREATE TABLE _vert (
-        'id' INTEGER PRIMARY KEY,
-        'vert_date' TEXT NOT NULL,
-        'attr' TEXT,
-        'vert' TEXT NOT NULL)"""
-        )
+        corpus = Corpus(self.config_file)
         corpus.db.c.execute(
             "INSERT INTO _vert (id, vert_date, attr, vert) VALUES('1','2022',?,'abc')",
             (tag,),
@@ -93,7 +80,8 @@ class Test_Attribute_(unittest.TestCase):
         config = corpus.export_attribute(print=True)
         for substr in ["id", "ATTRIBUTE", "DYNTYPE"]:
             self.assertIn(substr, config)
-        pathlib.Path(self.db_file).unlink(missing_ok=True)
+
+        pathlib.Path(corpus.db.config.get("db_name")).unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

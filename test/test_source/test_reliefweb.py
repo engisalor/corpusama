@@ -5,11 +5,11 @@ import unittest
 
 import pandas as pd
 
+from corpusama.database.database import Database
 from corpusama.source.reliefweb import ReliefWeb
 from corpusama.util import util
 
-input_yml = "test/test_source/call.yml"
-database = "3kd82kc843ke1la0.db"
+config_file = "test/config-example.yml"
 example_response = "test/test_source/.call_response.json"
 example_raw = "test/test_source/.call_raw.json"
 example_log = "test/test_source/.call_log.json"
@@ -22,8 +22,9 @@ def save_example_call():
     Run once before modifying the reliefweb module.
     Example data must contain at least one value for the file field."""
 
-    job = ReliefWeb(input_yml, database)
-    job.one()
+    db = Database(config_file)
+    job = ReliefWeb(config_file, db)
+    job.get_record()
     with open(example_response, "w") as f:
         json.dump(job.response_json, f)
 
@@ -33,19 +34,19 @@ def save_example_call():
         df = pd.read_sql(queries[x], job.db.conn)
         name = f"test/test_source/.call{tables[x]}.json"
         df.to_json(name, indent=2)
-    pathlib.Path(f"data/{database}").unlink(missing_ok=True)
+    pathlib.Path(db.config.get("db_name")).unlink(missing_ok=True)
+
+
+# save_example_call()
 
 
 class Test_ReliefWeb(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.job = ReliefWeb(input_yml)
+    def setUp(self):
+        self.db = Database(config_file)
+        self.job = ReliefWeb(config_file, self.db)
 
-    @classmethod
-    def tearDownClass(cls):
-        dir = pathlib.Path("data")
-        filepath = dir / database
-        filepath.unlink(missing_ok=True)
+    def tearDown(self):
+        pathlib.Path(self.db.config.get("db_name")).unlink(missing_ok=True)
 
     def test_get_field_names(self):
         self.job.response_json = {"data": [{"fields": {"a": 1, "b": 2}}]}
@@ -56,26 +57,25 @@ class Test_ReliefWeb(unittest.TestCase):
         self.job.call_n = 2
         self.job.response_json = {"count": 10}
         self.job._offset()
-        self.assertEqual(self.job.parameters["offset"], 10)
+        self.assertEqual(self.job.config.get("parameters").get("offset"), 10)
 
     def test_inserted_values_match_source(self):
         """Tests that API data has identical columns before and after insertion.
 
         Does not test insertion itself - see test_database instead"""
 
-        job = ReliefWeb(input_yml, database)
         with open(example_response, "r") as f:
-            job.response_json = json.load(f)
-        job.now = util.now()
-        job._get_field_names()
-        job._hash()
-        job._insert()
+            self.job.response_json = json.load(f)
+        self.job.now = util.now()
+        self.job._get_field_names()
+        self.job._hash()
+        self.job._insert()
         raw = pd.read_json(example_raw)
         log = pd.read_json(example_log)
         pdf = pd.read_json(example_pdf)
-        sql_raw = pd.read_sql("""SELECT id from _raw""", job.db.conn)
-        sql_log = pd.read_sql("""SELECT api_params_hash from _log""", job.db.conn)
-        sql_pdf = pd.read_sql("""SELECT id from _pdf""", job.db.conn)
+        sql_raw = pd.read_sql("""SELECT id from _raw""", self.job.db.conn)
+        sql_log = pd.read_sql("""SELECT api_params_hash from _log""", self.job.db.conn)
+        sql_pdf = pd.read_sql("""SELECT id from _pdf""", self.job.db.conn)
 
         self.assertEqual(
             str(raw["id"].sort_values().values), str(sql_raw["id"].sort_values().values)
@@ -89,45 +89,41 @@ class Test_ReliefWeb(unittest.TestCase):
         )
 
 
-@unittest.skip("WARNING: comment this line or logging will break when testing.")
+@unittest.skip("run API calls manually")
 class Test_ReliefWeb_Making_Calls(unittest.TestCase):
     """Superficially tests that API calls function properly."""
 
-    @classmethod
-    def setUpClass(cls):
-        cls.job = ReliefWeb(input_yml)
-
-    def setUp(cls):
+    def setUp(self):
         time.sleep(2)
-        dir = pathlib.Path("data")
-        filepath = dir / database
-        filepath.unlink(missing_ok=True)
+        self.db = Database(config_file)
+        self.job = ReliefWeb(config_file, self.db)
 
-    def test_run_one(self):
-        self.job.one()
+    def tearDown(self):
+        pathlib.Path(self.db.config.get("db_name")).unlink(missing_ok=True)
+
+    def test_get_record(self):
+        self.job.get_record()
         self.assertIsNotNone(self.job.response_json["time"])
 
-    def test_run_all(self):
-        self.job.all(1)
+    def test_get_all_records(self):
+        self.job.get_all_records(1)
         self.assertIsNotNone(self.job.response_json["time"])
 
-    def test_run_new(self):
+    def test_get_new_records(self):
         # job works
-        job = ReliefWeb(input_yml, database)
-        job.new(1)
-        self.assertIsNotNone(job.response_json["time"])
+        self.job.get_new_records(1)
+        self.assertIsNotNone(self.job.response_json["time"])
         # filter gets updated
-        job.new(2)
-        conditions = job.parameters.get("filter").get("conditions")
+        self.job.get_new_records(2)
+        conditions = self.job.config.get("parameters").get("filter").get("conditions")
         has_filter = [x for x in conditions if x.get("field", None) == "date.changed"]
         self.assertEqual(len(has_filter), 1)
 
     def test_new_raise_bad_sort_method(self):
-        job = ReliefWeb(input_yml, database)
-        job.new(1)
-        del job.parameters["sort"]
+        self.job.get_new_records(1)
+        del self.job.config["parameters"]["sort"]
         with self.assertRaises(ValueError):
-            job.new(1)
+            self.job.get_new_records(1)
 
 
 if __name__ == "__main__":
