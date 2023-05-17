@@ -43,19 +43,21 @@ class Test_LangID(unittest.TestCase):
         self.assertEqual(sam, ref)
 
     def test_identify_stanza(self):
-        dt = langid.identify_stanza(self.file, self.sample_kwargs, self.nlp)
+        dt = langid.identify_stanza(self.file, True, self.sample_kwargs, self.nlp)
         self.assertTrue("en" in dt["langs"])
 
     def test_identify_stanza_empty(self):
-        dt = langid.identify_stanza(self.empty_file, self.sample_kwargs, self.nlp)
+        dt = langid.identify_stanza(self.empty_file, True, self.sample_kwargs, self.nlp)
         self.assertEqual(dt["langs"], [])
 
     def test_identify_fasttext(self):
-        dt = langid.identify_fasttext(self.file, self.sample_kwargs, self.model)
+        dt = langid.identify_fasttext(self.file, True, self.sample_kwargs, self.model)
         self.assertTrue("en" in dt["langs"])
 
     def test_fasttext_empty_full(self):
-        dt = langid.identify_fasttext(self.empty_file, self.sample_kwargs, self.model)
+        dt = langid.identify_fasttext(
+            self.empty_file, True, self.sample_kwargs, self.model
+        )
         self.assertEqual(dt["langs"], [])
 
     def test_identify(self):
@@ -71,10 +73,11 @@ class Test_LangID(unittest.TestCase):
         )
         self.assertEqual(df["tool"][0], "stanza")
 
-    def test_LangID_texts_only_fa(self):
+    def test_LangID_texts_only_fa_with_empty(self):
         # NOTE: could break if text languages aren't predicted correctly
         texts = [
             "hello, my name is John\nand I speak English",
+            " ",
             "hola, mi nombre es José\ny hablo español",
         ]
         lid = langid.LangID(
@@ -82,7 +85,8 @@ class Test_LangID(unittest.TestCase):
         )
         self.assertTrue(pd.isnull(lid.df["file"][0]))
         self.assertEqual(lid.df["top_lang"][0], "en")
-        self.assertEqual(lid.df["top_lang"][1], "es")
+        self.assertTrue(pd.isnull(lid.df["top_lang"][1]))
+        self.assertEqual(lid.df["top_lang"][2], "es")
 
     def test_file_concat(self):
         out = [
