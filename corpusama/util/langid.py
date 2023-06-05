@@ -76,7 +76,7 @@ logging.basicConfig(
 # default settings
 pathlib.Path(".temp/").mkdir(exist_ok=True)
 digit = "".join([string.digits])
-punct = "".join([string.punctuation])
+punct = '!"#$%&()*+,./:;<=>?@[\\]^_`{|}~'
 symbol = "•�…►▼‐■》∗✔⇤–●▪➔­­;«»◊›➢“©□"
 whitespace = "\t\n\r\x0b\x0c"
 drop_all = "".join([digit, punct, symbol, whitespace])
@@ -90,12 +90,15 @@ def clean_lines(lines: list, min_len: int = 10, drops: str = drop_all) -> list:
     Args:
         lines: List of document lines.
         min_len: Remove lines if character length < N.
-        drops: String of unwanted characters (punctuation, digits, symbols, \\t, etc.).
-            See `langid.digit`, `langid.drop_all`, etc (add others as needed).
+        drops: String of unwanted chars (punctuation, digits, symbols, whitespace).
+            Keeps hyphens by default - see `langid.drop_all`.
+
 
     !!! warning
-        `drops` is set to `langid.drop_all` by default:
-            make sure this is appropriate for your data.
+        - Converts all-uppercase lines to lowercase (improves LI but ignores proper
+            nouns, etc.).
+        - Converts right-angled single quotation marks `’` (U+2019) to `'` (may impact
+            some particularly short, low-confidence lines)
     """
     # remove unwanted characters
     lines = [x.translate(str.maketrans(drops, " " * len(drops))) for x in lines]
@@ -103,6 +106,10 @@ def clean_lines(lines: list, min_len: int = 10, drops: str = drop_all) -> list:
     lines = [" ".join(x.split()) for x in lines if x.strip()]
     # remove short lines
     lines = [x for x in lines if len(x) >= min_len]
+    # convert to lower if needed
+    lines = [x.lower() if x.isupper() else x for x in lines]
+    # replace angled quotation mark
+    lines = [x.replace("’", "'") for x in lines]
     return lines
 
 
