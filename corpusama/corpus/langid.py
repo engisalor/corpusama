@@ -2,13 +2,13 @@
 import fasttext
 import pandas as pd
 
-from corpusama.util import convert, decorator, langid, parallel
+from corpusama.util import convert, decorator, langid, parallel, util
 
 
 def make_langid(
     self,
     table: str,
-    size: int = 1000,
+    size: int = 5000,
     cores=0,
 ) -> None:
     @decorator.while_loop
@@ -29,6 +29,7 @@ def make_langid(
         text_column = self.config.get("text_column")
         add_langid = AddLangID(table, pdf_dir, text_column)
         df = parallel.run(df, add_langid.make, self.cores)
+        df["lang_date"] = util.now()
         self.db.insert(df, "_lang")
         self.lang_run += 1
         return True
@@ -69,7 +70,7 @@ class AddLangID:
             df["file_id"] = 0
         # select columns and reset indexes
         df = df[["id", "file_id"]]
-        lid.df = lid.df[["top_lang", "top_size"]]
+        lid.df = lid.df[["lid"]]
         df.reset_index(drop=True, inplace=True)
         lid.df.reset_index(drop=True, inplace=True)
         return pd.concat([df, lid.df], axis=1)
