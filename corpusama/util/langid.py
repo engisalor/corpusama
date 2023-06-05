@@ -46,7 +46,6 @@ Example:
     >>> len(lid.df)  # generates a DataFrame at `LangiD.df`
     4
 
-    # view the df and inspect it w/ class methods like `get_top_lang_is()`
     ```
 """
 import functools
@@ -82,7 +81,7 @@ symbol = "•�…►▼‐■》∗✔⇤–●▪➔­­;«»◊›➢“©�
 whitespace = "\t\n\r\x0b\x0c"
 drop_all = "".join([digit, punct, symbol, whitespace])
 summary_cols = {x: None for x in ["file", "top", "weight", "sample", "langs", "time"]}
-li_columns = ["file", "tool", "id", "time", "top"]
+li_columns = ["file", "tool", "lid", "time", "top"]
 
 
 def clean_lines(lines: list, min_len: int = 10, drops: str = drop_all) -> list:
@@ -283,7 +282,7 @@ def analyze(dt: dict, threshold: float = 0.6, columns: list = li_columns) -> dic
         if bytes_size >= multilingual_threshold:
             ids[k] = bytes_size
     # sort top languages and add to output
-    dt["id"] = dict(sorted(ids.items(), key=lambda item: item[1], reverse=True))
+    dt["lid"] = dict(sorted(ids.items(), key=lambda item: item[1], reverse=True))
     return {k: v for k, v in dt.items() if k in columns}
 
 
@@ -328,7 +327,6 @@ def identify(
         temp = pd.DataFrame.from_records([dt_st, dt_fa])
         df = pd.concat([df, temp])
         n += 1
-        logging.info(f"... {n}/{len(s)}")
 
     df.drop(df[df["tool"].isna()].index, inplace=True)
     t1 = perf_counter()
@@ -347,7 +345,7 @@ def _has_lang(dt: dict, lang: str) -> bool:
     return lang in dt.keys()
 
 
-def _is_top_lang(dt: dict, lang: str) -> bool:
+def _is_l1(dt: dict, lang: str) -> bool:
     """Returns `True` if a language is the top result in a dict of LI results.
 
     Args:
@@ -371,7 +369,7 @@ def _multiling(dt: dict) -> bool:
     return len([x for x in dt.keys() if x != "unknown"]) > 1
 
 
-def _top_lang(dt: dict) -> str:
+def _l1(dt: dict) -> str:
     """Returns the top language for a in a dict of LI results.
 
     Args:
@@ -406,51 +404,51 @@ class LangID:
             Labels tend to match between Stanza and fastText, but compare their
             documentation to verify.
         - `size`: The proportion of a document in bytes that's in X language (0-1.0).
-        - `top_lang`: The language with the highest proportion in a text.
+        - `l1`: The language with the highest proportion in a text.
         - `multiling`: Whether a text has two or more languages (excluding `unknown`).
     """
 
-    def add_top_lang(self):
+    def add_l1(self):
         """Adds a column indicating the top language for each text."""
-        self.df["top_lang"] = self.df["id"].apply(_top_lang)
+        self.df["l1"] = self.df["lid"].apply(_l1)
 
-    def add_top_size(self):
+    def add_l1_size(self):
         """Adds a column indicating the top language's size (0-1.0) for each text."""
-        if "top_lang" not in self.df.columns:
-            self.add_top_lang()
-        self.df.loc[self.df["top_lang"].notna(), "top_size"] = self.df.loc[
-            self.df["top_lang"].notna()
-        ].apply(lambda row: row["id"].get(row["top_lang"]), axis=1)
+        if "l1" not in self.df.columns:
+            self.add_l1()
+        self.df.loc[self.df["l1"].notna(), "l1_size"] = self.df.loc[
+            self.df["l1"].notna()
+        ].apply(lambda row: row["lid"].get(row["l1"]), axis=1)
 
     def add_multiling(self):
         """Adds a column indicating whether each text may be multilingual."""
-        self.df["multiling"] = self.df["id"].apply(_multiling)
+        self.df["multiling"] = self.df["lid"].apply(_multiling)
 
     def get_has_lang(self, iso: str) -> pd.DataFrame:
         """Returns rows containing `iso` language."""
-        return self.df.loc[self.df["id"].apply(_has_lang, lang=iso)]
+        return self.df.loc[self.df["lid"].apply(_has_lang, lang=iso)]
 
-    def get_top_lang_is(self, iso: str) -> pd.DataFrame:
+    def get_l1_is(self, iso: str) -> pd.DataFrame:
         """Returns rows where `iso` is the top language."""
-        return self.df.loc[self.df["id"].apply(_is_top_lang, lang=iso)]
+        return self.df.loc[self.df["lid"].apply(_is_l1, lang=iso)]
 
-    def get_size_lt(self, size: float) -> pd.DataFrame:
-        """Returns rows where `top_size` is lesser than `size`."""
-        if "top_size" not in self.df.columns:
-            self.add_top_size()
-        return self.df.loc[self.df["top_size"] <= size]
+    def get_l1_size_lt(self, size: float) -> pd.DataFrame:
+        """Returns rows where `l1_size` is lesser than `size`."""
+        if "l1_size" not in self.df.columns:
+            self.add_l1_size()
+        return self.df.loc[self.df["l1_size"] <= size]
 
-    def get_size_gt(self, size: float):
-        """Returns rows where `top_size` is greater than `size`."""
-        if "top_size" not in self.columns:
-            self.add_top_size()
-        return self.df.loc[self.df["top_size"] >= size]
+    def get_l1_size_gt(self, size: float):
+        """Returns rows where `l1_size` is greater than `size`."""
+        if "l1_size" not in self.columns:
+            self.add_l1_size()
+        return self.df.loc[self.df["l1_size"] >= size]
 
-    def get_size_between(self, low: float, high: float):
-        """Returns rows where `top_size` is between `low` and `high`."""
-        if "top_size" not in self.df.columns:
-            self.add_top_size(self.df)
-        return self.df.loc[(self.df["top_size"] >= low) & (self.df["top_size"] <= high)]
+    def get_l1_size_between(self, low: float, high: float):
+        """Returns rows where `l1_size` is between `low` and `high`."""
+        if "l1_size" not in self.df.columns:
+            self.add_l1_size(self.df)
+        return self.df.loc[(self.df["l1_size"] >= low) & (self.df["l1_size"] <= high)]
 
     def __init__(
         self,
@@ -464,8 +462,8 @@ class LangID:
     ):
         self.df = identify(s, sample_kwargs, nlp, model, threshold, columns, is_file)
         self.add_multiling()
-        self.add_top_lang()
-        self.add_top_size()
+        self.add_l1()
+        self.add_l1_size()
 
 
 def file_stats(files: list, out: str = "file-stats") -> None:
