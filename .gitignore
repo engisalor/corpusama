@@ -8,3 +8,7 @@ docs/
 !.flake8
 !.pre-commit-config.yaml
 !.github
+
+# FreeLing
+_pyfreeling.so
+pyfreeling.py

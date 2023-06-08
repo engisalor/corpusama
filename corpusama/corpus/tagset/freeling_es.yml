@@ -1,0 +1,52 @@
+config_opts:
+  Lang: es
+  MACO_PunctuationFile: <install_dir>/share/freeling/common/punct.dat
+  MACO_DictionaryFile: <install_dir>/share/freeling/es/dicc.src
+  MACO_AffixFile: <install_dir>/share/freeling/es/afixos.dat
+  MACO_CompoundFile: <install_dir>/share/freeling/es/compounds.dat
+  MACO_LocutionsFile: <install_dir>/share/freeling/es/locucions.dat
+  MACO_NPDataFile: corpusama/corpus/tagset/np.dat  # CUSTOM
+  # MACO_NPDataFile: <install_dir>/share/freeling/es/np.dat  # DEFAULT
+  # MACO_NPDataFile: <install_dir>/share/freeling/es/nerc/nec/nec-ab-poor1.dat
+  # MACO_NPDataFile: <install_dir>/share/freeling/es/nerc/nec/nec-ab-rich.dat
+  # MACO_NPDataFile: <install_dir>/share/freeling/es/nerc/ner/ner-ab-poor1.dat
+  # MACO_NPDataFile: <install_dir>/share/freeling/es/nerc/ner/ner-ab-rich.dat
+  # MACO_NPDataFile: <install_dir>/share/freeling/es/nerc/nerc/nerc.dat
+  MACO_QuantitiesFile: <install_dir>/share/freeling/es/quantities.dat
+  MACO_ProbabilityFile: <install_dir>/share/freeling/es/probabilitats.dat
+  TAGGER_HMMFile: <install_dir>/share/freeling/es/tagger.dat
+invoke_opts:
+  # verified
+  MACO_AffixAnalysis: true
+  MACO_CompoundAnalysis: false
+  MACO_MultiwordsDetection: false
+  MACO_NumbersDetection: true
+  MACO_DictionarySearch: true
+  MACO_ProbabilityAssignment: true
+  MACO_RetokContractions: false
+  TAGGER_Retokenize: false
+  # TODO verify
+  MACO_PunctuationDetection: true
+  MACO_DatesDetection: false
+  MACO_QuantitiesDetection: false
+  MACO_NERecognition: true
+  MACO_NEClassification: true
+  TAGGER_ForceSelect: 0
+tokenizer: <install_dir>/share/freeling/es/tokenizer.dat
+splitter: <install_dir>/share/freeling/es/splitter.dat
+parser: <install_dir>/share/freeling/es/chunker/grammar-chunk.dat
+LD_LIBRARY_PATH: <install_dir>/lib;<install_dir>/share/freeling/APIs/python3
+tagset:
+  # TODO verify (e.g. not all adpositions are prepositions)
+  "A": {"lpos": "-j", "description": "adjective"}
+  "C": {"lpos": "-c", "description": "conjunction"}
+  "D": {"lpos": "-x", "description": "determiner"}
+  "N": {"lpos": "-n", "description": "noun"}
+  "P": {"lpos": "-p", "description": "pronoun"}
+  "R": {"lpos": "-r", "description": "adverb"}
+  "S": {"lpos": "-i", "description": "adposition"}
+  "V": {"lpos": "-v", "description": "verb"}
+  "Z": {"lpos": "-m", "description": "number"}
+  "W": {"lpos": "-x", "description": "date"}
+  "I": {"lpos": "-x", "description": "interjection"}
+  "F": {"lpos": "-x", "description": "punctuation"}
