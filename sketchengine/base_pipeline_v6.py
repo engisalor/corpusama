@@ -1,11 +1,14 @@
 #! /usr/bin/python3
+# Keep a copy of pyfreeling.py and _pyfreeling.so in the same parent directory.
+# FreeLing installation (update DATA = "<install_dir>" as needed):
+# https://freeling-user-manual.readthedocs.io/en/latest/installation/installation-linux
 import io
 import re
 import sys
 
-import freeling
+import pyfreeling as freeling
 
-DATA = "/usr/share/freeling/"
+DATA = ".local-only/share/freeling/"
 LANG = "es"
 SENTENCE_BREAKER_RE = re.compile(
     r"</?(doc|p|align|s)(\s+[^\W\d][\w:\.-]*\s*=\s*('[^']*'|\"[^\"]*\"))*\s*/?\s*>",
@@ -25,7 +28,7 @@ POS_MAPPING = {
     "P": "p",
     "V": "v",
 }
-GENDER_DICT_PATH = "/opt/freeling_pipe/spanish/estenten18_fl5_term_ref.gender_dict"
+GENDER_DICT_PATH = "sketchengine/estenten18_fl5_term_ref.gender_dict"
 
 gender_dict = {}
 for line in open(GENDER_DICT_PATH):
@@ -58,36 +61,36 @@ def get_gender_lemma(tag, lemma):
 
 
 freeling.util_init_locale("es_ES.utf8")
-splitter = freeling.splitter("/opt/freeling_pipe/spanish/splitter.dat")
-tokenizer = freeling.tokenizer("/opt/freeling_pipe/spanish/tokenizer_v6.dat")
-options = freeling.maco_options(LANG)
-options.set_data_files(
-    usr="",
-    pun=DATA + "common/punct.dat",
-    dic="/opt/freeling_pipe/spanish/dicc_v6.src",
-    aff=DATA + LANG + "/afixos.dat",
-    comp="",
-    loc="",
-    nps="",
-    qty="",
-    prb=DATA + LANG + "/probabilitats.dat",
-)
-morpho = freeling.maco(options)
-morpho.set_active_options(
-    umap=False,
-    num=True,
-    pun=True,
-    dat=False,
-    dic=True,
-    aff=True,
-    comp=False,
-    rtk=False,
-    mw=False,
-    ner=False,
-    qt=False,
-    prb=True,
-)
-tagger = freeling.hmm_tagger(DATA + LANG + "/tagger.dat", False, 2)
+splitter = freeling.splitter("sketchengine/splitter.dat")
+tokenizer = freeling.tokenizer("sketchengine/tokenizer_v6.dat")
+op = freeling.analyzer_config()
+op.config_opt.Lang = LANG
+op.config_opt.MACO_PunctuationFile = DATA + "common/punct.dat"
+op.config_opt.MACO_DictionaryFile = "sketchengine/dicc_v6.src"
+op.config_opt.MACO_AffixFile = DATA + LANG + "/afixos.dat"
+op.config_opt.MACO_CompoundFile = DATA + LANG + "/compounds.dat"
+op.config_opt.MACO_LocutionsFile = DATA + LANG + "/locucions.dat"
+op.config_opt.MACO_NPDataFile = "sketchengine/np.dat"
+op.config_opt.MACO_QuantitiesFile = DATA + LANG + "/quantities.dat"
+op.config_opt.MACO_ProbabilityFile = DATA + LANG + "/probabilitats.dat"
+op.invoke_opt.MACO_AffixAnalysis = True
+op.invoke_opt.MACO_CompoundAnalysis = False
+op.invoke_opt.MACO_MultiwordsDetection = False
+op.invoke_opt.MACO_NumbersDetection = True
+op.invoke_opt.MACO_PunctuationDetection = True
+op.invoke_opt.MACO_DatesDetection = False
+op.invoke_opt.MACO_QuantitiesDetection = False
+op.invoke_opt.MACO_DictionarySearch = True
+op.invoke_opt.MACO_ProbabilityAssignment = True
+op.invoke_opt.MACO_NERecognition = False
+op.invoke_opt.MACO_RetokContractions = False
+# Unused options
+# umap=False
+morpho = freeling.maco(op)
+op.config_opt.TAGGER_HMMFile = DATA + LANG + "/tagger.dat"
+op.invoke_opt.TAGGER_Retokenize = False
+op.invoke_opt.TAGGER_ForceSelect = 2
+tagger = freeling.hmm_tagger(op)
 
 
 def analyze(plaintext, flush=False):
@@ -104,12 +107,12 @@ def analyze(plaintext, flush=False):
             tokens.append(tag_or_token)
     sentences = splitter.split(session, tokens, flush)
     for sentence in sentences:
-        sentence = morpho.analyze(sentence)
+        sentence = morpho.analyze_sentence(sentence)
         if print_sent:
             sys.stdout.write("<s>\n")
         last_finish = -1
         initial = True
-        for token in tagger.analyze(sentence).get_words():
+        for token in tagger.analyze_sentence(sentence).get_words():
             for xmltag in xmltags.pop(0):
                 sys.stdout.write("%s\n" % xmltag)
             start = token.get_span_start()
