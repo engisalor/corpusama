@@ -12,3 +12,7 @@ docs/
 # FreeLing
 _pyfreeling.so
 pyfreeling.py
+
+# Large files
+sketchengine/estenten18_fl5_term_ref.gender_dict
+sketchengine/dicc_v6.src
