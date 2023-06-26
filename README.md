@@ -1,24 +1,16 @@
 # Corpusama
 
-Corpusama is a terminal-based language corpus management tool. It's designed to integrate open-source corpus software and APIs into a single Python library.
-
-Corpusama is a research tool supported by the [Humanitarian Encyclopedia](https://humanitarianencyclopedia.org/) and University of Granada [LexiCon research group](https://lexicon.ugr.es/). Its initial goal is to develop a semi-automated pipeline for creating corpora from the [ReliefWeb](https://reliefweb.int/) database of humanitarian texts.
+Corpusama is a Python-based language corpus creation tool supported by the [Humanitarian Encyclopedia](https://humanitarianencyclopedia.org/) and University of Granada [LexiCon research group](https://lexicon.ugr.es/). Its initial goal is to develop a semi-automated pipeline for creating corpora from the [ReliefWeb](https://reliefweb.int/) database of humanitarian texts.
 
 ## Installation
 
-Clone this repo and install dependencies. Note that the [Stanza NLP package](https://github.com/stanfordnlp/stanza) can require several GB of space.
-
-```python
-pip install defusedxml pandas pdfminer.six pyyaml requests stanza
-```
+Clone this repo and install dependencies. Note that the [Stanza NLP package](https://github.com/stanfordnlp/stanza) and other dependencies can require several GB of space.
 
 ## Usage
 
 Corpusama is currently designed for building corpora with texts from the ReliefWeb API. So far, it focuses on English HTML content. The project is still under development and can be expected to change significantly.
 
-Researchers interested in humanitarian discourse can use Corpusama to reproduce ReliefWeb corpora and undertake linguistic analyses. Note that efforts are being made to offer a family of ReliefWeb corpora publicly.
-
-More intrepid users could reconfigure it to include new types of data sources. Draft documentation is located in [usage.md](/usage.md). The overall workflow currently looks something like this:
+Researchers interested in humanitarian discourse can use Corpusama to reproduce ReliefWeb corpora and undertake linguistic analyses. The workflow will vary depending on the project, but looks something like this:
 
 ```python
 from corpusama.corpus.corpus import Corpus
