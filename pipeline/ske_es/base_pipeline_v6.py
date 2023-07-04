@@ -28,7 +28,7 @@ POS_MAPPING = {
     "P": "p",
     "V": "v",
 }
-GENDER_DICT_PATH = "sketchengine/estenten18_fl5_term_ref.gender_dict"
+GENDER_DICT_PATH = "pipeline/ske_es/estenten18_fl5_term_ref.gender_dict"
 
 gender_dict = {}
 for line in open(GENDER_DICT_PATH):
@@ -61,16 +61,16 @@ def get_gender_lemma(tag, lemma):
 
 
 freeling.util_init_locale("es_ES.utf8")
-splitter = freeling.splitter("sketchengine/splitter.dat")
-tokenizer = freeling.tokenizer("sketchengine/tokenizer_v6.dat")
+splitter = freeling.splitter("pipeline/ske_es/splitter.dat")
+tokenizer = freeling.tokenizer("pipeline/ske_es/tokenizer_v6.dat")
 op = freeling.analyzer_config()
 op.config_opt.Lang = LANG
 op.config_opt.MACO_PunctuationFile = DATA + "common/punct.dat"
-op.config_opt.MACO_DictionaryFile = "sketchengine/dicc_v6.src"
+op.config_opt.MACO_DictionaryFile = "pipeline/ske_es/dicc_v6.src"
 op.config_opt.MACO_AffixFile = DATA + LANG + "/afixos.dat"
 op.config_opt.MACO_CompoundFile = DATA + LANG + "/compounds.dat"
 op.config_opt.MACO_LocutionsFile = DATA + LANG + "/locucions.dat"
-op.config_opt.MACO_NPDataFile = "sketchengine/np.dat"
+op.config_opt.MACO_NPDataFile = "pipeline/ske_es/np.dat"
 op.config_opt.MACO_QuantitiesFile = DATA + LANG + "/quantities.dat"
 op.config_opt.MACO_ProbabilityFile = DATA + LANG + "/probabilitats.dat"
 op.invoke_opt.MACO_AffixAnalysis = True
