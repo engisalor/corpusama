@@ -84,8 +84,6 @@ op.invoke_opt.MACO_DictionarySearch = True
 op.invoke_opt.MACO_ProbabilityAssignment = True
 op.invoke_opt.MACO_NERecognition = False
 op.invoke_opt.MACO_RetokContractions = False
-# Unused options
-# umap=False
 morpho = freeling.maco(op)
 op.config_opt.TAGGER_HMMFile = DATA + LANG + "/tagger.dat"
 op.invoke_opt.TAGGER_Retokenize = False

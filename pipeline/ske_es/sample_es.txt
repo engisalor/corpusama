@@ -1,0 +1,3 @@
+<doc id="0" title="sample_es">
+Este es un ejemplo de un documento. Tiene dos frases y pocos metadatos.
+</doc>
