@@ -135,7 +135,7 @@ class ReliefWeb(Call):
         record = {
             "api_params_hash": self.hash,
             "api_params": self.config.get("parameters"),
-            "config_file": self.config.get("config_file"),
+            "api_input": "deprecated",
             "api_date": self.now,
             "count": self.response_json["count"],
             "total_count": self.response_json["totalCount"],
