@@ -2,41 +2,40 @@
 import fasttext
 import pandas as pd
 
-from corpusama.util import convert, decorator, langid, parallel, util
+from corpusama.util import convert, langid, parallel, util
+
+# TODO requires unit testing
 
 
 def make_langid(
     self,
     table: str,
-    size: int = 5000,
+    chunksize: int = 5000,
     cores=0,
 ) -> None:
-    @decorator.while_loop
-    def langid_batch(self, size) -> bool:
-        """Processes a batch of table records to make attributes."""
+    """Generates language ID data in the `_lang` table.
 
-        if table == "_pdf":
-            query = "SELECT * FROM _pdf LIMIT ?,?;"
-        if table == "_raw":
-            query = "SELECT * FROM _raw WHERE body_html IS NOT null LIMIT ?,?;"
-        # TODO WHERE id IS NOT null - body_html should be text column var
-        batch, offset = self.db.fetch_batch(self.lang_run, size, query)
-        if not batch:
-            return False
-        cols = self.db.tables[table]
-        df = pd.DataFrame.from_records(batch, columns=cols)
-        pdf_dir = self.config.get("pdf_dir")
-        text_column = self.config.get("text_column")
+    Args:
+        table: Source table to get rows from (either `_pdf` or `_raw`).
+        chunksize: Maximum rows to process at once.
+        cores: Number of processes used on each chunk (use `0` to auto-detect).
+
+    Warning:
+        Replaces all existing data. Must run in its entirety.
+    """
+    if table == "_pdf":
+        query = "SELECT * FROM _pdf"
+    if table == "_raw":
+        query = "SELECT * FROM _raw WHERE body_html IS NOT null"
+    cores = parallel.set_cores(cores)
+    res = pd.read_sql(query, self.db.conn, chunksize=chunksize)
+    pdf_dir = self.config.get("pdf_dir")
+    text_column = self.config.get("text_column")
+    for df in res:
         add_langid = AddLangID(table, pdf_dir, text_column)
-        df = parallel.run(df, add_langid.make, self.cores)
+        df = parallel.run(df, add_langid.make, cores)
         df["lang_date"] = util.now()
         self.db.insert(df, "_lang")
-        self.lang_run += 1
-        return True
-
-    self.lang_run = 0
-    self.cores = parallel.set_cores(cores)
-    langid_batch(self, size)
 
 
 class AddLangID:
