@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS _log (
 'api_params_hash' TEXT PRIMARY KEY,
 'api_params' TEXT NOT NULL UNIQUE,
+'api_input' TEXT NOT NULL,
 'api_date' TEXT NOT NULL,
 'count' INTEGER,
 'total_count' INTEGER,
@@ -21,25 +22,17 @@ FOREIGN KEY('id') REFERENCES _raw ('id')
 CREATE TABLE IF NOT EXISTS _lang (
 'id' INTEGER NOT NULL,
 'file_id' INTEGER NOT NULL,
-'top_lang' TEXT,
-'top_size' REAL,
+'lang_date' TEXT NOT NULL,
+'lid' TEXT,
 FOREIGN KEY('id') REFERENCES _raw ('id')
 PRIMARY KEY ('id', 'file_id')
 );
 
-CREATE TABLE IF NOT EXISTS _vert (
-'id' INTEGER PRIMARY KEY,
-'vert_date' TEXT NOT NULL,
-'attr' TEXT,
-'vert' TEXT NOT NULL,
+CREATE TABLE IF NOT EXISTS _attr (
+'id' INTEGER NOT NULL,
+'doc_tag' TEXT NOT NULL,
 FOREIGN KEY('id') REFERENCES _raw ('id')
-);
-
-CREATE TABLE IF NOT EXISTS _archive (
-'year' TEXT PRIMARY KEY,
-'doc_count' TEXT NOT NULL,
-'archive_date' TEXT,
-'archive' BLOB NOT NULL
+PRIMARY KEY ('id')
 );
 
 CREATE TABLE IF NOT EXISTS _raw  (
