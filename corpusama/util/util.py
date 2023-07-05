@@ -6,6 +6,8 @@ from xml.sax.saxutils import quoteattr  # nosec
 import pandas as pd
 from defusedxml import ElementTree
 
+from pipeline.ske_fr import uninorm_4 as uninorm
+
 logger = logging.getLogger(__name__)
 
 
@@ -113,3 +115,18 @@ def xml_quoteattr(item: str) -> str:
         return quoteattr(str(item).strip())
     else:
         return item
+
+
+def clean_text(text: str) -> str:
+    """Cleans texts to prepare for passing to an NLP pipeline.
+
+    Args:
+        text: Text string.
+
+    Notes:
+        `uninorm` module from Unitok: Michelfeit et al., 2014; Rychlý & Špalek, 2022.
+        License and code available at <https://corpus.tools/wiki/Unitok>.
+    """
+    lines = text.split("\n")
+    lines = [uninorm.normalize_line(x) for x in lines]
+    return "".join(lines)
