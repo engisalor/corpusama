@@ -15,32 +15,25 @@ from corpusama import log_file
 from corpusama.util import convert, util
 from corpusama.util.dataclass import DocBundle
 
-logger = logging.getLogger(__name__)
 
-
-def load_nlp(resources, processors, language) -> Pipeline:
+def load_nlp(lang, processors) -> Pipeline:
     """Returns a stanza ``Pipeline`` object, updating models at most once a day.
 
     Args:
-        resources: Stanza resources.
-        processors: Stanza processors.
-        language: Current language.
+        lang: Language.
+        processors: Processors.
 
     Notes:
         - Uses ``util.count_log_lines`` to check if the model has been updated.
         - Keep in mind that as stanza models are updated, segmentation,
             lemmatization, etc., may differ over time.
-
-    See Also:
-        <https://stanfordnlp.github.io/stanza/>"""
-
+    """
     nlp_runs = util.count_log_lines("load_nlp", log_file)
+    kwargs = {"lang": lang, "processors": processors}
     if nlp_runs > 0:
-        nlp = Pipeline(language, resources, processors=processors, download_method=None)
-    else:
-        nlp = Pipeline(language, resources, processors=processors)
-    logger.debug("done")
-    return nlp
+        kwargs["download_method"] = None
+    logging.debug(str(kwargs))
+    return Pipeline(**kwargs)
 
 
 def get_xpos(processed: list) -> list:
@@ -74,6 +67,10 @@ def fix_lemma(word):
         return "[number]"
     else:
         return word.lemma
+
+
+# Fixing OCR errors:
+# `s should be 's
 
 
 def run(
