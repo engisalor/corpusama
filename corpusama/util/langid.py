@@ -1,20 +1,28 @@
 """Language identification module.
 
 This module contains methods to identify the languages of texts with several LI tools.
-The `LangID` class is the main entry point. See the example below for usage.
+The `LangID` class is the main entry point. See the example below for usage and notes
+on installation requirements.
 
 !!! note
+    Downloading a FastText model is needed if using this tool (see wget command below).
     If pip fails to install `fasttext`, try downloading and building it locally:
     see their [website](https://fasttext.cc/docs/en/language-identification.html).
 
     ```bash
-    # inspect links before copy-pasting!
+    # download model (inspect links first!)
+    wget https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
+    # troubleshooting installation (execute and do a local pip install)
     git clone https://github.com/facebookresearch/fastText.git
     cd fastText
     make
-    wget https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
-    # then troubleshoot local pip installation
     ```
+
+!!! note
+    Using the `uninorm.py` module from Unitok is recommended: Michelfeit et al., 2014;
+    Rychlý & Špalek, 2022. License and code at <https://corpus.tools/wiki/Unitok>.
+    Copy `uninorm.py` into the repo's base dir. `uninorm` isn't required, but
+    performance may decline if texts aren't well-cleaned w/ normalized encoding.
 
 Example:
     ```py
@@ -62,6 +70,11 @@ import numpy as np
 import pandas as pd
 import stanza
 
+try:
+    from pipeline.ske_fr import uninorm_4 as uninorm
+except ModuleNotFoundError:
+    logging.warning("can't import uninorm.py: LI performance may decline")
+
 log_file = ".logs/langid.log"
 file_handler = TimedRotatingFileHandler(log_file, "midnight", backupCount=1)
 stream_handler = logging.StreamHandler()
@@ -84,32 +97,30 @@ summary_cols = {x: None for x in ["file", "top", "weight", "sample", "langs", "t
 li_columns = ["file", "tool", "lid", "time", "top"]
 
 
-def clean_lines(lines: list, min_len: int = 10, drops: str = drop_all) -> list:
+def clean_lines(lines: list, drops: str = drop_all) -> list:
     """Cleans a list of lines, removing `drops`, extra spaces and short lines.
 
     Args:
         lines: List of document lines.
-        min_len: Remove lines if character length < N.
         drops: String of unwanted chars (punctuation, digits, symbols, whitespace).
-            Keeps hyphens by default - see `langid.drop_all`.
 
-
-    !!! warning
+    Notes:
         - Converts all-uppercase lines to lowercase (improves LI but ignores proper
             nouns, etc.).
-        - Converts right-angled single quotation marks `’` (U+2019) to `'` (may impact
-            some particularly short, low-confidence lines)
+        - Relies on `uninorm.normalize_line` (see `langid` module docstring).
     """
+    # clean
+    try:
+        lines = [uninorm.normalize_line(x) for x in lines]
+    except NameError:
+        pass
     # remove unwanted characters
+    # TODO somewhat redundant w/ uninorm; removing punct, symbols, digits still needed
     lines = [x.translate(str.maketrans(drops, " " * len(drops))) for x in lines]
     # remove extra spaces
     lines = [" ".join(x.split()) for x in lines if x.strip()]
-    # remove short lines
-    lines = [x for x in lines if len(x) >= min_len]
     # convert to lower if needed
     lines = [x.lower() if x.isupper() else x for x in lines]
-    # replace angled quotation mark
-    lines = [x.replace("’", "'") for x in lines]
     return lines
 
 
@@ -117,8 +128,8 @@ def sample_lines(
     lines: list,
     sample_size: int,
     tries: int = 5,
-    min_len: int = 10,
     drops: str = drop_all,
+    **kwargs,
 ) -> list:
     """Returns a random sample of cleaned, unique lines, or all if fewer exist.
 
@@ -129,15 +140,16 @@ def sample_lines(
         min_len: Remove lines if character length < N.
         drops: String of unwanted characters (punctuation, digits, symbols, \\t, etc.).
             See `langid.digit`, `langid.drop_all`, etc (add others as needed).
+        kwargs: Other `sample_kwargs` used by related functions.
     """
     if sample_size > len(lines) or sample_size == 0:
-        return clean_lines(lines, min_len, drops)
+        return clean_lines(lines, drops)
     else:
         clean = set()
         while sample_size > len(clean) and tries > 0:
             tries -= 1
             lines = random.sample(lines, len(lines))
-            clean.update(clean_lines(lines, min_len, drops))
+            clean.update(clean_lines(lines, drops))
         return list(clean)[:sample_size]
 
 
@@ -202,6 +214,29 @@ def _li_wrapper(func: Callable) -> dict:
     return _inner
 
 
+def _sort_lines(lines: list, sample_kwargs: dict) -> dict:
+    """Sorts lines by string length and returns a dict.
+
+    Args:
+        sample_kwargs: Settings dict that includes `min_len`.
+    """
+    long = []
+    short = []
+    for line in lines:
+        if len(line) >= sample_kwargs["min_len"]:
+            long.append(line)
+        else:
+            short.append(line)
+    langs_short = ["short"] * len(short)
+    bytes_short = [len(x.encode("utf8")) for x in short]
+    return {
+        "long": long,
+        "short": short,
+        "langs_short": langs_short,
+        "bytes_short": bytes_short,
+    }
+
+
 @_li_wrapper
 def identify_stanza(
     s: str, is_file: bool, sample_kwargs: dict, nlp: stanza.Pipeline
@@ -217,11 +252,12 @@ def identify_stanza(
     sample = _get_lines(s, is_file, sample_kwargs)
     if not sample:
         return {"langs": [], "bytes": []}
-    docs = [stanza.Document([], text=t) for t in sample]
+    dt = _sort_lines(sample, sample_kwargs)
+    docs = [stanza.Document([], text=t) for t in dt["long"]]
     nlp(docs)
     return {
-        "langs": [doc.lang for doc in docs],
-        "bytes": [len(x.encode("utf8")) for x in sample],
+        "langs": [doc.lang for doc in docs] + dt["langs_short"],
+        "bytes": [len(x.encode("utf8")) for x in dt["long"]] + dt["bytes_short"],
     }
 
 
@@ -243,26 +279,35 @@ def identify_fasttext(
     sample = _get_lines(s, is_file, sample_kwargs)
     if not sample:
         return {"langs": [], "scores": [], "bytes": []}
-    res = model.predict(sample)
+    dt = _sort_lines(sample, sample_kwargs)
+    res = model.predict(dt["long"])
     return {
-        "langs": [y.replace("__label__", "") for x in res[0] for y in x],
-        "scores": [y for x in res[1] for y in x],
-        "bytes": [len(x.encode("utf8")) for x in sample],
+        "langs": [y.replace("__label__", "") for x in res[0] for y in x]
+        + dt["langs_short"],
+        "scores": [y for x in res[1] for y in x] + [1] * len(dt["langs_short"]),
+        "bytes": [len(x.encode("utf8")) for x in dt["long"]] + dt["bytes_short"],
     }
 
 
-def analyze(dt: dict, threshold: float = 0.6, columns: list = li_columns) -> dict:
+def analyze(
+    dt: dict, threshold: float = 0.6, columns: list = li_columns, max_langs=4
+) -> dict:
     """Runs an analysis on raw LI data and returns a more detailed dict.
 
     Args:
         dt: A dictionary produced with `_li_wrapper()`.
         threshold: (0-1.0) Minimum confidence needed to consider an LI result valid
-            (fastText only).
+            (fastText only). Labels anything under threshold as `unknown`.
         columns: Data to include in output. Use `[]` to get everything.
+        max_langs: The maximum number of languages expected in a multilingual text. If
+            LI results include many languages, only those with a significant portion
+            (`1 / max_langs+1`) of the text are included. E.g., `max_langs=4`
+            ignores LI results for languages that make up less than 20% of a text if
+            4 or more languages are detected.
 
     Notes:
-        Computations modeled off of Abadji et al. (2022).
-            <https://aclanthology.org/2022.lrec-1.463>
+        - Modeled off Abadji et al. (2022) <https://aclanthology.org/2022.lrec-1.463>.
+        - Includes `unknown` and `short` in language results when large enough.
     """
     if not columns:
         columns = [k for k in dt.keys()]
@@ -282,7 +327,10 @@ def analyze(dt: dict, threshold: float = 0.6, columns: list = li_columns) -> dic
     }
     # summarize top languages
     filesize = sum([v for v in _bytes.values()])
-    multilingual_threshold = 1 / (len(langs) + 1)
+    num_langs = len(langs)
+    if num_langs > max_langs:
+        num_langs = max_langs
+    multilingual_threshold = 1 / (num_langs + 1)
     ids = {}
     for k in langs:
         bytes_size = round(_bytes[k] / filesize, 2)
@@ -302,7 +350,7 @@ def identify(
     columns: list = li_columns,
     is_file: bool = True,
 ) -> pd.DataFrame:
-    """Runs language identification on or more `s` and makes a DataFrame of results.
+    """Runs language identification on `s` and makes a DataFrame of results.
 
     Args:
         s: Filepath(s) or text(s).
@@ -366,14 +414,14 @@ def _is_l1(dt: dict, lang: str) -> bool:
 
 
 def _multiling(dt: dict) -> bool:
-    """Returns `True` if 2+ languages are in a dict of LI results (excludes `unknown`).
+    """Returns `True` if 2+ languages exist (excludes `unknown` & `short`).
 
     Args:
         dt: A dictionary of LI results, e.g., from `identify_stanza()`.
     """
     if not dt or not isinstance(dt, dict):
         return np.NaN
-    return len([x for x in dt.keys() if x != "unknown"]) > 1
+    return len([x for x in dt.keys() if x not in ["unknown", "short"]]) > 1
 
 
 def _l1(dt: dict) -> str:
@@ -490,7 +538,7 @@ def file_stats(files: list, out: str = "file-stats") -> None:
     for file in files:
         with open(file) as f:
             lines = f.readlines()
-        lines = clean_lines(lines, 0)
+        lines = clean_lines(lines)
         if not lines:
             line_chars = []
             lines = []
@@ -539,7 +587,7 @@ def file_concat(
             dest.write(f'<file path="{file}">\n')
             dest.write("".join(lines))
             dest.write("\n</file>\n")
-            lines = clean_lines(lines, min_len, drops)
+            lines = clean_lines(lines, drops)
             dest_clean.write(f'<file path="{file}">\n')
             dest_clean.write("\n".join(lines))
             dest_clean.write("\n</file>\n")
