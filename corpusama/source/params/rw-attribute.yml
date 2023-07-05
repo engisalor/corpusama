@@ -1,11 +1,13 @@
 api_params_hash:
   MULTIVALUE: 0
   drop: true
+  note: for referencing API calls history
 country__id:
   MULTIVALUE: 1
   drop: true
 country__iso3:
   MULTIVALUE: 1
+  drop: true
 country__location__lat:
   MULTIVALUE: 1
   drop: true
@@ -186,18 +188,22 @@ language__id:
   drop: true
 language__name:
   MULTIVALUE: 1
+  drop: true
 ocha_product__id:
   MULTIVALUE: 1
   drop: true
 ocha_product__name:
   MULTIVALUE: 1
+  drop: true
 origin:
   MULTIVALUE: 0
+  drop: true
 primary_country__id:
   MULTIVALUE: 1
   drop: true
 primary_country__iso3:
   MULTIVALUE: 1
+  drop: true
 primary_country__location__lat:
   MULTIVALUE: 1
   drop: true
@@ -214,6 +220,7 @@ source__disclaimer:
   drop: true
 source__homepage:
   MULTIVALUE: 1
+  drop: true
 source__id:
   MULTIVALUE: 1
   drop: true
@@ -262,4 +269,15 @@ vulnerable_groups:
   drop: true
   note: deprecated
 file:
+  drop: true
+redirects:
+  drop: true
+file_id:
+  MULTIVALUE: 0
+  note: supersedes file__id
+vulnerable_groups__id:
+  drop: true
+ocha_product:
+  drop: true
+vulnerable_groups__name:
   drop: true
