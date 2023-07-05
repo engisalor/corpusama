@@ -52,6 +52,7 @@ def dataframe(
         df.reset_index(drop=True, inplace=True)
     df = df.applymap(convert.str_to_obj)
     for col in df.columns:
+        # logging.debug(f"column: {col}")  # for debugging
         prefix = "".join([col, separator])
         df[col] = df[col].apply(list_of_dict)
         df = pd.concat([df, pd.json_normalize(df[col]).add_prefix(prefix)], axis=1)
