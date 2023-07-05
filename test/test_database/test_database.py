@@ -9,7 +9,9 @@ from corpusama.database.database import Database
 class Test_Database(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.table_names = sorted(["_log", "_lang", "_pdf", "_raw", "_vert", "_archive"])
+        cls.table_names = sorted(
+            ["_archive", "_attr", "_lang", "_log", "_pdf", "_raw", "_vert"]
+        )
         cls.config_file = "test/config-example.yml"
 
     def tearDown(self):

@@ -33,13 +33,13 @@ class Test_LangID(unittest.TestCase):
 
     def test_clean_lines(self):
         lines = ["a", "  \n\n # 34 abcde  � "]
-        ref = ["abcde"]
-        self.assertEqual(langid.clean_lines(lines, 3, langid.drop_all), ref)
+        ref = ["a", "abcde"]
+        self.assertEqual(langid.clean_lines(lines, langid.drop_all), ref)
 
     def test_sample_lines(self):
         lines = ["a", "b", "c", "  \n\n # 34 abcde  � ", "fghij"]
-        ref = sorted(["abcde", "fghij"])
-        sam = sorted(langid.sample_lines(lines, 4, 10, 3, langid.drop_all))
+        ref = sorted(["a", "abcde", "b", "c", "fghij"])
+        sam = sorted(langid.sample_lines(lines, 0, 3, langid.drop_all))
         self.assertEqual(sam, ref)
 
     def test_identify_stanza(self):
@@ -84,9 +84,9 @@ class Test_LangID(unittest.TestCase):
             texts, self.sample_kwargs, None, self.model, 0.6, is_file=False
         )
         self.assertTrue(pd.isnull(lid.df["file"][0]))
-        self.assertEqual(lid.df["top_lang"][0], "en")
-        self.assertTrue(pd.isnull(lid.df["top_lang"][1]))
-        self.assertEqual(lid.df["top_lang"][2], "es")
+        self.assertEqual(lid.df["l1"][0], "en")
+        self.assertTrue(pd.isnull(lid.df["l1"][1]))
+        self.assertEqual(lid.df["l1"][2], "es")
 
     def test_file_concat(self):
         out = [
