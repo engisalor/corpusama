@@ -82,22 +82,6 @@ class Database:
         self.conn.commit()
         logging.debug(f"{len(series)} values into {table}.{column}")
 
-    def fetch_batch(self, run: int, size: int, query: str) -> tuple:
-        """Fetches SQL batches using a limit and offset.
-
-        Args:
-            run: The current run in a while loop.
-            size: The maximum number of rows to select.
-            query: The SQL query to repeat in loop.
-
-        Returns:
-            A tuple of fetched content and the current offset,
-            where `offset = run * size`.
-        """
-        offset = run * size
-        batch = self.c.execute(query, (offset, size)).fetchall()
-        return batch, offset
-
     def _add_missing_columns(self, df: pd.DataFrame, table: str) -> pd.DataFrame:
         """Returns a DataFrame with database table columns added when missing.
 
