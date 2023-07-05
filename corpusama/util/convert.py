@@ -14,11 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 def to_json_or_str(item: object) -> str:
-    """Converts lists/dicts to JSON strings and most other types to ``str``.
+    """Converts lists/dicts to JSON strings and most other types to `str`.
 
     Notes:
-        Returns original object if ``bytes``."""
-
+        Returns original object if `bytes`.
+    """
     if isinstance(item, (list, dict)):
         return json.dumps(item)
     elif isinstance(item, bytes):
@@ -32,10 +32,10 @@ def str_to_obj(item: str) -> object:
 
     Notes:
         - Returns non-strings and unparsable strings as-is.
-        - Tries to parse strings with ``json.loads``, then ``ast.literal_eval``.
-        - May print ``SyntaxWarning: invalid decimal literal`` (can ignore;
-            tends to occur when attempting to parse some URL strings)."""
-
+        - Tries to parse strings with `json.loads`, then `ast.literal_eval`.
+        - May print `SyntaxWarning: invalid decimal literal` (can ignore;
+            tends to occur when attempting to parse some URL strings).
+    """
     if not item:
         return item
     elif not isinstance(item, str):
@@ -53,13 +53,13 @@ def str_to_obj(item: str) -> object:
 def nan_to_none(
     series: pd.Series, strip: bool = True, nan_strings: list = ["none", "null", "nan"]
 ) -> pd.Series:
-    """Converts ``np.nan``, ``"NULL"`` and similar to ``None``.
+    """Converts `np.nan`, `"NULL"` and similar to `None`.
 
     Args:
         series: A series to process.
         strip: Strip leading/trailing string whitespace.
-        nan_strings: Strings to consider as ``None`` values (case insensitive)."""
-
+        nan_strings: Strings to consider as `None` values (case insensitive).
+    """
     bad_NAs = [np.nan, r"^\s*$"] + [f"(?i)^{x}$" for x in nan_strings]
     if strip:
         series = series.apply(lambda x: x.strip() if isinstance(x, str) else x)
@@ -71,8 +71,7 @@ def nan_to_none(
 
 
 def empty_list_to_none(item: list) -> None:
-    """Converts an empty list to ``None``, otherwise returns as-is."""
-
+    """Converts an empty list to `None`, otherwise returns as-is."""
     if isinstance(item, list):
         if [x for x in item if x]:
             return item
@@ -87,23 +86,23 @@ def list_to_string(item: list, separator: str = "|", replacement: str = None) ->
 
     Args:
         item: List of values.
-        separator: Symbol (corresponds to Sketch Engine's ``MULTISEP``).
-        replacement: String to replace preexisting cases of ``separator``.
+        separator: Symbol (corresponds to Sketch Engine's `MULTISEP`).
+        replacement: String to replace preexisting cases of `separator`.
 
     Notes:
-        If ``replacement=None``, function raises an error when an input string already
-        contains ``separator``. If such an error occurs, consider excluding the
-        attribute from the corpus by adding ``drop: true`` to its entry in the
-        ``attribute.yaml``. Otherwise, consider percent encoding for replacement
-        values, e.g., ``"%7C"`` to replace ``"|"``."""
-
+        If `replacement=None`, function raises an error when an input string already
+        contains `separator`. If such an error occurs, consider excluding the
+        attribute from the corpus by adding `drop: true` to its entry in the
+        `attribute.yaml`. Otherwise, consider percent encoding for replacement
+        values, e.g., `"%7C"` to replace `"|"`.
+    """
     if isinstance(item, list):
         if [x for x in item if separator in str(x)]:
             if not replacement:
                 raise ValueError(f"{separator} exists in {item}")
             item = [str(x).replace(separator, replacement) for x in item]
             logger.warning(f"{separator} replaced with '{replacement}' in {item}")
-        item = separator.join([str(x) for x in item])
+        item = separator.join([str(x).strip() for x in item])
     return item
 
 
@@ -114,14 +113,14 @@ def list_to_string_no_sep(item: list) -> str:
         item: List of values.
 
     Notes:
-        Used to convert lists of ``len=1`` to strings. Logs a warning if a list has
+        Used to convert lists of `len=1` to strings. Logs a warning if a list has
         multiple items (this should be resolved earlier on, e.g, with
-        ``convert.list_to_values`` and ``convert.empty_list_to_none``)."""
-
+        `convert.list_to_values` and `convert.empty_list_to_none`).
+    """
     if isinstance(item, list):
         if len(item) > 1:
             logger.warning(f"list values joined without a separator: {item}")
-        item = "".join(item)
+        item = "".join(item).strip()
     return item
 
 
@@ -137,17 +136,17 @@ def html_to_text(html: str) -> str:
     if isinstance(html, str):
         f = HTMLFilter()
         f.feed(html)
-        return f.text
+        return f.text.strip()
     else:
         return html
 
 
 def docbundle_to_df(bundle: DocBundle) -> pd.DataFrame:
-    """Converts a ``DocBundle`` to a ``DataFrame``.
+    """Converts a `DocBundle` to a `DataFrame`.
 
     See Also:
-        ``util.dataclass.DocBundle``"""
-
+        `util.dataclass.DocBundle`
+    """
     df = pd.DataFrame({"id": bundle.id, "vert": bundle.doc})
     df["vert_date"] = bundle.date
     df["attr"] = None
