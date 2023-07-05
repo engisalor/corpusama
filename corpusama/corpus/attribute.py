@@ -1,28 +1,23 @@
 """Methods to generate and modify corpus attributes."""
-import json
 import logging
-import pathlib
 from collections import OrderedDict
 
 import pandas as pd
 
-from corpusama.util import convert, decorator, flatten
+from corpusama.util import convert, flatten
 from corpusama.util import io as _io
 from corpusama.util import parallel, util
-
-logger = logging.getLogger(__name__)
+from pipeline.ske_fr import uninorm_4
 
 
 class Prep_DF:
-    """A class to supply additional variables when making attributes.
-
-    Methods:
-        make: The method for making attributes."""
+    """A class to make corpus attributes via a `make` method."""
 
     def __init__(self, attributes, attr_params: dict, years: bool = True):
         self.attributes = attributes
         self.attr_params = attr_params
         self.years = years
+        self.missing = set()
 
     def make(
         self,
@@ -31,22 +26,19 @@ class Prep_DF:
         """Prepares a DataFrame of raw content and generates document attributes.
 
         Notes:
-            Logs a warning if an attribute/field is missing from ``attribute.yaml``.
-            Update the yaml file with new values and consider rerunning
-            ``make_attribute`` to ensure all attributes are treated properly."""
-
+            Inspect `self.missing` to check for attributes that may be missing from the
+            corpus's `attribute_file` but existing in `_raw` data.
+        """
         # reshape df
         df = flatten.dataframe(df)
         df.columns = [x.replace(".", "__").replace("-", "_") for x in df.columns]
         missing_attr = [x for x in df.columns if x not in self.attributes.keys()]
         if missing_attr:
-            logger.warning(f"missing from attribute.yaml: {missing_attr}")
+            self.missing.update(missing_attr)
         df = df[[x for x in df.columns if x not in self.attr_params["drop"]]]
-        # remove invalid XML tokens
-        df = df.applymap(util.clean_xml_tokens)
         # add simplified year columns
         if self.years:
-            add_years(df)
+            _add_years(df)
         # prepare multivalue columns
         single = [x for x in self.attr_params["single"] if x in df.columns]
         multi = [x for x in df.columns if x not in single]
@@ -59,27 +51,40 @@ class Prep_DF:
             df[col] = df[col].apply(convert.list_to_string_no_sep)
         # standardize nan values
         df = df.apply(convert.nan_to_none)
+        # normalize
+        df = df.applymap(
+            lambda x: uninorm_4.normalize_line(x) if isinstance(x, str) else x
+        )
+        # replace extra whitespace
+        df.replace(r"\s+", " ", regex=True, inplace=True)
         # format as XML attributes
+        ids = df["id"].copy()
         df = df.applymap(util.xml_quoteattr)
         # add doc_tag column
-        add_doc_tags(df)
+        _add_doc_tags(df)
+        # return only id and doc_tag
+        df = df[["id", "doc_tag"]]
+        df["id"] = ids
         return df
 
 
-def doc_tag(dt: dict) -> str:
+def _doc_tag(dt: dict) -> str:
     """Returns a document's XML tag with attributes from a dictionary.
 
     Args:
-        dt: A dictionary of tag items
-            (pre-format with ``prep_df`` or similar first).
+        dt: A dictionary of quoted tag items (e.g., {"id": '"1"'}, not "1" or 1).
 
     Notes:
-        - Outputs the start-tag only:
-            ``<doc id="12345" title="document title>``."""
-
+        Adds a `file_id="FILE_ID"` placeholder whose value is inserted later on.
+    """
     dt = OrderedDict(sorted(dt.items()))
     doc_tag = [f'<doc id={dt["id"]} ']
     del dt["id"]
+    if dt.get("file_id"):
+        doc_tag.append(f'file_id={dt["file_id"]} ')
+        del dt["file_id"]
+    else:
+        doc_tag.append('file_id="FILE_ID" ')
     for k, v in dt.items():
         if v:
             doc_tag.append(f"{k}={v} ")
@@ -87,40 +92,26 @@ def doc_tag(dt: dict) -> str:
     return "".join(doc_tag)
 
 
-def join_vert(row: dict) -> str:
-    """Returns a complete vertical document with XML tags and tokens.
-
-    Args:
-        row: A record in the ``_vert`` table."""
-
-    doc_start = row["attr"]
-    doc_vert = row["vert"]
-    doc_end = "</doc>\n"
-    return "\n".join([doc_start, doc_vert, doc_end])
-
-
-def add_doc_tags(df: pd.DataFrame) -> None:
+def _add_doc_tags(df: pd.DataFrame) -> None:
     """Adds a column of XML start-tags with document attributes.
 
     Args:
-        df: The dataframe to work on (modified in-place)."""
+        df: DataFrame to update (modified in-place).
+    """
+    df["doc_tag"] = df.apply(lambda row: _doc_tag(dict(row)), axis=1)
 
-    df["doc_tag"] = df.apply(lambda row: doc_tag(dict(row)), axis=1)
 
-
-def add_years(df: pd.DataFrame, separator: str = "__") -> None:
-    """Adds columns with simplified timestamps based off existing ``date_`` columns.
+def _add_years(df: pd.DataFrame, separator: str = "__") -> None:
+    """Adds columns with simplified timestamps based off existing `date` columns.
 
     Args:
-        df: The DataFrame with attribute columns.
-        separator: The separator used in column names (e.g., ``date__created``).
+        df: DataFrame with attribute columns.
+        separator: Separator added in column names (e.g., `date__created`).
 
     Notes:
         - Timestamp columns must be parsable by pd.to_datetime.
         - Modifies the DataFrame in-place.
-        - By default, ``__`` is used to separate ReliefWeb fields and subfields:
-            ``field_name__subfield_name``."""
-
+    """
     date = "".join(["date", separator])
     source_columns = [x for x in df.columns if x.startswith(date)]
     for col in source_columns:
@@ -129,140 +120,148 @@ def add_years(df: pd.DataFrame, separator: str = "__") -> None:
 
 def make_attribute(
     self,
-    attribute_yaml: str = "corpusama/source/params/rw-attribute.yml",
-    size: int = 10000,
-    cores=0,
+    lang: str,
+    chunksize: int = 10000,
     years: bool = True,
+    cores: int = 0,
+    drops: list = ["api_params_hash", "body", "body_html", "redirects"],
 ) -> None:
-    """Generates attributes for vertical files.
+    """Generates XML attributes for records and inserts into `_attr`.
 
     Args:
-        self: A ``Corpus`` object.
-        attribute_yaml: File with parameters defining how to treat corpus attributes.
-        size: The number of table rows to process at a time.
-        cores: Max number of cores to use in parallel.
-        years: Run ``attribute.add_years`` on data
-            (adds columns simplifying timestamps to 4-digit year only).
+        self: `Corpus` object.
+        lang: ISO language code.
+        chunksize: Number of rows to process at a time.
+        years: Run `attribute.add_years` on data (generates 4-digit year columns).
+        cores: Cores to run in parallel (0 = auto-detect).
+        drops: Columns in `_raw` to ignore.
 
     Notes:
-        - Makes attribute tags for existing _vert rows only.
-        - Destructive: replaces all attributes in the ``_vert`` table."""
-
-    @decorator.while_loop
-    def attr_batch(self, size) -> bool:
-        """Processes a batch of table records to make attributes."""
-
-        query = "SELECT * FROM _raw WHERE id IN (SELECT id FROM _vert) LIMIT ?,?;"
-        batch, offset = self.db.fetch_batch(self.attr_run, size, query)
-        if not batch:
-            return False
-        cols = self.db.tables["_raw"]
-        df = pd.DataFrame.from_records(batch, columns=cols)
-        prep_df = Prep_DF(self.attributes, self.attr_params, self.years)
-        df = parallel.run(df, prep_df.make, self.cores)
-        rowids = self.attr_rowids[offset : offset + size]
-        self.db.update_column("_vert", "attr", df["doc_tag"], rowids)
-        self.attr_run += 1
-        return True
-
-    self.attributes = _io.load_yaml(attribute_yaml)
-    self.attr_params = get_params(self.attributes)
-    self.years = years
-    self.attr_run = 0
-    self.cores = parallel.set_cores(cores)
-    self.attr_rowids = [x[0] for x in self.db.c.execute("SELECT rowid FROM _vert")]
-    attr_batch(self, size)
+        Attributes are included based on the `attribute_file` supplied to a `Corpus`.
+        See `corpusama/source/params/rw-attribute.yml` for an example.
+        - `drops` should exclude text content (e.g. `body_html`) and `redirects`.
+        - XML tags include an empty `file_id` value: `<doc id="123" file_id=FILE_ID>`.
+    """
+    raw_cols = [x[1] for x in self.db.c.execute("pragma table_info(_raw)").fetchall()]
+    raw_cols = [x for x in raw_cols if x not in drops]
+    raw_query = f"""SELECT {",".join(raw_cols)} FROM _raw
+        WHERE id IN (SELECT id FROM _lang WHERE json_extract(_lang.lid,?));"""  # nosec
+    attributes = _io.load_yaml(self.config["attribute_file"])
+    attr_params = _get_params(attributes)
+    attr_job = Prep_DF(attributes, attr_params, years=years)
+    cores = parallel.set_cores(cores)
+    res = pd.read_sql(
+        raw_query, self.db.conn, chunksize=chunksize, params=(f"$.{lang}",)
+    )
+    for df in res:
+        df = parallel.run(df, attr_job.make, cores)
+        self.db.insert(df, "_attr")
+    m = f'attributes missing in {self.config["attribute_file"]} - {attr_job.missing}'
+    logging.debug(m)
 
 
-def get_params(attributes: dict) -> dict:
+def _get_params(attributes: dict) -> dict:
     """Reads a dictionary of attributes and returns another of corpus settings.
 
     Args:
-        attributes: A dictionary of attributes loaded from ``attribute_yaml``.
+        attributes: Dict of attributes loaded from `attribute_yaml`.
 
     Notes:
-        Currently, this function accepts these fields from an ``attribute.yaml`` file:
-        ``drop`` (whether to include an attribute in a
-        corpus) and ``MULTIVALUE`` (whether an attribute can have multiple values
-        with a separator)."""
-
+        So far, this function accepts these fields from an `attribute.yaml` file:
+        - `drop` (if an attribute is ignored for corpus creation)
+        - `MULTIVALUE` (if an attribute can have multiple values with a separator).
+    """
     return {
         "drop": [k for k, v in attributes.items() if v.get("drop", False)],
         "single": [k for k, v in attributes.items() if not v.get("MULTIVALUE", False)],
     }
 
 
-def export_attribute(
-    self,
-    default_params: dict = {"DYNTYPE": "freq", "MULTISEP": "|"},
-    attribute_yaml: str = "corpusama/source/params/rw-attribute.yml",
-    print: bool = False,
-) -> None:
-    """Reads attribute tags from the ``_vert`` table and saves unique keys to file.
+# WORK IN PROGRESS
 
-    Args:
-        print: Return a list of attribute strings without saving to file.
-        default_params: Default parameters for attributes (e.g., DYNTYPE).
-        attribute_yaml: File with parameters defining how to treat corpus attributes.
+# def analyze_attribute(self, lang:str, chunksize: int=10000, cores: int =0,
+# chunk_examples:int = 1, drop_cols: list = ["body",
+# "body_html", "redirects"]) -> pd.DataFrame:
+#     """Returns a DF describing values for attributes.
 
-    Notes:
-        - Saves attributes to ``/data/<database_name>.attr.go``.
+#     Args:
+#         self: A `Corpus` object.
+#         lang: Two/three-letter ISO language code.
+#         chunksize: Number of rows to process at a time.
+#         chunk_examples: Number of example values to retrieve for each attribute.
+#             Gets N examples from each chunk.
+#         cores: Cores to run in parallel (0 = auto-detect).
+#         drop_cols: Columns to drop from the `_raw` table before processing.
 
-    See Also:
-        - https://www.sketchengine.eu/documentation/"""
+#     Notes:
+#         - Language code must exist in `_lang` table (run `make_langid()` first).
+#         - Exclude any `_raw` columns that aren't attributes or if errors occur
+#             (e.g. while flattening).
+#         - Can process very large tables, but will produce many examples depending on
+#             `chunksize` and `chunk_examples`. Consider how many rows exist for `lang`
+#             to determine optimal settings.
+#         - `_analyze_attribute()` is available as an alternative method (1 batch only).
+#     """
+#     m = f"invalid lang {lang}: must be string with length 2 or 3"
+#     if len(lang) > 3 or len(lang) < 2 or not isinstance(lang,str):
+#         raise ValueError(m)
+# q = "SELECT * FROM _raw WHERE id IN (SELECT id FROM _lang WHERE
+# json_extract(_lang.lid,?))"
+#     res = pd.read_sql(q, self.db.conn, chunksize=chunksize, params = (f"$.{lang}",))
+#     analysis = pd.DataFrame()
+#     n = 0
 
-    attributes = _io.load_yaml(attribute_yaml)
-    filepath = self.db.path.with_suffix(".attr.go")
-    config = _export(default_params, attributes)
-    if print:
-        return config
-    else:
-        with open(filepath, "w") as f:
-            f.write(config)
-        logger.debug(f"{filepath}")
+#     class Batch:
+#         def run(df):
+#             return _analyze_attribute(df, self.chunk_examples, self.drop_cols)
+#         def __init__(self, chunk_examples, drop_cols) -> None:
+#             self.chunk_examples = chunk_examples
+#             self.drop_cols = drop_cols
+
+#     # TODO combine parallel.run and parallel.run_with_timeout
+#     # TODO currently this produces one %NA value for each chunk: we want one value
+#     # calculated across all chunks (as in _analyze_attribute)
+#     for df in res:
+#         logging.debug(f'batch {n}')
+#         n += 1
+#         if not df.empty:
+#             cores = parallel.set_cores(cores)
+#             batch = Batch(chunk_examples, drop_cols)
+#             df = parallel.run(df, batch.run, cores)
+#             analysis = pd.concat([analysis, df])
+#     return analysis.sort_values(["%NA", "attribute"])
 
 
-def _export(default_params: dict, attributes: dict) -> str:
-    """A helper function for ``export_attribute``."""
+# def _analyze_attribute(df: pd.DataFrame, examples:int = 5,
+#     drop_cols: list = ["body", "body_html", "redirects"]) -> pd.DataFrame:
+#     """Analyzes a DataFrame from `_raw` and returns another describing its attributes.
 
-    config = ""
-    attributes = {k: v for k, v in attributes.items() if not v.get("drop", False)}
-    attributes = {k: v | default_params for k, v in attributes.items()}
-    for v in attributes.values():
-        if v.get("MULTIVALUE", None) == 0:
-            del v["MULTIVALUE"]
-            del v["MULTISEP"]
-
-    for attr, params in attributes.items():
-        config += f"""\nATTRIBUTE "{attr}" """
-        config += "{"
-        for k, v in params.items():
-            config += f"\n    {k} {json.dumps(str(v))}"
-        config += "\n    }"
-    return config
-
-
-def unique_attribute(
-    self,
-    attribute_yaml: str = "corpusama/source/params/rw-attribute.yml",
-) -> set:
-    """Returns a set of attributes in ``_vert`` and compares with ``attribute_yaml``.
-
-    Args:
-        self: A Corpus object.
-        attribute_yaml: File with parameters defining how to treat corpus attributes.
-
-    Notes:
-        Logs a warning if attributes exist in ``_vert`` but not ``attribute_yaml``
-        (update the file and/or fix in ``Corpus`` code before continuing."""
-
-    res = self.db.c.execute("SELECT attr FROM _vert")
-    tags = ["".join([x[0], "</doc>"]) for x in res.fetchall()]
-    all_attrs = util.unique_xml_attrs(tags)
-    attributes = _io.load_yaml(attribute_yaml)
-    fname = pathlib.Path(attribute_yaml).name
-    missing_attr = [x for x in all_attrs if x not in attributes.keys()]
-    logger.debug(f"{len(attributes)} in {fname}, including {len(all_attrs)} in _vert")
-    if missing_attr:
-        logger.warning(f"{fname} is missing: {missing_attr}")
-    return all_attrs
+#     Args:
+#         lang: DataFrame of `_raw` data.
+#         examples: Number of example values to retrieve for each attribute.
+#         drop_cols: Columns to drop from the `_raw` table before processing.
+#     """
+#     df.drop(drop_cols, axis=1, inplace=True)
+#     df = flatten.dataframe(df)
+#     # make attribute list
+#     attrs = {}
+#     for col in df.columns:
+#         attrs[col] = round(len(df.loc[df[col].isna(), col]) / len(df), 2)
+#     # get examples
+#     examples_dt = {}
+#     for col in df.columns:
+#         temp = df.loc[df[col].notnull(), col]
+#         if temp.empty:
+#             examples_dt[col] = []
+#         elif len(temp) < examples:
+#             examples_dt[col] = temp.to_list()
+#         else:
+#             examples_dt[col] = temp.sample(examples).to_list()
+#     # make analysis
+#     records = [
+#         {"attribute": k, "example": i} for k,v in examples_dt.items() for i in v
+#       ]
+#     analysis = pd.DataFrame.from_records(records)
+#     for k,v in attrs.items():
+#         analysis.loc[analysis["attribute"] == k, "%NA"] = v
+#     return analysis[["%NA", "attribute", "example"]].sort_values(["%NA", "attribute"])
