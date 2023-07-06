@@ -16,3 +16,7 @@ pyfreeling.py
 # Large files
 *.gender_dict
 *.src
+*.db
+
+# Secrets
+*.secret.yml
