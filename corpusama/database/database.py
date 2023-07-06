@@ -97,7 +97,8 @@ class Database:
         self,
         config: str,
     ):
-        self.config = _io.load_yaml(config)
+        secrets = pathlib.Path(config).with_suffix(".secret.yml")
+        self.config = _io.load_yaml(config) | _io.load_yaml(secrets)
         self.path = pathlib.Path(self.config.get("db_name"))
         self.path.parent.mkdir(exist_ok=True)
         self.open_db()

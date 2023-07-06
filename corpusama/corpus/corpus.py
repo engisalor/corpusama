@@ -1,4 +1,6 @@
 """Stores the Corpus class, for executing operations on corpora."""
+import pathlib
+
 from corpusama.database.database import Database
 from corpusama.util import io as _io
 
@@ -21,7 +23,8 @@ class Corpus:
         self,
         config: str,
     ):
-        self.config = _io.load_yaml(config)
+        secrets = pathlib.Path(config).with_suffix(".secret.yml")
+        self.config = _io.load_yaml(config) | _io.load_yaml(secrets)
         self.changed = []
         self.db = Database(config)
         if self.config.get("source") == "reliefweb":
