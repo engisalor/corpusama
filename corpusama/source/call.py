@@ -2,6 +2,7 @@
 import hashlib
 import json
 import logging
+import pathlib
 import time
 
 import requests
@@ -71,11 +72,12 @@ class Call:
         self.now = util.now()
         params = self.config.get("parameters")
         self.response = requests.post(
-            self.config.get("url"), json.dumps(params), timeout=(6.05, 57)
+            self.config["url"], json.dumps(params), timeout=(6.05, 57)
         )
         self._check_response()
 
     def __init__(self, config=None):
         self.call_n = 0
         self.config_file = config
-        self.config = _io.load_yaml(config)
+        secrets = pathlib.Path(config).with_suffix(".secret.yml")
+        self.config = _io.load_yaml(config) | _io.load_yaml(secrets)
