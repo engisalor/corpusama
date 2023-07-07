@@ -1,7 +1,4 @@
 #! /usr/bin/python3
-# Keep a copy of pyfreeling.py and _pyfreeling.so in the same parent directory.
-# FreeLing installation (update DATA = "<install_dir>" as needed):
-# https://freeling-user-manual.readthedocs.io/en/latest/installation/installation-linux
 import io
 import re
 import sys

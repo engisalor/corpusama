@@ -1,9 +1,4 @@
 #!/usr/bin/python3
-# Keep a copy of pyfreeling.py and _pyfreeling.so in the same parent directory.
-# FreeLing installation (update DATA = "<install_dir>" as needed):
-# https://freeling-user-manual.readthedocs.io/en/latest/installation/installation-linux
-# dicc.src file generated w/ "cat DATA + LANG + /dictionary/entries/* >> dicc.src"
-# (manually add header/footer lines)
 import io
 import re
 import sys
@@ -62,7 +57,7 @@ tokenizer = freeling.tokenizer("pipeline/ske_fr/tokenizer.dat")
 op = freeling.analyzer_config()
 op.config_opt.Lang = LANG
 op.config_opt.MACO_PunctuationFile = DATA + "common/punct.dat"
-op.config_opt.MACO_DictionaryFile = "pipeline/ske_fr/dicc.src"
+op.config_opt.MACO_DictionaryFile = DATA + LANG + "/dicc.src"
 op.config_opt.MACO_AffixFile = DATA + LANG + "/afixos.dat"
 op.config_opt.MACO_CompoundFile = ""
 op.config_opt.MACO_LocutionsFile = DATA + LANG + "/locucions.dat"
