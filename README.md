@@ -4,7 +4,7 @@
 
 Corpusama is a language corpus management tool. Its initial goal is to develop a semi-automated pipeline for creating corpora from the [ReliefWeb](https://reliefweb.int/) database of humanitarian texts (managed by the United Nations Office for the Coordination of Humanitarian Affairs). Initial funding for Corpusama was provided by the [Humanitarian Encyclopedia](https://humanitarianencyclopedia.org/).
 
-## Applications
+## Purpose
 
 The goal of building language corpora from ReliefWeb is to study humanitarian discourse: what concepts exist among actors, how their usage changes over time, what's debated about them, their practical/ideological implications, etc. While ReliefWeb reports are searchable, converting them into a tokenized and lemmatized corpus gives researchers a much more powerful way to study language.
 

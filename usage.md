@@ -1,6 +1,8 @@
 # Corpusama usage notes
 
-This document describes some of Corpusama's components and behaviors. It doesn't yet qualify as a user guide.
+**NOTE: this is outdated but provides background on design considerations.**
+
+This document describes some of Corpusama's components and behaviors.
 
 ## Source
 
@@ -18,7 +20,6 @@ This module wraps the ReliefWeb API to simplify making queries and storing data.
 - use the parameter `appname` (an HE URL/email) for tracking purposes
 - max 1,000 entries per call
 - max 1,000 calls per day
-
 
 **Data retrieval features**
 
