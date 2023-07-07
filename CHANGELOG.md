@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.2.0](https://github.com/engisalor/corpusama/compare/v0.1.1...v0.2.0) (2023-07-07)
+
+This release has various significant changes and is not backwards compatible with previous versions. See `README.md` for current workflow.
+
+Version `2.0.0` has pipelines for building Spanish and French corpora with FreeLing. An English pipeline is currently being redesigned and will be integrated soon.
+
+Corpora can now be built using both HTML and PDF content on ReliefWeb.
+
+### Features
+
+* added FreeLing NLP
+* added language identification with fastText
+* added PDF extraction module 
+* `pipeline/` is now used for the final steps of corpus creation
+
+### Bug Fixes
+
+* Various bug fixes and small improvements
+
 ## [0.1.1](https://github.com/Humanitarian-Encyclopedia/corpusama/compare/v0.1.0...v0.1.1) (2022-12-14)
 
 Includes various bug fixes and incremental improvements for making/managing a corpus.
