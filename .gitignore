@@ -10,6 +10,7 @@ docs/
 !.github
 
 # FreeLing
+FreeLing*
 _pyfreeling.so
 pyfreeling.py
 
@@ -17,6 +18,9 @@ pyfreeling.py
 *.gender_dict
 *.src
 *.db
+*.tar.gz
+*.vert
+*.vert.xz
 
 # Secrets
 *.secret.yml
