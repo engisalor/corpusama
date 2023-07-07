@@ -4,7 +4,7 @@
 
 This release has various significant changes and is not backwards compatible with previous versions. See `README.md` for current workflow.
 
-Version `2.0.0` has pipelines for building Spanish and French corpora with FreeLing. An English pipeline is currently being redesigned and will be integrated soon.
+Version `0.2.0` has pipelines for building Spanish and French corpora with FreeLing. An English pipeline is currently being redesigned and will be integrated soon.
 
 Corpora can now be built using both HTML and PDF content on ReliefWeb.
 
@@ -12,7 +12,7 @@ Corpora can now be built using both HTML and PDF content on ReliefWeb.
 
 * added FreeLing NLP
 * added language identification with fastText
-* added PDF extraction module 
+* added PDF extraction module
 * `pipeline/` is now used for the final steps of corpus creation
 
 ### Bug Fixes
