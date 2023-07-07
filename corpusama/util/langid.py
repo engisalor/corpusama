@@ -4,25 +4,8 @@ This module contains methods to identify the languages of texts with several LI 
 The `LangID` class is the main entry point. See the example below for usage and notes
 on installation requirements.
 
-!!! note
-    Downloading a FastText model is needed if using this tool (see wget command below).
-    If pip fails to install `fasttext`, try downloading and building it locally:
-    see their [website](https://fasttext.cc/docs/en/language-identification.html).
-
-    ```bash
-    # download model (inspect links first!)
-    wget https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
-    # troubleshooting installation (execute and do a local pip install)
-    git clone https://github.com/facebookresearch/fastText.git
-    cd fastText
-    make
-    ```
-
-!!! note
-    Using the `uninorm.py` module from Unitok is recommended: Michelfeit et al., 2014;
-    Rychlý & Špalek, 2022. License and code at <https://corpus.tools/wiki/Unitok>.
-    Copy `uninorm.py` into the repo's base dir. `uninorm` isn't required, but
-    performance may decline if texts aren't well-cleaned w/ normalized encoding.
+For the `uninorm` module, see Michelfeit et al., 2014; Rychlý & Špalek, 2022:
+<https://corpus.tools/wiki/Unitok>.
 
 Example:
     ```py
@@ -70,10 +53,7 @@ import numpy as np
 import pandas as pd
 import stanza
 
-try:
-    from pipeline.ske_fr import uninorm_4 as uninorm
-except ModuleNotFoundError:
-    logging.warning("can't import uninorm.py: LI performance may decline")
+from pipeline.ske_fr import uninorm_4 as uninorm
 
 log_file = ".logs/langid.log"
 file_handler = TimedRotatingFileHandler(log_file, "midnight", backupCount=1)
@@ -110,10 +90,7 @@ def clean_lines(lines: list, drops: str = drop_all) -> list:
         - Relies on `uninorm.normalize_line` (see `langid` module docstring).
     """
     # clean
-    try:
-        lines = [uninorm.normalize_line(x) for x in lines]
-    except NameError:
-        pass
+    lines = [uninorm.normalize_line(x) for x in lines]
     # remove unwanted characters
     # TODO somewhat redundant w/ uninorm; removing punct, symbols, digits still needed
     lines = [x.translate(str.maketrans(drops, " " * len(drops))) for x in lines]
