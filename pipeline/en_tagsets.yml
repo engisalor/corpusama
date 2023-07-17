@@ -1,0 +1,549 @@
+notes:
+  - The best-fitting UPOS value for a tag is generalized from ud-ewt's .conllu file
+  - some are simplified (e.g. SYM values annotated as PUNCT)
+  - some are expanded (e.g. verb:ing)
+sources:
+  fl-en: https://freeling-user-manual.readthedocs.io/en/v4.2/tagsets/tagset-en/
+  ske-en-tt-2: https://www.sketchengine.eu/english-treetagger-pipeline-2/
+  ud-ewt: https://github.com/UniversalDependencies/UD_English-EWT
+  upos: https://universaldependencies.org/u/pos/
+ske-en-tt-2:
+  "''":
+    upos: PUNCT
+    note: single quotation ' (added manually)
+  "``":
+    upos: PUNCT
+    note: double quotation " (added manually)
+  "”":
+    upos: PUNCT
+    note: "single or double quotation marks 	” ‘"
+  "“":
+    upos: PUNCT
+    note: "single or double quotation marks 	” ‘"
+  "(":
+    upos: PUNCT
+    note: "left brackets 	( [ {"
+  ")":
+    upos: PUNCT
+    note: "right brackets 	) ] }"
+  ",":
+    upos: PUNCT
+    note: "comma 	,"
+  "$":
+    upos: PUNCT
+    note: "currency punctbols 	$ £ €"
+  "#":
+    upos: PUNCT
+    note: "hash (number sign) 	#"
+  ":":
+    upos: PUNCT
+    note: "dashes, ellipsis, underscore, (semi)colon 	– … .. _ ; :"
+  CC:
+    upos: CCONJ
+    note: "coordinating conjunction 	and"
+  CD:
+    upos: NUM
+    note: "cardinal number 	1, one"
+  CDZ:
+    upos: PRON
+    note: "possesive pronoun 	one’s"
+  DT:
+    upos: DET
+    note: "determiner 	the"
+  EX:
+    upos: PRON
+    note: "existential there 	there is"
+  FW:
+    upos: X:foreign
+    note: "foreign word 	d’hoevre"
+  IN:
+    upos: ADP
+    note: "preposition, subordinating conjunction 	in, of, like"
+  IN/that:
+    upos: ADP
+    note: "/that 	that as subordinator 	that"
+  JJ:
+    upos: ADJ
+    note: "adjective 	green"
+  JJR:
+    upos: ADJ
+    note: "adjective, comparative 	greener"
+  JJS:
+    upos: ADJ
+    note: "adjective, superlative 	greenest"
+  LS:
+    upos: X:list
+    note: "list marker 	1)"
+  MD:
+    upos: AUX
+    note: "modal (verbs) 	could, will, should, would"
+  NN:
+    upos: NOUN
+    note: "noun, singular or mass 	table"
+  NNS:
+    upos: NOUN
+    note: "noun plural 	tables"
+  NNSZ:
+    upos: NOUN
+    note: "possessive noun plural 	people’s, women’s"
+  NNZ:
+    upos: NOUN
+    note: "possessive noun, singular or mass 	year’s, world’s"
+  NP:
+    upos: PROPN
+    note: "proper noun, singular 	John"
+  NPS:
+    upos: PROPN
+    note: "proper noun, plural 	Vikings"
+  NPSZ:
+    upos: PROPN
+    note: "possesive proper noun, plural 	Boys’, Workers’"
+  NPZ:
+    upos: NOUN
+    note: "possesive noun, singular 	Britain’s, God’s"
+  PDT:
+    upos: DET
+    note: "predeterminer 	both the boys"
+  PP:
+    upos: PRON
+    note: "personal pronoun 	I, he, it"
+  PPZ:
+    upos: PRON
+    note: "possessive pronoun 	my, his"
+  RB:
+    upos: ADV
+    note: "adverb 	however, usually, naturally, here, good"
+  RBR:
+    upos: ADV
+    note: "adverb, comparative 	better"
+  RBS:
+    upos: ADV
+    note: "adverb, superlative 	best"
+  RP:
+    upos: ADP
+    note: "particle 	give up"
+  SENT:
+    upos: PUNCT
+    note: "Sentence-break punctuation 	. ! ?"
+  SYM:
+    upos: PUNCT
+    note: "Symbols (except for those listed above) 	/ = *"
+  TO:
+    upos: PART
+    note: "infinitive ‘to’ 	togo"
+  UH:
+    upos: INTJ
+    note: "interjection 	uhhuhhuhh"
+  VB:
+    upos: VERB:base
+    note: "verb be, base form 	be"
+  VBD:
+    upos: VERB:past
+    note: "verb be, past tense 	was, were"
+  VBG:
+    upos: VERB:ing
+    note: "verb be, gerund/present participle 	being"
+  VBN:
+    upos: VERB:part
+    note: "verb be, past participle 	been"
+  VBP:
+    upos: VERB
+    note: "verb be, present, non-3d person 	am, are"
+  VBZ:
+    upos: VERB
+    note: "verb be, 3rd person sing. present 	is"
+  VH:
+    upos: VERB:base
+    note: "verb have, base form 	have"
+  VHD:
+    upos: VERB:past
+    note: "verb have, past tense 	had"
+  VHG:
+    upos: VERB:ing
+    note: "verb have, gerund/present participle 	having"
+  VHN:
+    upos: VERB:part
+    note: "verb have, past participle 	had"
+  VHP:
+    upos: VERB
+    note: "verb have, sing. present, non-3d 	have"
+  VHZ:
+    upos: VERB
+    note: "verb have, 3rd person sing. present 	has"
+  VV:
+    upos: VERB:base
+    note: "verb, base form 	take"
+  VVD:
+    upos: VERB:past
+    note: "verb, past tense 	took"
+  VVG:
+    upos: VERB:ing
+    note: "verb, gerund/present participle 	taking"
+  VVN:
+    upos: VERB:part
+    note: "verb, past participle 	taken"
+  VVP:
+    upos: VERB
+    note: "verb, present, not 3rd person 	take"
+  VVZ:
+    upos: VERB
+    note: "verb, 3rd person sing. present 	takes"
+  WDT:
+    upos: PRON
+    note: "wh-determiner 	which"
+  WP:
+    upos: PRON
+    note: "wh-pronoun 	who, what"
+  WPZ:
+    upos: PRON
+    note: "possessive wh-pronoun 	whose"
+  WRB:
+    upos: ADV
+    note: "wh-abverb 	where, when"
+  Z:
+    upos: PART
+    note: "possessive ending 	‘s"
+fl-en:
+  Z:
+    upos: NUM
+    note: "number (also d:partitive; m:currency; p:percentage; u:unit if quantities are recognized)"
+  W:
+    upos: X-date
+    note: "date (if recognized)"
+  I:
+    upos: INTJ
+    note: "interjection"
+  JJ:
+    upos: ADJ
+    note: "adjective"
+  JJR:
+    upos: ADJ
+    note: "adjective; degree:comparative"
+  JJS:
+    upos: ADJ
+    note: "adjective; degree:superlative"
+  POS:
+    upos: PART
+    note: "adposition; type:possessive"
+  RB:
+    upos: ADV
+    note: "adverb; type:general"
+  RBR:
+    upos: ADV
+    note: "adverb; type:general; degree:comparative"
+  RBS:
+    upos: ADV
+    note: "adverb; type:general; degree:superlative"
+  WRB:
+    upos: ADV
+    note: "adverb; type:interrogative"
+  CC:
+    upos: CCONJ
+    note: "conjunction; type:coordinating"
+  DT:
+    upos: DET
+    note: "determiner"
+  WDT:
+    upos: PRON
+    note: "determiner; type:interrogative"
+  PDT:
+    upos: DET
+    note: "determiner; type:predeterminer"
+  UH:
+    upos: INTJ
+    note: "interjection"
+  NNS:
+    upos: NOUN
+    note: "noun; type:common; num:plural"
+  NN:
+    upos: NOUN
+    note: "noun; type:common; num:singular"
+  NNP:
+    upos: NOUN
+    note: "noun; type:proper"
+  NP00000:
+    upos: PROPN
+    note: "noun; type:proper"
+  NP:
+    upos: PROPN
+    note: "noun; type:proper"
+  NPS:
+    upos: PROPN
+    note: "noun; type:proper (added manually)"
+  NP00G00:
+    upos: PROPN
+    note: "noun; type:proper; neclass:location"
+  NP00O00:
+    upos: PROPN
+    note: "noun; type:proper; neclass:organization"
+  NP00V00:
+    upos: PROPN
+    note: "noun; type:proper; neclass:other"
+  NP00SP0:
+    upos: PROPN
+    note: "noun; type:proper; neclass:person"
+  NNPS:
+    upos: PROPN
+    note: "noun; type:proper; num:plural"
+  RP:
+    upos: ADP
+    note: "particle"
+  TO:
+    upos: PART
+    note: "particle; type:to"
+  IN:
+    upos: ADP
+    note: "preposition"
+  EX:
+    upos: PRON
+    note: "pronoun"
+  WP:
+    upos: PRON
+    note: "pronoun; type:interrogative"
+  PRP:
+    upos: PRON
+    note: "pronoun; type:personal"
+  PRP$:
+    upos: PRON
+    note: "pronoun; type:possessive"
+  WP$:
+    upos: PRON
+    note: "pronoun; type:possessive"
+  Fd:
+    upos: PUNCT
+    note: "punctuation; type:colon"
+  Fc:
+    upos: PUNCT
+    note: "punctuation; type:comma"
+  Flt:
+    upos: PUNCT
+    note: "punctuation; type:curlybracket; punctenclose:close"
+  Fla:
+    upos: PUNCT
+    note: "punctuation; type:curlybracket; punctenclose:open"
+  Fs:
+    upos: PUNCT
+    note: "punctuation; type:etc"
+  Fat:
+    upos: PUNCT
+    note: "punctuation; type:exclamationmark; punctenclose:close"
+  Faa:
+    upos: PUNCT
+    note: "punctuation; type:exclamationmark; punctenclose:open"
+  Fg:
+    upos: PUNCT
+    note: "punctuation; type:hyphen"
+  Fz:
+    upos: PUNCT
+    note: "punctuation; type:other"
+  Fpt:
+    upos: PUNCT
+    note: "punctuation; type:parenthesis; punctenclose:close"
+  Fpa:
+    upos: PUNCT
+    note: "punctuation; type:parenthesis; punctenclose:open"
+  Ft:
+    upos: PUNCT
+    note: "punctuation; type:percentage"
+  Fp:
+    upos: PUNCT
+    note: "punctuation; type:period"
+  Fit:
+    upos: PUNCT
+    note: "punctuation; type:questionmark; punctenclose:close"
+  Fia:
+    upos: PUNCT
+    note: "punctuation; type:questionmark; punctenclose:open"
+  Fe:
+    upos: PUNCT
+    note: "punctuation; type:quotation"
+  Frc:
+    upos: PUNCT
+    note: "punctuation; type:quotation; punctenclose:close"
+  Fra:
+    upos: PUNCT
+    note: "punctuation; type:quotation; punctenclose:open"
+  Fx:
+    upos: PUNCT
+    note: "punctuation; type:semicolon"
+  Fh:
+    upos: PUNCT
+    note: "punctuation; type:slash"
+  Fct:
+    upos: PUNCT
+    note: "punctuation; type:squarebracket; punctenclose:close"
+  Fca:
+    upos: PUNCT
+    note: "punctuation; type:squarebracket; punctenclose:open"
+  MD:
+    upos: AUX
+    note: "verb; type:modal"
+  VBG:
+    upos: VERB:ing
+    note: "verb; vform:gerund"
+  VB:
+    upos: VERB:base
+    note: "verb; vform:infinitive"
+  VBN:
+    upos: VERB:part
+    note: "verb; vform:participle"
+  VBD:
+    upos: VERB:past
+    note: "verb; vform:past"
+  VBP:
+    upos: VERB
+    note: "verb; vform:personal"
+  VBZ:
+    upos: VERB
+    note: "verb; vform:personal; person:3"
+ud-ewt:
+  "$":
+    note: $
+    upos: PUNCT
+  "''":
+    note: quotation
+    upos: PUNCT
+  ",":
+    note: comma
+    upos: PUNCT
+  "-LRB-":
+    note: left bracket
+    upos: PUNCT
+  "-RRB-":
+    note: right bracket
+    upos: PUNCT
+  ".":
+    note: "."
+    upos: PUNCT
+  ":":
+    note: colon dash
+    upos: PUNCT
+  ADD:
+    note: addresses URL email
+    upos: X:address
+  AFX:
+    note: (also ADJ ADV X)
+    upos: X
+  CC:
+    note: (also ADV)
+    upos: CCONJ
+  CD:
+    note: (also PRON)
+    upos: NUM
+  DT:
+    note: (also PRON)
+    upos: DET
+  EX:
+    note: there
+    upos: PRON
+  FW:
+    note: (also ADJ ADV NOUN)
+    upos: X:foreign
+  GW:
+    note: (also ADJ ADP ADV NOUN NUM PRON PROPN PUNCT SCONJ VERB)
+    upos: X
+  HYPH:
+    note: (also SYM)
+    upos: PUNCT
+  IN:
+    note: (also ADV SCONJ SYM X)
+    upos: ADP
+  JJ:
+    note: (also X)
+    upos: ADJ
+  JJR:
+    note: comparative
+    upos: ADJ
+  JJS:
+    note: superlative
+    upos: ADJ
+  LS:
+    note: list
+    upos: X:list
+  MD:
+    note: auxiliary verb
+    upos: AUX
+  NFP:
+    note: (also SYM)
+    upos: PUNCT
+  NN:
+    note: (also ADJ PRON SYM X)
+    upos: NOUN
+  NNP:
+    note: (also ADJ ADP ADV NUM VERB X)
+    upos: PROPN
+  NNPS:
+    note: proper noun
+    upos: PROPN
+  NNS:
+    note: (also SYM)
+    upos: NOUN
+  PDT:
+    note: all, half
+    upos: DET
+  POS:
+    note: possessive
+    upos: PART
+  PRP:
+    note: we you I (also X)
+    upos: PRON
+  PRP$:
+    note: my our your
+    upos: PRON
+  RB:
+    note: (also ADP PART X)
+    upos: ADV
+  RBR:
+    note: more better
+    upos: ADV
+  RBS:
+    note: most best
+    upos: ADV
+  RP:
+    note: up in out (also ADV)
+    upos: ADP
+  SYM:
+    note: (also SYM)
+    upos: PUNCT
+  TO:
+    note: to
+    upos: PART
+  UH:
+    note: interjection
+    upos: INTJ
+  VB:
+    note: (also AUX X)
+    upos: VERB:base
+  VBD:
+    note: (also AUX)
+    upos: VERB:past
+  VBG:
+    note: (also AUX SCONJ)
+    upos: VERB:ing
+  VBN:
+    note: (also AUX SCONJ)
+    upos: VERB:part
+  VBP:
+    note: (also AUX)
+    upos: VERB
+  VBZ:
+    note: (also AUX)
+    upos: VERB
+  WDT:
+    note: (also DET)
+    upos: PRON
+  WP:
+    note: (also X)
+    upos: PRON
+  WP$:
+    note: possessive
+    upos: PRON
+  WRB:
+    note: (also X)
+    upos: ADV
+  _:
+    note: _
+    upos: X
+  "``":
+    note: quotations
+    upos: PUNCT
