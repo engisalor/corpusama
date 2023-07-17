@@ -7,6 +7,9 @@ if [ $1 == "ske_es" ]
 elif [ $1 == "ske_fr" ]
   then
     PIPELINE=freeling_french_v3.sh
+elif [ $1 == "fl_en" ]
+  then
+    PIPELINE=freeling_english.sh
 else
   echo INVALID PIPELINE value '($1)': must be in '(ske_es ske_fr)', not $1
 fi
