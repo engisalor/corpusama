@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.1](https://github.com/engisalor/corpusama/compare/v0.2.0...v0.2.1) (2023-07-17)
+
+
+### Bug Fixes
+
+* add FreeLing EN pipeline ([783ac38](https://github.com/engisalor/corpusama/commit/783ac3845c0870089a198cce9b0979c344dbda0c))
+* add pipeline/compare_vert script ([c0db3e4](https://github.com/engisalor/corpusama/commit/c0db3e48fd199c5ebb3ba6e3d23589e6846197f1))
+* fix changelog release number ([10eebe7](https://github.com/engisalor/corpusama/commit/10eebe743c00354515f4d812a0239e5186c0d9e0))
+
 ## [0.2.0](https://github.com/engisalor/corpusama/compare/v0.1.1...v0.2.0) (2023-07-07)
 
 This release has various significant changes and is not backwards compatible with previous versions. See `README.md` for current workflow.
