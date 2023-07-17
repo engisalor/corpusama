@@ -7,7 +7,7 @@ profile = "black"
 
 [project]
 name = "Corpusama"
-version = "0.2.0"
+version = "0.2.1"
 authors = [{name="Loryn Isaacs", email="50170623+engisalor@users.noreply.github.com"}]
 description = "A Python package for managing language corpora"
 keywords = [
