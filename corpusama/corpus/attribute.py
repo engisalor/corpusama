@@ -4,9 +4,7 @@ from collections import OrderedDict
 
 import pandas as pd
 
-from corpusama.util import convert, flatten
-from corpusama.util import io as _io
-from corpusama.util import parallel, util
+from corpusama.util import convert, flatten, parallel, util
 from pipeline.ske_fr import uninorm_4
 
 
@@ -27,7 +25,7 @@ class Prep_DF:
 
         Notes:
             Inspect `self.missing` to check for attributes that may be missing from the
-            corpus's `attribute_file` but existing in `_raw` data.
+            corpus's `attributes` dictionary but existing in `_raw` data.
         """
         # reshape df
         df = flatten.dataframe(df)
@@ -137,8 +135,7 @@ def make_attribute(
         drops: Columns in `_raw` to ignore.
 
     Notes:
-        Attributes are included based on the `attribute_file` supplied to a `Corpus`.
-        See `corpusama/source/params/rw-attribute.yml` for an example.
+        Attributes are defined in a corpus's `<config_file>.yml` `attributes` dict.
         - `drops` should exclude text content (e.g. `body_html`) and `redirects`.
         - XML tags include an empty `file_id` value: `<doc id="123" file_id=FILE_ID>`.
     """
@@ -146,7 +143,7 @@ def make_attribute(
     raw_cols = [x for x in raw_cols if x not in drops]
     raw_query = f"""SELECT {",".join(raw_cols)} FROM _raw
         WHERE id IN (SELECT id FROM _lang WHERE json_extract(_lang.lid,?));"""  # nosec
-    attributes = _io.load_yaml(self.config["attribute_file"])
+    attributes = self.config["attributes"]
     attr_params = _get_params(attributes)
     attr_job = Prep_DF(attributes, attr_params, years=years)
     cores = parallel.set_cores(cores)
@@ -156,7 +153,7 @@ def make_attribute(
     for df in res:
         df = parallel.run(df, attr_job.make, cores)
         self.db.insert(df, "_attr")
-    m = f'attributes missing in {self.config["attribute_file"]} - {attr_job.missing}'
+    m = f"missing attributes - {attr_job.missing}"
     logging.debug(m)
 
 
