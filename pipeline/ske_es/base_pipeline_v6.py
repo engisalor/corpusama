@@ -57,7 +57,7 @@ def get_gender_lemma(tag, lemma):
         return lemma
 
 
-freeling.util_init_locale("es_ES.utf8")
+freeling.util.init_locale("es_ES.utf8")
 splitter = freeling.splitter("pipeline/ske_es/splitter.dat")
 tokenizer = freeling.tokenizer("pipeline/ske_es/tokenizer_v6.dat")
 op = freeling.analyzer_config()

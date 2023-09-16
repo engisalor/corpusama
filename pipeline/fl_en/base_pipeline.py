@@ -46,7 +46,7 @@ POS_MAPPING = {
     "PRP$": "d",
 }
 
-freeling.util_init_locale("en_US.utf8")
+freeling.util.init_locale("en_US.utf8")
 splitter = freeling.splitter("pipeline/fl_en/splitter.dat")
 tokenizer = freeling.tokenizer("pipeline/fl_en/tokenizer.dat")
 op = freeling.analyzer_config()
