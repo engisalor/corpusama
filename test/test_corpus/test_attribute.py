@@ -3,7 +3,6 @@ import unittest
 import pandas as pd
 
 from corpusama.corpus import attribute
-from corpusama.util import io as _io
 from corpusama.util.util import now
 
 
@@ -20,10 +19,11 @@ class Test_Attribute(unittest.TestCase):
         }
         cls.df_prepped = pd.DataFrame(df_prepped)
 
-    def test_get_params(self):
-        attributes = _io.load_yaml("corpusama/source/params/rw-attribute.yml")
-        attr_params = attribute._get_params(attributes)
-        self.assertIn("drop", attr_params.keys())
+    # def test_get_params(self):
+    #     # TODO requires setting up a dummy config file w/ an attributes dict
+    #     attributes = _io.load_yaml("corpusama/source/params/rw-attribute.yml")
+    #     attr_params = attribute._get_params(attributes)
+    #     self.assertIn("drop", attr_params.keys())
 
     def test_prep_df(self):
         attrs = {"disaster__type": {"drop": True}}
