@@ -2,7 +2,7 @@
 
 ## About
 
-Corpusama is a language corpus management tool. Its initial goal is to develop a semi-automated pipeline for creating corpora from the [ReliefWeb](https://reliefweb.int/) database of humanitarian texts (managed by the United Nations Office for the Coordination of Humanitarian Affairs). Initial funding for Corpusama was provided by the [Humanitarian Encyclopedia](https://humanitarianencyclopedia.org/).
+Corpusama is a language corpus management tool. Its initial goal is to develop a semi-automated pipeline for creating corpora from the [ReliefWeb](https://reliefweb.int/) database of humanitarian texts (managed by the United Nations Office for the Coordination of Humanitarian Affairs). Corpusama has received funding from the [Humanitarian Encyclopedia](https://humanitarianencyclopedia.org/).
 
 ## Purpose
 
@@ -96,8 +96,6 @@ schema: corpusama/database/schema/reliefweb.sql
 db_name: data/reliefweb_2000+.db
 # the column containing textual data (i.e., corpus texts)
 text_column: body_html
-# a file that specifies how to treat API metadata
-attribute_file: corpusama/source/params/rw-attribute.yml
 # the daily maximum number of API calls
 quota: 1000
 # a dictionary specifying how to throttle API calls
@@ -105,6 +103,8 @@ wait_dict: {"0": 1, "5": 49, "10": 99, "20": 499, "30": null}
 # API parameters used to generate calls
 parameters:
 	<various ReliefWeb API parameters>
+attributes:
+	<ReliefWeb API metadata fields, some of which will be included in a corpus>
 ```
 
 In this case, `reliefweb_2000+` has parameters to get all text-based reports (in any language) starting from 1 January 2000.
@@ -146,7 +146,7 @@ corp.rw.get_new_records(1) # this example stops after 1 API call
 
 # download associated PDFs
 corp.rw.get_pdfs()
-# (usually most reports don't have PDFs)
+# (most reports don't have PDFs; some have several)
 
 # extract PDF text
 corp.rw.extract_pdfs()
@@ -159,7 +159,7 @@ corp.make_langid("_raw") # HTML data stored within API responses
 
 # make corpus XML <doc> attributes for a language
 corp.make_attribute("fr")
-# there should be a few French documents in the first 1000 API results
+# there should be a few French documents in the first 1000 API results (example breaks if otherwise)
 
 # export the combined texts into one TXT file
 df = corp.export_text("fr")
@@ -169,7 +169,7 @@ df = corp.export_text("fr")
 
 ### Pipelines
 
-Files in the `pipeline/` directory are used to complete corpus creation. Each pipeline is designed to be a standalone script that's run in a terminal. Execute a pipeline after exporting an XML-tagged TXT file with `corpusama` (`reliefweb_fr.1.txt` in the above example).
+Files in the `pipeline/` directory are used to complete corpus creation. Each pipeline is designed to be a standalone script that's run in bash. Execute a pipeline after exporting an XML-tagged TXT file (`reliefweb_fr.1.txt` in the above example).
 
 To process a text file, run `pipeline/run.sh` with the desired arguments.
 
@@ -203,27 +203,35 @@ Point	NPMS000	Point-n	point	NPMS000	Point	M	S
 96	Z	96-m	96	Z	96	0	0
 ```
 
-Such vertical files are ready to be loaded into compatible corpus management software.
+Vertical files can be loaded into compatible corpus linguistics tools.
 
 ### Batch pipeline execution
 
-To process multiple text files in parallel, try this:
+To process multiple text files, try:
 
 ```bash
+# option 1: parallel
 # add a line for each additional file, up to the device's number of CPUs-1
 (trap 'kill 0' SIGINT; \
 bash pipeline/run.sh PIPELINE COMPRESS FILE0 &
 bash pipeline/run.sh PIPELINE COMPRESS FILE1 &
 wait)
+
+# option 2: sequential
+for file in rw/reliefweb_fr.{1..9}.txt; do
+    echo start ${file}
+    $(bash pipeline/run.sh ske_fr t ${file})
+    echo done ${file}
+done
 ```
 
 ### Designing pipelines
 
-Pipelines can be modified as needed. For convenience, execution is managed with `pipeline/run.sh`. This script finds and executes a chain of commands, e.g. `pipeline/ske_fr/freeling_french_v3.sh`, all which can be modified. This depends on the software being used (FreeLing, Stanza, ...) and requires understanding all the technical aspects of corpus creation.
+Pipelines can be modified as needed. For convenience, execution is managed with `pipeline/run.sh`. This script finds and executes a chain of commands, e.g. `pipeline/ske_fr/freeling_french_v3.sh`, all of which can be modified. This depends on the software being used (FreeLing, Stanza, ...) and requires understanding all the technical aspects of corpus creation.
 
 ### Using corpora
 
-After 1) building a database with `corpusama`, 2) exporting the texts for a language to a TXT file, and 3) running this file through a pipeline, the resulting `.vert.xz` is a completed corpus. Viewing the corpus (e.g., in Sketch Engine) also requires making a corpus [configuration file](https://www.sketchengine.eu/documentation/corpus-configuration-file-all-features/) and other steps beyond this introduction.
+After 1) building a database with `corpusama`, 2) exporting the texts for a language to TXT files, and 3) running these files through a pipeline, the resulting `.vert.xz` files make up a completed corpus. Viewing the corpus (e.g., in Sketch Engine) also requires making a corpus [configuration file](https://www.sketchengine.eu/documentation/corpus-configuration-file-all-features/) and other steps beyond this introduction.
 
 ## Acknowledgements
 
