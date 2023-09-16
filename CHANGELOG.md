@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.2](https://github.com/engisalor/corpusama/compare/v0.2.1...v0.2.2) (2023-09-16)
+
+
+### Bug Fixes
+
+* add date args for export_text ([ea10b93](https://github.com/engisalor/corpusama/commit/ea10b9323ced8e9e806343bee907f1c82ce2a601))
+* move corpus attributes to config yml ([e0594cd](https://github.com/engisalor/corpusama/commit/e0594cd96c0fed0ed6a341a8b3e0eba2eb46d17d))
+* update freeling pipeline init_locale func ([7d81c49](https://github.com/engisalor/corpusama/commit/7d81c49988e2619be800fe2f25a70611b1ba1e64))
+
+
+### Documentation
+
+* update readme ([0199f41](https://github.com/engisalor/corpusama/commit/0199f412aec14d1f94a4386574752642d3d16a92))
+
 ## [0.2.1](https://github.com/engisalor/corpusama/compare/v0.2.0...v0.2.1) (2023-07-17)
 
 
