@@ -74,7 +74,9 @@ def export_text(
     lang: str,
     stem: str = "reliefweb",
     min_portion: float = 0.8,
-    chunksize: int = 30000,
+    chunksize: int = 25000,
+    start_date: str = "1900-01-01",
+    end_date: str = "2100-12-31",
     cores: int = 0,
     test: bool = False,
 ):
@@ -87,6 +89,8 @@ def export_text(
         min_portion: Minimum portion of a text necessary to be included in `lang`.
         chunksize: Maximum number of texts to combine per file. A corpus will have
             `ceil(n_texts / chunksize)` files; adjust based on corpus size and CPU/RAM.
+        start_date: Earliest date to include.
+        end_date: Latest date to include.
         cores: Cores used to process items in a chunk (`0` to auto-detect).
         test: Output first file only (for testing).
 
@@ -97,14 +101,15 @@ def export_text(
             performance.
     """
     q = """SELECT
-        _lang.id,_lang.file_id,_lang.lid,_attr.doc_tag,_raw.body_html FROM _lang
-        LEFT JOIN _attr ON _lang.id = _attr.id
-        LEFT JOIN _raw ON _lang.id = _raw.id
-        WHERE json_extract(_lang.lid,?) >= ?
-        ORDER BY _lang.id,_lang.file_id;"""
-    params = (f"$.{lang}", min_portion)
+    _lang.id,_lang.file_id,_lang.lid,_attr.doc_tag,_raw.date,_raw.body_html FROM _lang
+    LEFT JOIN _attr ON _lang.id = _attr.id
+    LEFT JOIN _raw ON _lang.id = _raw.id
+    WHERE json_extract(_lang.lid,?) >= ?
+    AND DATE(json_extract(_raw.date, '$.original')) BETWEEN date(?) AND date(?)
+    ORDER BY _lang.id,_lang.file_id;"""
+    params = (f"$.{lang}", min_portion, start_date, end_date)
     res = pd.read_sql(q, self.db.conn, chunksize=chunksize, params=params)
-    file = pathlib.Path(f"{stem}_{lang}.txt")
+    file = pathlib.Path(f"{stem}_{lang}_{start_date}_{end_date}.txt")
     cores = parallel.set_cores(cores)
     batch = 1
     for df in res:
