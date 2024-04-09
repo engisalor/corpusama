@@ -2,6 +2,7 @@
 .*
 data/
 fastText/
+fasttext/
 site/
 docs/
 !.gitignore
@@ -22,6 +23,12 @@ pyfreeling.py
 *.vert
 *.vert.xz
 *.txt
+*.zip
 
 # Secrets
 *.secret.yml
+
+# generated files
+*.go
+*.conllu
+restats
