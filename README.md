@@ -35,15 +35,24 @@ pip install -r requirements.txt
 
 ### fastText
 
+>Warning: fastText installation may break, especially with Python 3.12. Manual installation or some modifications to run the binary instead may be needed.
+
 fastText is a text classifier that's used for language identification. It has a Python package that's included in `requirements.txt` but models are downloaded separately. See [their website](https://fasttext.cc/docs/en/language-identification.html) for details. This is the default configuration:
 
 ```bash
-mkdir fastText
-cd fastText
+# download
+# see https://github.com/facebookresearch/fastText/releases
+unzip fastText-0.9.2.zip
+cd fastText-0.9.2
+make
+
+# get language identification model
 wget https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
 ```
 
 ### FreeLing
+
+>Warning: like fastText, FreeLing isn't actively developed. Transitioning to Stanza is likely, although FreeLing is much faster/doesn't require a GPU.
 
 Follow FreeLing's [install from source](https://freeling-user-manual.readthedocs.io/en/latest/installation/installation-linux/) instructions. Releases are available [on GitHub](https://github.com/TALP-UPC/FreeLing/releases). After its dependencies are installed, FreeLing's installation could look like this:
 
@@ -82,6 +91,8 @@ FreeLing also requires a locale installed for each language to be used: refer to
 ### Stanza
 
 [Stanza](https://github.com/stanfordnlp/stanza) is a Python NLP package. Models for languages may need to be downloaded with its `download()` function if this doesn't happen automatically.
+
+>Note: The Stanza-based pipeline is being rewritten as of early 2024.
 
 ## Configuration files
 
