@@ -74,7 +74,7 @@ def export_text(
     lang: str,
     stem: str = "reliefweb",
     min_portion: float = 0.8,
-    chunksize: int = 25000,
+    chunksize: int = 10000,
     start_date: str = "1900-01-01",
     end_date: str = "2100-12-31",
     cores: int = 0,
