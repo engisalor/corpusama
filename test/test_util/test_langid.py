@@ -1,8 +1,8 @@
 import pathlib
 import unittest
 
-import fasttext
-import pandas as pd
+# import fasttext
+# import pandas as pd
 import stanza
 
 from corpusama.util import langid
@@ -16,7 +16,7 @@ class Test_LangID(unittest.TestCase):
             processors="langid",
             download_method=None,
         )
-        cls.model = fasttext.load_model("./fastText/lid.176.bin")
+        # cls.model = fasttext.load_model("./fastText/lid.176.bin")
         cls.file = "test/test_util/text-file.txt"
         cls.files = [cls.file, "test/test_util/text-file-2.txt"]
         cls.empty_file = "test/test_util/empty-file.txt"
@@ -50,18 +50,18 @@ class Test_LangID(unittest.TestCase):
         dt = langid.identify_stanza(self.empty_file, True, self.sample_kwargs, self.nlp)
         self.assertEqual(dt["langs"], [])
 
-    def test_identify_fasttext(self):
-        dt = langid.identify_fasttext(self.file, True, self.sample_kwargs, self.model)
-        self.assertTrue("en" in dt["langs"])
+    # def test_identify_fasttext(self):
+    #     dt = langid.identify_fasttext(self.file, True, self.sample_kwargs, self.model)
+    #     self.assertTrue("en" in dt["langs"])
 
-    def test_fasttext_empty_full(self):
-        dt = langid.identify_fasttext(
-            self.empty_file, True, self.sample_kwargs, self.model
-        )
-        self.assertEqual(dt["langs"], [])
+    # def test_fasttext_empty_full(self):
+    #     dt = langid.identify_fasttext(
+    #         self.empty_file, True, self.sample_kwargs, self.model
+    #     )
+    #     self.assertEqual(dt["langs"], [])
 
     def test_identify(self):
-        df = langid.identify(self.file, self.sample_kwargs, self.nlp, self.model)
+        df = langid.identify(self.file, self.sample_kwargs, self.nlp, None)
         self.assertEqual(df["tool"][0], "stanza")
 
     def test_identify_empty_no_fa(self):
@@ -73,20 +73,20 @@ class Test_LangID(unittest.TestCase):
         )
         self.assertEqual(df["tool"][0], "stanza")
 
-    def test_LangID_texts_only_fa_with_empty(self):
-        # NOTE: could break if text languages aren't predicted correctly
-        texts = [
-            "hello, my name is John\nand I speak English",
-            " ",
-            "hola, mi nombre es José\ny hablo español",
-        ]
-        lid = langid.LangID(
-            texts, self.sample_kwargs, None, self.model, 0.6, is_file=False
-        )
-        self.assertTrue(pd.isnull(lid.df["file"][0]))
-        self.assertEqual(lid.df["l1"][0], "en")
-        self.assertTrue(pd.isnull(lid.df["l1"][1]))
-        self.assertEqual(lid.df["l1"][2], "es")
+    # def test_LangID_texts_only_fa_with_empty(self):
+    #     # NOTE: could break if text languages aren't predicted correctly
+    #     texts = [
+    #         "hello, my name is John\nand I speak English",
+    #         " ",
+    #         "hola, mi nombre es José\ny hablo español",
+    #     ]
+    #     lid = langid.LangID(
+    #         texts, self.sample_kwargs, None, self.model, 0.6, is_file=False
+    #     )
+    #     self.assertTrue(pd.isnull(lid.df["file"][0]))
+    #     self.assertEqual(lid.df["l1"][0], "en")
+    #     self.assertTrue(pd.isnull(lid.df["l1"][1]))
+    #     self.assertEqual(lid.df["l1"][2], "es")
 
     def test_file_concat(self):
         out = [

@@ -1,17 +1,23 @@
 """Methods to classify document languages and save results to the `_lang` table."""
-import fasttext
+# import fasttext
 import pandas as pd
-
-from corpusama.util import convert, langid, parallel, util
+import stanza 
+from corpusama.util import convert, langid, util
 
 # TODO requires unit testing
 
+nlp = stanza.Pipeline(
+    lang="multilingual",
+    processors="langid",
+    ld_batch_size = 64, # 64 Batch size to use for language identification
+    max_cache_size = 10, # 10 Max number of pipelines to cache
+    )
 
 def make_langid(
     self,
     table: str,
     chunksize: int = 5000,
-    cores=0,
+    # cores=0,
 ) -> None:
     """Generates language ID data in the `_lang` table.
 
@@ -27,13 +33,16 @@ def make_langid(
         query = "SELECT * FROM _pdf"
     if table == "_raw":
         query = "SELECT * FROM _raw WHERE body_html IS NOT null"
-    cores = parallel.set_cores(cores)
+    # cores = parallel.set_cores(cores)
     res = pd.read_sql(query, self.db.conn, chunksize=chunksize)
     pdf_dir = self.config.get("pdf_dir")
     text_column = self.config.get("text_column")
+    n = 0
     for df in res:
         add_langid = AddLangID(table, pdf_dir, text_column)
-        df = parallel.run(df, add_langid.make, cores)
+        n += 1
+        # df = parallel.run(df, add_langid.make, cores)
+        df = add_langid.make(df)
         df["lang_date"] = util.now()
         self.db.insert(df, "_lang")
 
@@ -55,12 +64,12 @@ class AddLangID:
             is_file = True
             s = self._make_filepath(df)
         # run language id
-        model = fasttext.load_model(self.model_file)
+        # model = fasttext.load_model(self.model_file)
         lid = langid.LangID(
             s,
             self.sample_kwargs,
-            None,
-            model,
+            nlp, # stanza nlp obj,
+            None, # fastext model,
             self.threshold,
             is_file=is_file,
         )

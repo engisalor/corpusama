@@ -47,8 +47,9 @@ import string
 from logging.handlers import TimedRotatingFileHandler
 from time import perf_counter
 from typing import Callable
+from math import ceil
 
-import fasttext
+# import fasttext
 import numpy as np
 import pandas as pd
 import stanza
@@ -130,7 +131,7 @@ def sample_lines(
         return list(clean)[:sample_size]
 
 
-def _get_lines(s: str, is_file: bool, sample_kwargs: dict) -> dict:
+def _get_lines(s: str, is_file: bool, sample_kwargs: dict) -> list|dict:
     """Opens a file and runs sample_lines(): logs a warning if there's no content.
 
     Args:
@@ -216,7 +217,7 @@ def _sort_lines(lines: list, sample_kwargs: dict) -> dict:
 
 @_li_wrapper
 def identify_stanza(
-    s: str, is_file: bool, sample_kwargs: dict, nlp: stanza.Pipeline
+    s: str, is_file: bool, sample_kwargs: dict, nlp: stanza.Pipeline, chunksize: int = 1000000
 ) -> dict:
     """Runs Stanza LI on `s`, returns a dict with results.
 
@@ -225,17 +226,30 @@ def identify_stanza(
         is_file: Whether `s` is a filepath `True` or a text `False`.
         sample_kwargs: Args passed to `sample_lines()` and `clean_lines()`.
         nlp: Stanza NLP pipeline.
+        chunksize: Max bytes of text fed to Stanza at a time.
     """
+    results = {"langs": [], "bytes": []}
     sample = _get_lines(s, is_file, sample_kwargs)
     if not sample:
-        return {"langs": [], "bytes": []}
-    dt = _sort_lines(sample, sample_kwargs)
-    docs = [stanza.Document([], text=t) for t in dt["long"]]
-    nlp(docs)
-    return {
-        "langs": [doc.lang for doc in docs] + dt["langs_short"],
-        "bytes": [len(x.encode("utf8")) for x in dt["long"]] + dt["bytes_short"],
-    }
+        return results
+    size = len("".join(sample).encode("utf8"))
+    chunks = 1
+    if size > chunksize:
+        chunks = ceil(size/chunksize) # 2903051 breaks at this size
+        logging.info(f"split {size} bytes into {chunks} chunks")
+    
+    def _inner(batch) -> None:
+        dt = _sort_lines(batch, sample_kwargs)
+        docs = [stanza.Document([], text=t) for t in dt["long"]]
+        nlp(docs)
+        results["langs"].extend([doc.lang for doc in docs] + dt["langs_short"])
+        results["bytes"].extend([len(x.encode("utf8")) for x in dt["long"]] + dt["bytes_short"])
+
+    for batch in np.array_split(sample, chunks):
+        _inner(batch)
+
+    return results
+
 
 
 @_li_wrapper
@@ -243,7 +257,7 @@ def identify_fasttext(
     s: str,
     is_file: bool,
     sample_kwargs: dict,
-    model: fasttext.FastText._FastText,
+    # model: fasttext.FastText._FastText,
 ) -> dict:
     """Runs fasttext LI on `s`, returns a dict with results.
 
@@ -253,17 +267,18 @@ def identify_fasttext(
         sample_kwargs: Args passes to `sample_lines()` and `clean_lines()`.
         model: A `_FastText` object.
     """
-    sample = _get_lines(s, is_file, sample_kwargs)
-    if not sample:
-        return {"langs": [], "scores": [], "bytes": []}
-    dt = _sort_lines(sample, sample_kwargs)
-    res = model.predict(dt["long"])
-    return {
-        "langs": [y.replace("__label__", "") for x in res[0] for y in x]
-        + dt["langs_short"],
-        "scores": [y for x in res[1] for y in x] + [1] * len(dt["langs_short"]),
-        "bytes": [len(x.encode("utf8")) for x in dt["long"]] + dt["bytes_short"],
-    }
+    print("WARNING: fasttext is deprecated as of v0.3.0")
+    # sample = _get_lines(s, is_file, sample_kwargs)
+    # if not sample:
+    #     return {"langs": [], "scores": [], "bytes": []}
+    # dt = _sort_lines(sample, sample_kwargs)
+    # res = model.predict(dt["long"])
+    # return {
+    #     "langs": [y.replace("__label__", "") for x in res[0] for y in x]
+    #     + dt["langs_short"],
+    #     "scores": [y for x in res[1] for y in x] + [1] * len(dt["langs_short"]),
+    #     "bytes": [len(x.encode("utf8")) for x in dt["long"]] + dt["bytes_short"],
+    # }
 
 
 def analyze(
@@ -322,7 +337,7 @@ def identify(
     s: str | list,
     sample_kwargs: dict,
     nlp: stanza.Pipeline | None,
-    model: fasttext.FastText._FastText | None,
+    model: None ,# fasttext.FastText._FastText | None,
     threshold: float = 0.6,
     columns: list = li_columns,
     is_file: bool = True,
@@ -487,15 +502,21 @@ class LangID:
         s: str | list,
         sample_kwargs: dict,
         nlp: stanza.Pipeline | None,
-        model: fasttext.FastText._FastText | None,
+        model: None, # fasttext.FastText._FastText | None,
         threshold: float,
         columns: list = li_columns,
         is_file: bool = True,
     ):
         self.df = identify(s, sample_kwargs, nlp, model, threshold, columns, is_file)
-        self.add_multiling()
-        self.add_l1()
-        self.add_l1_size()
+        if "lid" in self.df.columns:
+            self.add_multiling()
+            self.add_l1()
+            self.add_l1_size()
+        else:
+            self.df["lid"] = None
+            self.df["multiling"] = None
+            self.df["l1"] = None
+            self.df["l1_size"] = None
 
 
 def file_stats(files: list, out: str = "file-stats") -> None:
