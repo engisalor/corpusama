@@ -224,7 +224,7 @@ class ReliefWeb(Call):
         Notes:
             - Compares file sizes of downloaded PDFs with Database _pdf.filesize values
                 and if changed re-downloads file.
-            -Set min and max to run small tests or start from a certain index to ignore
+            - Set min and max to run small tests or start from a certain index to ignore
                 already downloaded content.
         """
         df = pd.read_sql("SELECT * from _pdf", self.db.conn)
