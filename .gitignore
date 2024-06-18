@@ -24,6 +24,7 @@ pyfreeling.py
 *.vert.xz
 *.txt
 *.zip
+*.xz
 
 # Secrets
 *.secret.yml
