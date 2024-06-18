@@ -47,7 +47,7 @@ class Database:
     def insert(self, df: pd.DataFrame, table: str) -> None:
         """Inserts/replaces a DataFrame into a table."""
         # standardize datatypes
-        df = df.applymap(convert.to_json_or_str)
+        df = df.map(convert.to_json_or_str)
         df = df.apply(convert.nan_to_none)
         # insert into SQL
         records = df[self.tables[table]].to_records(index=False)

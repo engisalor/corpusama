@@ -50,7 +50,7 @@ def dataframe(
     # flatten data
     if reset_index:
         df.reset_index(drop=True, inplace=True)
-    df = df.applymap(convert.str_to_obj)
+    df = df.map(convert.str_to_obj)
     for col in df.columns:
         # logging.debug(f"column: {col}")  # for debugging
         prefix = "".join([col, separator])

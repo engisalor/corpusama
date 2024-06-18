@@ -43,21 +43,21 @@ class Prep_DF:
         for col in multi:
             df[col] = df[col].apply(convert.list_to_string)
         # remove empty lists
-        df = df.applymap(convert.empty_list_to_none)
+        df = df.map(convert.empty_list_to_none)
         # prepare singlevalue columns
         for col in single:
             df[col] = df[col].apply(convert.list_to_string_no_sep)
         # standardize nan values
         df = df.apply(convert.nan_to_none)
         # normalize
-        df = df.applymap(
+        df = df.map(
             lambda x: uninorm_4.normalize_line(x) if isinstance(x, str) else x
         )
         # replace extra whitespace
         df.replace(r"\s+", " ", regex=True, inplace=True)
         # format as XML attributes
         ids = df["id"].copy()
-        df = df.applymap(util.xml_quoteattr)
+        df = df.map(util.xml_quoteattr)
         # add doc_tag column
         _add_doc_tags(df)
         # return only id and doc_tag
