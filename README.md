@@ -2,29 +2,19 @@
 
 ## About
 
-Corpusama is a language corpus management tool. Its initial goal is to develop a semi-automated pipeline for creating corpora from the [ReliefWeb](https://reliefweb.int/) database of humanitarian texts (managed by the United Nations Office for the Coordination of Humanitarian Affairs). Corpusama has received funding from the [Humanitarian Encyclopedia](https://humanitarianencyclopedia.org/).
+Corpusama is a language corpus management tool that provides a semi-automated pipeline for creating corpora from the [ReliefWeb](https://reliefweb.int/) database of humanitarian texts (managed by the United Nations Office for the Coordination of Humanitarian Affairs).
 
-## Purpose
+The goal of building language corpora from ReliefWeb is to study humanitarian discourse: what concepts exist among actors, how their usage changes over time, what's debated about them, their practical/ideological implications, etc.
 
-The goal of building language corpora from ReliefWeb is to study humanitarian discourse: what concepts exist among actors, how their usage changes over time, what's debated about them, their practical/ideological implications, etc. While ReliefWeb reports are searchable, converting them into a tokenized and lemmatized corpus gives researchers a much more powerful way to study language.
-
-## Disclaimer
-
-Corpusama can build corpora with texts from the ReliefWeb API. [Contact ReliefWeb](https://reliefweb.int/contact) to discuss acceptable uses for your project: users are responsible for how they access and utilize ReliefWeb. This software is for nonprofit research (see Acknowledgements/Citation sections).
-
-This software is not designed to be stable for third parties: code may change without notice. It is offered to ensure the reproducibility of research and to build on previous work. Feel free to reach out if you have questions or suggestions.
+Corpusama can build corpora with texts from the ReliefWeb API. [Contact ReliefWeb](https://reliefweb.int/contact) to discuss acceptable uses for your project: users are responsible for how they access and utilize ReliefWeb. This software is for nonprofit research; it is offered to ensure the reproducibility of research and to build on previous work. Feel free to reach out if you have questions or suggestions.
 
 ## General requirements
 
-ReliefWeb is a large database with over 1 million humanitarian reports, each of which may include PDF attachments and texts in multiple languages. Upwards of **500 GB of space** may be required for managing and processing files. Downloading this data at a reasonable rate **takes weeks**. Dependencies also require several GB of space and benefit from a fast CPU/GPU.
+ReliefWeb is a large database with over 1 million humanitarian reports, each of which may include PDF attachments and texts in multiple languages. Upwards of 500 GB of space may be required for managing and processing files. Downloading this data at a reasonable rate takes weeks. Dependencies also require several GB of space and benefit from a fast CPU and GPU.
 
 ## Installation
 
-> Note: Some aspects of Corpusama work without setting up all third party software: e.g., downloading ReliefWeb API data only requires core modules. Building corpora (producing vertical files) may only require one pipeline software, e.g., FreeLing or Stanza. Examine your needs before installing everything. *Designed and tested on Linux only*.
-
-### Python dependencies
-
-Clone this repo and install dependencies in in a virtual environment.
+Clone this repo and install dependencies in in a virtual environment. These are the main packages: `pip install defusedxml pandas PyMuPDF PyYAML requests stanza`.
 
 ```bash
 python3 -m venv .venv
@@ -33,66 +23,13 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### fastText
-
->Warning: fastText installation may break, especially with Python 3.12. Manual installation or some modifications to run the binary instead may be needed.
-
-fastText is a text classifier that's used for language identification. It has a Python package that's included in `requirements.txt` but models are downloaded separately. See [their website](https://fasttext.cc/docs/en/language-identification.html) for details. This is the default configuration:
-
-```bash
-# download
-# see https://github.com/facebookresearch/fastText/releases
-unzip fastText-0.9.2.zip
-cd fastText-0.9.2
-make
-
-# get language identification model
-wget https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
-```
-
-### FreeLing
-
->Warning: like fastText, FreeLing isn't actively developed. Transitioning to Stanza is likely, although FreeLing is much faster/doesn't require a GPU.
-
-Follow FreeLing's [install from source](https://freeling-user-manual.readthedocs.io/en/latest/installation/installation-linux/) instructions. Releases are available [on GitHub](https://github.com/TALP-UPC/FreeLing/releases). After its dependencies are installed, FreeLing's installation could look like this:
-
-```bash
-wget https://github.com/TALP-UPC/FreeLing/releases/download/4.2/FreeLing-src-4.2.1.tar.gz
-wget https://github.com/TALP-UPC/FreeLing/releases/download/4.2/FreeLing-langs-src-4.2.1.tar.gz
-
-tar -xf FreeLing-src-4.2.1.tar.gz
-tar -xf FreeLing-langs-src-4.2.1.tar.gz
-
-# installs FreeLing to $CWD/.local-only
-FLINSTALL=$PWD/.local-only
-mkdir $FLINSTALL
-cd FreeLing-4.2.1
-mkdir build
-  cd build
-  cmake .. -DPYTHON3_API=ON -DCMAKE_INSTALL_PREFIX=$FLINSTALL
-  make -j 3 install # define number of processors to speed up install
-```
-
-Two files are needed to use FreeLing via Python: `pyfreeling.py` and `_pyfreeling.so`, found in `$FLINSTALL/share/freeling/APIs/python3/`. Add this directory to `$PYTHONPATH` and `$LD_LIBRARY_PATH` or just copy the two files to the root directory *and* the pipeline being used, e.g.:
-
-```bash
-# option 1: append these lines to ~/.bashrc with proper path
-export PYTHONPATH="${PYTHONPATH}:PATH/TO/CORPUSAMA/.local-only/share/freeling/APIs/python3"
-export LD_LIBRARY_PATH=PATH/TO/CORPUSAMA/.local-only/lib;PATH/TO/CORPUSAMA/.local-only/share/freeling/APIs/python3
-
-# option 2: copy files wherever needed
-DIR=$PWD/.local-only/share/freeling/APIs/python3
-cp $DIR/pyfreeling.py $PWD & cp $DIR/_pyfreeling.so $PWD
-cp $DIR/pyfreeling.py $PWD/pipeline/ske_fr/ & cp $DIR/_pyfreeling.so $PWD/pipeline/ske_fr/
-```
-
-FreeLing also requires a locale installed for each language to be used: refer to your Linux distribution.
-
 ### Stanza
 
-[Stanza](https://github.com/stanfordnlp/stanza) is a Python NLP package. Models for languages may need to be downloaded with its `download()` function if this doesn't happen automatically.
+[Stanza](https://github.com/stanfordnlp/stanza) is a Python NLP package from Stanford. Models for languages may need to be downloaded with its `download()` function if this doesn't happen automatically.
 
->Note: The Stanza-based pipeline is being rewritten as of early 2024.
+### Deprecated packages
+
+Earlier versions relied on FreeLing and fastText NLP tools. See the history of this README for old installation instructions. These tools perform better on machines without a dedicated GPU, whereas Stanza can run on a CPU but only for limited tasks.
 
 ## Configuration files
 
@@ -129,7 +66,7 @@ pdf_dir: /a/local/filepath/
 url: https://api.reliefweb.int/v1/reports?appname=<YOUR EMAIL ADDRESS>
 ```
 
-Make a secrets file for `reliefweb_2000+` or design other pairs of configuration files.
+To get started, make a secrets file for `reliefweb_2000+` or design your own configuration files.
 
 ## Usage example
 
@@ -178,71 +115,83 @@ df = corp.export_text("fr")
 # this files can be processed with a pipeline to make a vertical file
 ```
 
-### Pipelines
+### Export format
 
-Files in the `pipeline/` directory are used to complete corpus creation. Each pipeline is designed to be a standalone script that's run in bash. Execute a pipeline after exporting an XML-tagged TXT file (`reliefweb_fr.1.txt` in the above example).
-
-To process a text file, run `pipeline/run.sh` with the desired arguments.
-
-**`pipeline/run.sh` positional arguments**
-
-- *$1* the pipeline to use (corresponds to a subdirectory in `pipeline/`)
-- *$2* whether to compress the output file: either `t` (for `.vert.xz`) or `f` (for `.vert`)
-- *$3* the text file to process (can include XML tags w/ corpus structure attributes)
-
-This example uses Sketch Engine's French pipeline, which normally requires a `.gender_dict` file (see `pipeline/ske_fr/gennum_guess.py`). We'll use an empty file for now:
-
-```bash
-touch pipeline/ske_fr/frtenten17_fl2_term_ref.gender_dict
-bash pipeline/run.sh ske_fr f reliefweb_fr.1.txt
-```
-
-The output is `reliefweb_fr.1.vert`, a vertical corpus file with content that looks like this:
+The above workflow generates text files with ReliefWeb reports surrounded by `<doc>` XML tags, by default in batches of up to 10,000 reports per output file. Here is a fragment of a single report:
 
 ```xml
-<!-- the attributes for the corpus document -->
-<doc id="59033" file_id="0" country__shortname="Indonesia|Timor-Leste" date__original="2000-01-31T00:00:00+00:00" date__original__year="2000" format__name="UN Document" primary_country__shortname="Indonesia" source__name="UN Security Council" source__shortname="UN SC" source__spanish_name="El Consejo de Seguridad" source__type__name="International Organization" title="Rapport de la Commission d'enquête internationale sur le Timor Oriental adressé au Secrétaire Général" url="https://reliefweb.int/node/59033" >
-<!-- part of the first sentence -->
-<s>
-A/54/726	Z	a/54/726-m	a/54/726	Z	a/54/726	0	0
-S/2000/59	NP00000	S/2000/59-n	s/2000/59	NP00000	S/2000/59	F	S
-ASSEMBLÉE	NPFS000	ASSEMBLÉE-n	assemblée	NPFS000	ASSEMBLÉE	F	S
-GÉNÉRALE	AQ0FS00	général-j	général	AQ0FS00	général	F	S
-Cinquante-quatrième	NPCS000	Cinquante-quatrième-n	cinquante-quatrième	NPCS000	Cinquante-quatrième	F	S
-session	NCFS000	session-n	session	NCFS000	session	F	S
-Point	NPMS000	Point-n	point	NPMS000	Point	M	S
-96	Z	96-m	96	Z	96	0	0
+<doc id="302405" file_id="0" country__iso3="pse" country__shortname="oPt" date__original="2009-03-25T00:00:00+00:00" date__original__year="2009" format__name="News and Press Release" primary_country__iso3="pse" primary_country__shortname="oPt" source__name="Palestinian Centre for Human Rights" source__shortname="PCHR" source__type__name="Non-governmental Organization" theme__name="Health|Protection and Human Rights" title="OPT: PCHR appeals for action to save lives of Gaza Strip patients" url="https://reliefweb.int/node/302405" >
+The Palestinian Centre for human rights
+(PCHR) is appealing to the Ministries of Health in the Ramallah and Gaza
+Governments to take all possible measures to facilitate referrals for Gazan
+patients who need urgent medical treatment outside Gaza.
+The Centre is alarmed at the deterioration
+of patient's health following two key political decisions on healthcare
+provision. In January 2009, the Ramallah Ministry of Health (MOH) cancelled
+financial coverage for all Palestinian patients in Israeli hospitals, including
+those who in the middle of long term treatment.
+[...]
+</doc>
 ```
 
-Vertical files can be loaded into compatible corpus linguistics tools.
+Once the content of these files is inspected, they can be compressed with `xz` or a similar tool before further processing.
 
-### Batch pipeline execution
+### Pipelines
 
-To process multiple text files, try:
+Files in the `pipeline/` directory are used to complete corpus creation. The current version of Corpusama relies on the Stanza pipeline. Run `python pipeline/stanza/base_pipeline.py --help` for an overview.
+
+This has been tested on a machine with an NVIDIA 4070m GPU (8 GB). A batch size of 1024 bytes can handle most documents without memory issues, but this may be altered depending on the resources available.
+
+A complete job looks like this: `time python pipeline/stanza/base_pipeline.py -csv en MY-DOC.txt.xz`
+
+The first output format is `.conllu` (see https://universaldependencies.org/format.html). Here's a sample:
 
 ```bash
-# option 1: parallel
-# add a line for each additional file, up to the device's number of CPUs-1
-(trap 'kill 0' SIGINT; \
-bash pipeline/run.sh PIPELINE COMPRESS FILE0 &
-bash pipeline/run.sh PIPELINE COMPRESS FILE1 &
-wait)
-
-# option 2: sequential
-for file in rw/reliefweb_fr.{1..9}.txt; do
-    echo start ${file}
-    $(bash pipeline/run.sh ske_fr t ${file})
-    echo done ${file}
-done
+# newdoc
+# id = 302405
+# file_id = 0
+# country__iso3 = pse
+# country__shortname = oPt
+# date__original = 2009-03-25T00:00:00+00:00
+# date__original__year = 2009
+# format__name = News and Press Release
+# primary_country__iso3 = pse
+# primary_country__shortname = oPt
+# source__name = Palestinian Centre for Human Rights
+# source__shortname = PCHR
+# source__type__name = Non-governmental Organization
+# theme__name = Health|Protection and Human Rights
+# title = OPT: PCHR appeals for action to save lives of Gaza Strip patients
+# url = https://reliefweb.int/node/302405
+# text = The Palestinian Centre for human rights (PCHR) is appealing to the Ministries of Health in the Ramallah and Gaza Governments to take all possible measures to facilitate referrals for Gazan patients who need urgent medical treatment outside Gaza.
+# sent_id = 0
+1	The	the	DET	DT	Definite=Def|PronType=Art	3	det	_	start_char=0|end_char=3
+2	Palestinian	Palestinian	ADJ	NNP	Degree=Pos	3	amod	_	start_char=4|end_char=15
+3	Centre	Centre	PROPN	NNP	Number=Sing	11	nsubj	_	start_char=16|end_char=22
+[...]
 ```
 
-### Designing pipelines
+The `--ske` flag also converts the CoNLLU files into a vertical format recognized by [Sketch Engine](https://www.sketchengine.eu/my_keywords/conll-format/).
 
-Pipelines can be modified as needed. For convenience, execution is managed with `pipeline/run.sh`. This script finds and executes a chain of commands, e.g. `pipeline/ske_fr/freeling_french_v3.sh`, all of which can be modified. This depends on the software being used (FreeLing, Stanza, ...) and requires understanding all the technical aspects of corpus creation.
+```xml
+<doc id="302405" file_id="0" country__iso3="pse" country__shortname="oPt" date__original="2009-03-25T00:00:00+00:00" date__original__year="2009" format__name="News and Press Release" primary_country__iso3="pse" primary_country__shortname="oPt" source__name="Palestinian Centre for Human Rights" source__shortname="PCHR" source__type__name="Non-governmental Organization" theme__name="Health|Protection and Human Rights" title="OPT: PCHR appeals for action to save lives of Gaza Strip patients" url="https://reliefweb.int/node/302405">
+<s id="0">
+1	The	the	DET	DT	Definite=Def|PronType=Art	3	det	_	start_char=0|end_char=3
+2	Palestinian	Palestinian	ADJ	NNP	Degree=Pos	3	amod	_	start_char=4|end_char=15
+3	Centre	Centre	PROPN	NNP	Number=Sing	11	nsubj	_	start_char=16|end_char=22
+```
 
-### Using corpora
+Inspect the output files and compress them with `xz`. The TXT, CoNLLU and vertical formats have their own use cases for NLP tasks. See `base_pipeline.py` for details or making modifications. Viewing the corpus (e.g., in Sketch Engine) also requires making a corpus [configuration file](https://www.sketchengine.eu/documentation/corpus-configuration-file-all-features/) and other steps beyond this introduction.
 
-After 1) building a database with `corpusama`, 2) exporting the texts for a language to TXT files, and 3) running these files through a pipeline, the resulting `.vert.xz` files make up a completed corpus. Viewing the corpus (e.g., in Sketch Engine) also requires making a corpus [configuration file](https://www.sketchengine.eu/documentation/corpus-configuration-file-all-features/) and other steps beyond this introduction.
+Generating and verifying checksums is also recommended for sharing and versioning:
+
+```bash
+# generate
+sha256sum reliefweb* > hashes.txt
+
+# verify
+sha265sum -c hashes.txt
+```
 
 ## Acknowledgements
 
@@ -256,7 +205,7 @@ Other attributions are indicated in individual files. [NoSketch Engine](https://
 
 ## Citation
 
-Please cite the paper below. `CITATION.cff` can be used if citing the software directly.
+Please consider citing the papers below. `CITATION.cff` can be used if citing the software directly.
 
 ```bibtex
 @inproceedings{isaacs_humanitarian_2023,
@@ -269,5 +218,25 @@ Please cite the paper below. `CITATION.cff` can be used if citing the software d
 	author = {Isaacs, Loryn},
 	editor = {Medveď, Marek and Měchura, Michal and Kosem, Iztok and Kallas, Jelena and Tiberius, Carole and Jakubíček, Miloš},
 	date = {2023}
+}
+
+@inproceedings{isaacs-etal-2024-humanitarian-corpora,
+    title = "Humanitarian Corpora for {E}nglish, {F}rench and {S}panish",
+    author = "Isaacs, Loryn  and
+      Chamb{\'o}, Santiago  and
+      Le{\'o}n-Ara{\'u}z, Pilar",
+    editor = "Calzolari, Nicoletta  and
+      Kan, Min-Yen  and
+      Hoste, Veronique  and
+      Lenci, Alessandro  and
+      Sakti, Sakriani  and
+      Xue, Nianwen",
+    booktitle = "Proceedings of the 2024 Joint International Conference on Computational Linguistics, Language Resources and Evaluation (LREC-COLING 2024)",
+    month = may,
+    year = "2024",
+    location = "Torino, Italia",
+    publisher = "ELRA and ICCL",
+    url = "https://aclanthology.org/2024.lrec-main.738",
+    pages = "8418--8426",
 }
 ```
