@@ -69,9 +69,10 @@ def conll_to_vert(file: str) -> None:
                     if re.match(r"\d+-\d+", line):
                         ids = [int(x) for x in line.split("\t")[0].split("-")]
                         mwt_ids = [str(x) for x in range(ids[0], ids[1] + 1)]
+                        mwt_ids_len = int(mwt_ids[-1])
                     if mwt_ids:
                         id = re.match(r"\d+", line).group()
-                        if id in mwt_ids:
+                        if id in mwt_ids and len(mwt_parts) < mwt_ids_len:
                             mwt_parts.append([x.strip() for x in line.split("\t")])
                         else:
                             new = list(
