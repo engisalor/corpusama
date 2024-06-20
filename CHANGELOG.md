@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.3.0](https://github.com/engisalor/corpusama/compare/v0.2.2...v0.3.0) (2024-06-20)
+
+
+### Features
+
+* redo stanza pipeline ([070f60a](https://github.com/engisalor/corpusama/commit/070f60a5ef7300d7abe5ae214ad8a91b844b1c5f))
+* use stanza, deprecated fasttext for langid ([2e2d5e5](https://github.com/engisalor/corpusama/commit/2e2d5e5203b44afc1d9e0d99cb5e00a0f1ee84cb))
+* working stanza pipeline ([aa52528](https://github.com/engisalor/corpusama/commit/aa525287e78fb1e051d5ecfa29b0867bb2edaa0f))
+
+
+### Bug Fixes
+
+* add mupdf exception for pdf extraction ([5f51358](https://github.com/engisalor/corpusama/commit/5f513583de0e5873306b1d715121ac9ae4395b98))
+* conll to vert fix mwt handling ([6731d04](https://github.com/engisalor/corpusama/commit/6731d04318029b24b0f9d4300800583cd121d122))
+* improve stanza pipeline ([e84e8bf](https://github.com/engisalor/corpusama/commit/e84e8bffa2b56fd0571fe227a4e61fca0ac86c21))
+* reduce export_text chunksize to 10000 ([caac056](https://github.com/engisalor/corpusama/commit/caac0560dcc3fef8daa214999c0295a940e93444))
+* remove old stanza pipeline ([86a77d1](https://github.com/engisalor/corpusama/commit/86a77d16ed74d6cdc8bd5414f7e9f574b211246e))
+* update df.applymap to df.map ([2a5393f](https://github.com/engisalor/corpusama/commit/2a5393f652918b8214848907493c101c5fb90a34))
+* update gitignore ([60ca73b](https://github.com/engisalor/corpusama/commit/60ca73b6722c44645a7c76fd7dcd426f0a98ad7a))
+* update pd.Timestamp format ([f00606e](https://github.com/engisalor/corpusama/commit/f00606e9f03e01e65da978d8097dcf62ff1ba0cf))
+* wip redo stanza pipeline ([aa681b3](https://github.com/engisalor/corpusama/commit/aa681b31dbf69d85e27322692d76315d3b19e9eb))
+
+
+### Documentation
+
+* fix docstring ([fc43853](https://github.com/engisalor/corpusama/commit/fc438531ba89633617e8ba418a9d942a31cb7305))
+* update main deps ([aad5949](https://github.com/engisalor/corpusama/commit/aad5949b0c005bfea3a62cbbb290320efd3f3e61))
+* update readme ([5657223](https://github.com/engisalor/corpusama/commit/5657223ac1b8eb78be2ea356ad93c113a6a593cd))
+* update readme ([b35e30c](https://github.com/engisalor/corpusama/commit/b35e30c21b4e55a536cea2562b869e36bd69188a))
+* update readme ([fd0cc1f](https://github.com/engisalor/corpusama/commit/fd0cc1fa5efcafc0a0bb55d54742e83b71ffdf4a))
+
 ## [0.2.2](https://github.com/engisalor/corpusama/compare/v0.2.1...v0.2.2) (2023-09-16)
 
 
