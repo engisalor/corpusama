@@ -14,7 +14,7 @@ ReliefWeb is a large database with over 1 million humanitarian reports, each of 
 
 ## Installation
 
-Clone this repo and install dependencies in in a virtual environment. These are the main packages: `pip install defusedxml pandas PyMuPDF PyYAML requests stanza`.
+Clone this repo and install dependencies in in a virtual environment. These are the main packages: `pip install defusedxml nltk pandas PyMuPDF PyYAML requests stanza`.
 
 ```bash
 python3 -m venv .venv
