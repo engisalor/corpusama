@@ -138,11 +138,21 @@ Once the content of these files is inspected, they can be compressed with `xz` o
 
 ### Pipelines
 
-Files in the `pipeline/` directory are used to complete corpus creation. The current version of Corpusama relies on the Stanza pipeline. Run `python pipeline/stanza/base_pipeline.py --help` for an overview.
+Files in the `pipeline/` directory are used to complete corpus creation. The current version of Corpusama relies on the Stanza pipeline. Run `python pipeline/stanza/base_pipeline.py --help` for an overview. This has been tested with an NVIDIA 4070m GPU (8 GB). Also adjust the arguments below in `stanza.Pipeline` when fine-tuning memory management:
 
-This has been tested on a machine with an NVIDIA 4070m GPU (8 GB). A batch size of 1024 bytes can handle most documents without memory issues, but this may be altered depending on the resources available.
+```py
+self.nlp = stanza.Pipeline(
+    tokenize_batch_size=32,   #  Stanza default=32
+    mwt_batch_size=50,        #  Stanza default=50
+    pos_batch_size=100,       #  Stanza default=5000
+    lemma_batch_size=50,      #  Stanza default=50
+    depparse_batch_size=5000, #  Stanza default=5000
+)
+```
 
-A complete job looks like this: `time python pipeline/stanza/base_pipeline.py -csv en MY-DOC.txt.xz`
+If possible, the dependency parsing batch size should be "set larger than the number of words in the longest sentence in your input document" ([see documentation](https://stanfordnlp.github.io/stanza/neural_pipeline.html)).
+
+A complete job looks like this: `time python pipeline/stanza/base_pipeline.py -csuwvV en fileName.txt.xz`
 
 The first output format is `.conllu` (see https://universaldependencies.org/format.html). Here's a sample:
 
@@ -190,7 +200,7 @@ Generating and verifying checksums is also recommended for sharing and versionin
 sha256sum reliefweb* > hashes.txt
 
 # verify
-sha265sum -c hashes.txt
+sha256sum -c hashes.txt
 ```
 
 ## Acknowledgements
