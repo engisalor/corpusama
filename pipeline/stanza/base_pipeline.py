@@ -1,18 +1,20 @@
-"""A pipeline to process texts with Stanza and output a SkE-conll format.
+"""A pipeline to process texts with Stanza.
 
-`SkE-conll` here refers to a format used by Sketch Engine based on conll. Primary
-differences include reshaping `# key = value` comments into XML attributes; collapsing
-multiword-terms (e.g., `del` in Spanish) from multiple lines in conll to one in SkE).
+Produces CoNLLU-formatted output and converts this to be compatible with Sketch Engine.
 
-On SkE's SkE-conll format, see:
-    https://www.sketchengine.eu/documentation/building-sketches-from-parsed-corpora
-
-On CONLL-U format, see:
+On CONLL-U, see:
     https://universaldependencies.org/format.html
 
-Notes:
-    `uninorm` module from Unitok: Michelfeit et al., 2014; Rychlý & Špalek, 2022.
+On Sketch Engine's CoNNL-based format, see:
+    https://www.sketchengine.eu/documentation/building-sketches-from-parsed-corpora
+
+Optionally normalizes text with `uninorm`, see:
+    Unitok: Michelfeit et al., 2014; Rychlý & Špalek, 2022.
     License and code available at <https://corpus.tools/wiki/Unitok>.
+
+Designed for use with ReliefWeb texts processed with Corpusama. One or more texts can
+be supplied in a file, with each text surrounded by `<doc>` XML tags. See README for
+examples.
 """
 
 import argparse
@@ -30,8 +32,7 @@ from xml.sax.saxutils import quoteattr  # nosec
 import stanza
 import uninorm_4 as uninorm
 from defusedxml.ElementTree import fromstring
-from nltk import download as nltk_download
-from nltk import sent_tokenize
+from nltk import download, sent_tokenize
 from numpy import array_split
 from stanza import DownloadMethod
 from stanza.utils.conll import CoNLL
@@ -80,8 +81,8 @@ def clean_text(text: str) -> str:
     return "".join(lines)
 
 
-def splice_mwt_lines(mwt_parts):
-    """Splice multiword term CoNLLU lines into a Sketch Engine compatible format."""
+def splice_mwt_lines(mwt_parts: list) -> str:
+    """Splices multiword term CoNLLU lines into a Sketch Engine-compatible format."""
     old = list(
         map(
             ",".join,
@@ -95,7 +96,7 @@ def splice_mwt_lines(mwt_parts):
 
 
 def conll_to_vert(file: str) -> None:
-    """Converts a `.conll` file to a SkE-compatible vertical format."""
+    """Converts a `.conllu` file to a SkE-compatible vertical format."""
     source = Path(file)
     dest = source.with_suffix(".vert")
     dest.unlink(missing_ok=True)
@@ -170,7 +171,7 @@ def conll_to_vert(file: str) -> None:
                 else:
                     # sanity check
                     if line.strip():
-                        raise ValueError(f"unused non-empty line: {line}")
+                        raise ValueError(f"unused non-empty line - {i} - {line}")
                     # write any trailing mwt group
                     if mwt_ids:
                         spliced = splice_mwt_lines(mwt_parts)
@@ -209,7 +210,11 @@ class NLP:
                 + "\n"
             )
 
-        if _bytes > self.big:
+        if _bytes < self.big:
+            logging.debug(f"{self.n} - neural - {id}/{file_id}")
+            doc = self.nlp.process(doc)
+            CoNLL.write_doc2conll(doc, self.dest, "a")
+        else:
             doc = sent_tokenize(doc, self.nltk_lang)
             logging.debug(f"{self.n} - split - {id}/{file_id}")
             n_chunks = ceil(_bytes / self.chunk)
@@ -233,19 +238,14 @@ class NLP:
                             mini_chunk = ["\n".join(x) for x in mini_array]
                             mini_docs = self.nlp.bulk_process(mini_chunk)
                             for doc in mini_docs:
-                                CoNLL.write_doc2conll(d, self.dest, "a")
-                            m = (
+                                CoNLL.write_doc2conll(doc, self.dest, "a")
+                            logging.debug(
                                 f"{self.n} - big chunk - force split - first 100 chars"
-                                + " - {repr(mini_chunk[0][:100])}"
+                                + f" - {repr(mini_chunk[0][:100])}"
                             )
-                            logging.debug(m)
                         else:
                             doc = self.nlp.process(unit)
                             CoNLL.write_doc2conll(doc, self.dest, "a")
-        else:
-            logging.debug(f"{self.n} - neural - {id}/{file_id}")
-            doc = self.nlp.process(doc)
-            CoNLL.write_doc2conll(doc, self.dest, "a")
 
         t1 = perf_counter()
         secs = t1 - t0
@@ -254,7 +254,7 @@ class NLP:
         self.doc = ""
         self.n += 1
 
-    def _process_file(self, f):
+    def _process_file(self, f) -> None:
         for i, line in enumerate(f):
             if line.startswith('<doc id="'):
                 self.meta = line
@@ -266,8 +266,8 @@ class NLP:
         if self.doc:
             self._to_conll_inner()
 
-    def start_nlp(self):
-        nltk_download("punkt", quiet=True)
+    def start_nlp(self) -> None:
+        download("punkt", quiet=True)
         self.nlp = stanza.Pipeline(
             self.language,
             processors=self.processors,
@@ -356,7 +356,7 @@ class NLP:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Process some integers.")
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--environ",
         nargs="*",
@@ -366,7 +366,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--nlp",
         default="tokenize,mwt,pos,lemma,depparse",
-        help="Stanza processors, e.g. `tokenize,mwt,pos,lemma,depparse`",
+        help="Stanza processors (default `tokenize,mwt,pos,lemma,depparse`)",
     )
     parser.add_argument(
         "--big",
@@ -393,13 +393,16 @@ if __name__ == "__main__":
         "-c",
         "--conll",
         action="store_true",
-        help="Run the pipeline and output .conllu files",
+        help="Run the pipeline and output `.conllu` files",
     )
     parser.add_argument(
-        "-s", "--ske", action="store_true", help="Language code for Stanza, e.g. `en`"
+        "-s",
+        "--ske",
+        action="store_true",
+        help="Convert `.conllu` output to Sketch Engine `.vert`",
     )
     parser.add_argument(
-        "-u", "--uninorm", action="store_true", help="Clean docs with uninorm"
+        "-u", "--uninorm", action="store_true", help="Clean docs with `uninorm`"
     )
     parser.add_argument(
         "-w", "--wrap", action="store_true", help="Remove hyphens in line-wrapped words"
@@ -412,7 +415,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("-V", "--verbose", action="store_true", help="Verbose logging")
     parser.add_argument("-D", "--debug", action="store_true", help="Debug logging")
-
     parser.add_argument("lang", help="Language code for Stanza, e.g. `en`")
     parser.add_argument("file", nargs="+", help="Text file(s) to process")
     args = parser.parse_args()
