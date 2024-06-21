@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/engisalor/corpusama/compare/v0.3.0...v0.3.1) (2024-06-21)
+
+
+### Bug Fixes
+
+* stanza pipeline fix bad var name, refactor ([a43c170](https://github.com/engisalor/corpusama/commit/a43c1706e444997014ab4a2af5027309eab65398))
+
 ## [0.3.0](https://github.com/engisalor/corpusama/compare/v0.2.2...v0.3.0) (2024-06-20)
 
 
