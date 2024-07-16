@@ -150,7 +150,7 @@ self.nlp = stanza.Pipeline(
 )
 ```
 
-If possible, the dependency parsing batch size should be "set larger than the number of words in the longest sentence in your input document" ([see documentation](https://stanfordnlp.github.io/stanza/neural_pipeline.html)).
+If possible, the dependency parsing batch size should be "set larger than the number of words in the longest sentence in your input document" ([see documentation](https://stanfordnlp.github.io/stanza/neural_pipeline.html)). Managing memory issues in the GPU-based Stanza pipeline may be necessary. See `error_corrections.md` for a list of steps taken to build the corpora with an Nvidia 4070.
 
 A complete job looks like this: `time python pipeline/stanza/base_pipeline.py -csuwvV en fileName.txt.xz`
 
@@ -202,6 +202,13 @@ sha256sum reliefweb* > hashes.txt
 # verify
 sha256sum -c hashes.txt
 ```
+
+## Resources
+
+- [Stanza Treebanks](https://stanfordnlp.github.io/stanza/performance.html)
+- [Universal Dependencies](https://universaldependencies.org/)
+- [Ancora treebank documentation (Spanish pipeline)](https://clic.ub.edu/corpus/en/documentation)
+- [Penn treebank tagset (English pipeline)](https://www.sketchengine.eu/penn-treebank-tagset/)
 
 ## Acknowledgements
 
