@@ -1,0 +1,180 @@
+CORPUS "rw_fr23"
+DEFAULTATTR "word"
+DOCSTRUCTURE "doc"
+ENCODING "UTF-8"
+INFO "French ReliefWeb reports 2000-2023 (Corpusama v0.3.1)."
+INFOHREF "https://github.com/engisalor/corpusama"
+LANGUAGE "French"
+MAINTAINER "github.com/engisalor"
+NAME "ReliefWeb French 2023 (rw_fr23)"
+PATH "/corpora/rw_fr23/indexed/"
+SUBCBASE "/corpora/rw_fr23/indexed/subcorp"
+SUBCDEF "/corpora/registry_subcorp/rw_subcorp"
+SUBCORPATTRS "doc.country__shortname,doc.disaster__glide,doc.disaster__name,doc.disaster_type__name,doc.format__name,doc.primary_country__shortname,doc.source__name,doc.source__type__name,doc.theme__name,doc.date__original__year"
+TAGSETDOC "https://universaldependencies.org/treebanks/fr_gsd/index.html"
+VERTICAL "| for FILE in $(find /corpora/rw_fr23/vertical -maxdepth 1 -name *.vert.xz | sort); do xzcat $FILE; done;"
+
+ATTRIBUTE "id" {
+    MULTISEP ","
+    MULTIVALUE "y"
+}
+ATTRIBUTE "word" {
+    MAPTO "lemma"
+}
+ATTRIBUTE "lemma" {
+    MULTISEP ","
+    MULTIVALUE "y"
+}
+ATTRIBUTE "upos" {
+        MULTISEP ","
+        MULTIVALUE "y"
+}
+ATTRIBUTE "xpos" {
+        MULTISEP ","
+        MULTIVALUE "y"
+}
+ATTRIBUTE "feats" {
+        MULTISEP "|"
+        MULTIVALUE "y"
+}
+ATTRIBUTE "head" {
+        MULTISEP ","
+        MULTIVALUE "y"
+}
+ATTRIBUTE "deprel" {
+        MULTISEP ","
+        MULTIVALUE "y"
+}
+ATTRIBUTE "lc" {
+    ARG1 "C"
+    DYNAMIC "utf8lowercase"
+    DYNLIB "internal"
+    DYNTYPE "freq"
+    FROMATTR "word"
+    FUNTYPE "s"
+	LABEL "word (lowercase)"
+    TRANSQUERY "yes"
+}
+ATTRIBUTE "lemma_lc" {
+    ARG1 "C"
+    DYNAMIC "utf8lowercase"
+    DYNLIB "internal"
+    DYNTYPE "freq"
+    FROMATTR "lemma"
+    FUNTYPE "s"
+    LABEL "lemma (lowercase)"
+    TRANSQUERY "yes"
+}
+STRUCTURE "s" {
+	ENCODING "UTF-8"
+    ATTRIBUTE "id" {
+    }
+}
+STRUCTURE "doc" {
+    DEFAULTLOCALE "C"
+    ENCODING "UTF-8"
+    LANGUAGE ""
+    NESTED ""
+	ATTRIBUTE "country__iso3" {
+		MULTIVALUE "1"
+		DYNTYPE "freq"
+		MULTISEP "|"
+		LABEL "Country ISO"
+		}
+	ATTRIBUTE "country__shortname" {
+		MULTIVALUE "1"
+		DYNTYPE "freq"
+		MULTISEP "|"
+		LABEL "Country"
+		}
+	ATTRIBUTE "date__original" {
+		DYNTYPE "freq"
+		LABEL "Timestamp"
+		}
+	ATTRIBUTE "date__original__year" {
+		DYNTYPE "freq"
+		LABEL "Year"
+		}
+	ATTRIBUTE "disaster__glide" {
+		MULTIVALUE "1"
+		DYNTYPE "freq"
+		MULTISEP "|"
+		LABEL "Disaster GLIDE"
+		}
+	ATTRIBUTE "disaster__name" {
+		MULTIVALUE "1"
+		DYNTYPE "freq"
+		MULTISEP "|"
+		LABEL "Disaster name"
+		}
+	ATTRIBUTE "disaster_type__name" {
+		MULTIVALUE "1"
+		DYNTYPE "freq"
+		MULTISEP "|"
+		LABEL "Disaster type"
+		}
+	ATTRIBUTE "file_id" {
+		DYNTYPE "freq"
+		LABEL "File ID"
+		}
+	ATTRIBUTE "format__name" {
+		MULTIVALUE "1"
+		DYNTYPE "freq"
+		MULTISEP "|"
+		LABEL "Format"
+		}
+	ATTRIBUTE "id" {
+		DYNTYPE "freq"
+		LABEL "Report ID"
+		}
+	ATTRIBUTE "primary_country__iso3" {
+		MULTIVALUE "1"
+		DYNTYPE "freq"
+		MULTISEP "|"
+		LABEL "Primary country ISO"
+		}
+	ATTRIBUTE "primary_country__shortname" {
+		MULTIVALUE "1"
+		DYNTYPE "freq"
+		MULTISEP "|"
+		LABEL "Primary country"
+		}
+	ATTRIBUTE "source__name" {
+		MULTIVALUE "1"
+		DYNTYPE "freq"
+		MULTISEP "|"
+		LABEL "Source (full)"
+		}
+	ATTRIBUTE "source__shortname" {
+		MULTIVALUE "1"
+		DYNTYPE "freq"
+		MULTISEP "|"
+		LABEL "Source (short)"
+		}
+	ATTRIBUTE "source__spanish_name" {
+		MULTIVALUE "1"
+		DYNTYPE "freq"
+		MULTISEP "|"
+		LABEL "Source (ES)"
+		}
+	ATTRIBUTE "source__type__name" {
+		MULTIVALUE "1"
+		DYNTYPE "freq"
+		MULTISEP "|"
+		LABEL "Source type"
+		}
+	ATTRIBUTE "theme__name" {
+		MULTIVALUE "1"
+		DYNTYPE "freq"
+		MULTISEP "|"
+		LABEL "Theme"
+		}
+	ATTRIBUTE "title" {
+		DYNTYPE "freq"
+		LABEL "Report title"
+		}
+	ATTRIBUTE "url" {
+		DYNTYPE "freq"
+		LABEL "Report URL"
+		}
+}
