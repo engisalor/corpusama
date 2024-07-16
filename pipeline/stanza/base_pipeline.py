@@ -74,10 +74,10 @@ def wrap_lines(match, hunspell: bool = False, dictionaries="en_US,es_ES,fr_FR"):
         return match.group()
 
 
-def clean_text(text: str) -> str:
+def clean_text(text: str, keep_empty=False) -> str:
     """Cleans texts to prepare for passing to an NLP pipeline."""
     lines = text.split("\n")
-    lines = [uninorm.normalize_line(x) for x in lines]
+    lines = [uninorm.normalize_line(x, keep_empty=keep_empty) for x in lines]
     return "".join(lines)
 
 
