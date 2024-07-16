@@ -385,9 +385,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--force",
         type=int,
-        default=10,
+        default=8,
         help="""Largest multiple of chunksize allowed before forcing
-        smaller sentence segmentation (default `10`, e.g., `10*chunk` bytes)""",
+        smaller sentence segmentation (default `8`, e.g., `8*chunk` bytes)""",
     )
     parser.add_argument(
         "-c",
