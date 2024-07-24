@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.2](https://github.com/engisalor/corpusama/compare/v0.3.1...v0.3.2) (2024-07-24)
+
+
+### Bug Fixes
+
+* add corpus config files ([81bf898](https://github.com/engisalor/corpusama/commit/81bf8985ac3312314ee55085e81743bd9bd73c67))
+* add keep_empty to st clean_text ([398a371](https://github.com/engisalor/corpusama/commit/398a3716e11f377e492822663bf61fe97dc9ba59))
+* reduce f default from 10 to 8 amended ([28d9210](https://github.com/engisalor/corpusama/commit/28d92103fb5365ad44c4775e3370823b64f90a47))
+
+
+### Documentation
+
+* update readme, add error_corrections ([4b05eea](https://github.com/engisalor/corpusama/commit/4b05eeadbcf978672ea3ee68631a845ca96e4aab))
+
 ## [0.3.1](https://github.com/engisalor/corpusama/compare/v0.3.0...v0.3.1) (2024-06-21)
 
 
