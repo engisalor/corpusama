@@ -181,7 +181,7 @@ def conll_to_vert(file: str) -> None:
                     # end sentence tag
                     d.write("</s>")
             # end document tag
-            d.write("\n</doc>")
+            d.write("\n</doc>\n")
 
 
 class NLP:
