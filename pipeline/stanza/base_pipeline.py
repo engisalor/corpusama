@@ -429,7 +429,7 @@ class NLP:
             self._to_conll_inner()
 
     def start_nlp(self) -> None:
-        download("punkt", quiet=True)
+        download("punkt_tab", quiet=True)
         self.nlp = stanza.Pipeline(
             self.lang,
             processors=self.processors,
