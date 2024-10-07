@@ -29,7 +29,10 @@ pyfreeling.py
 # Secrets
 *.secret.yml
 
-# generated files
+# Generated files
 *.go
 *.conllu
 restats
+
+# Test
+!test/test_pipeline/files/rw_en.txt

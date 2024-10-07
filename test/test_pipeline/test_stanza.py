@@ -1,5 +1,6 @@
 import lzma
 import re
+import shutil
 import unittest
 from hashlib import blake2b
 from pathlib import Path
@@ -7,6 +8,9 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from pipeline.stanza import base_pipeline
+
+# NOTE rw_en.ttx.conllu.REF has only one \n at EOF to pass pre-commit reqs.
+# By default conllu files produces \n\n: tests must ignore this difference.
 
 
 def file_hash(file):
@@ -52,8 +56,8 @@ class TestConllToVert(unittest.TestCase):
         """Compares file hashes. Use diff on out & ref if assertEqual fails.
 
         <doc id="EN test cases">:
-        - <s id="0"> `can't` (middle, hypen)
-        - <s id="1"> `cannot` (no hypen)
+        - <s id="0"> `can't` (middle, hyphen)
+        - <s id="1"> `cannot` (no hyphen)
         - <s id="2"> `families'` (start, end, plural possessive)
         - <s id="3"> `Stakeholders'` (start, preceded by mwt w/ same positions 1-2)
         - <s id="4"> `Girl's` (singular possessive)
@@ -134,6 +138,60 @@ class TestConllToVert(unittest.TestCase):
         self.assertTrue("already exists" in str(result4.exception))
         out.unlink(missing_ok=True)
         out_xz.unlink(missing_ok=True)
+
+
+class TestToConll(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.runner = CliRunner()
+        cls.file_original = Path("test/test_pipeline/files/rw_en.txt")
+        cls.file = Path("test/test_pipeline/files/rw_en_temp.txt")
+        shutil.copy(cls.file_original, cls.file)
+
+    # @classmethod
+    # def tearDownClass(cls) -> None:
+    #     tmp_files = Path("test/test_pipeline/files").glob("*_temp.*")
+    #     for file in tmp_files:
+    #         file.unlink()
+
+    def test_to_conll(self):
+        out = self.file.with_suffix(".txt.conllu")
+        ref_file = self.file_original.with_suffix(".txt.conllu.REF")
+
+        with open(ref_file) as f:
+            ref_lines = f.readlines()
+
+        result = self.runner.invoke(
+            base_pipeline.to_conll, [str(self.file), "--lang", "en"]
+        )
+        self.assertTrue(result.exit_code == 0)
+
+        with open(out) as f:
+            out_lines = f.readlines()
+
+        self.assertListEqual(ref_lines[:18], out_lines[:18])
+
+    def test_to_conll_from_xz(self):
+        file_xz = self.file.with_suffix(".txt.xz")
+        with open(self.file) as source:
+            with lzma.open(file_xz, "w") as o:
+                o.write(source.read().encode())
+
+        out = self.file.with_suffix(".txt.xz.conllu")
+        ref_file = self.file_original.with_suffix(".txt.conllu.REF")
+
+        with open(ref_file) as f:
+            ref_lines = f.readlines()
+
+        result = self.runner.invoke(
+            base_pipeline.to_conll, [str(file_xz), "--lang", "en"]
+        )
+        self.assertTrue(result.exit_code == 0)
+
+        with open(out) as f:
+            out_lines = f.readlines()
+
+        self.assertListEqual(ref_lines[:18], out_lines[:18])
 
 
 if __name__ == "__main__":
