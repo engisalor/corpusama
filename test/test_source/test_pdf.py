@@ -40,7 +40,7 @@ class TestPDF(unittest.TestCase):
 
     def test_try_extract(self):
         # raises an error
-        with self.assertRaises(fitz.fitz.FileDataError):
+        with self.assertRaises(fitz.FileDataError):
             pdf.extract_text("test/test_source/sample-corrupt.pdf", True)
         # shouldn't raise an error
         pdf._try_extract("test/test_source/sample-corrupt.pdf", True)

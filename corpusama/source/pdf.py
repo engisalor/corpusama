@@ -1,4 +1,5 @@
 """A module for managing PDF content."""
+
 import logging
 import pathlib
 import re
@@ -100,7 +101,7 @@ def _try_extract(file: str, clean: bool, n: int = 0) -> None:
         text = extract_text(file, clean)
         with open(file.with_suffix(".txt"), "w") as f:
             f.write(text)
-    except (fitz.fitz.FileDataError, RuntimeError, fitz.mupdf.FzErrorFormat) as e:
+    except (fitz.FileDataError, RuntimeError, fitz.mupdf.FzErrorFormat) as e:
         logger.warning(f"{n} - {file} - {e}")
 
 
