@@ -59,6 +59,7 @@ class Test_ReliefWeb(unittest.TestCase):
         self.job._offset()
         self.assertEqual(self.job.config.get("parameters").get("offset"), 10)
 
+    @unittest.skip("Disabled due to loss of example files: TODO regenerate them.")
     def test_inserted_values_match_source(self):
         """Tests that API data has identical columns before and after insertion.
 
