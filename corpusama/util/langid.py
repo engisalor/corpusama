@@ -39,15 +39,16 @@ Example:
 
     ```
 """
+
 import functools
 import logging
 import pathlib
 import random
 import string
 from logging.handlers import TimedRotatingFileHandler
+from math import ceil
 from time import perf_counter
 from typing import Callable
-from math import ceil
 
 # import fasttext
 import numpy as np
@@ -131,7 +132,7 @@ def sample_lines(
         return list(clean)[:sample_size]
 
 
-def _get_lines(s: str, is_file: bool, sample_kwargs: dict) -> list|dict:
+def _get_lines(s: str, is_file: bool, sample_kwargs: dict) -> list | dict:
     """Opens a file and runs sample_lines(): logs a warning if there's no content.
 
     Args:
@@ -217,7 +218,11 @@ def _sort_lines(lines: list, sample_kwargs: dict) -> dict:
 
 @_li_wrapper
 def identify_stanza(
-    s: str, is_file: bool, sample_kwargs: dict, nlp: stanza.Pipeline, chunksize: int = 1000000
+    s: str,
+    is_file: bool,
+    sample_kwargs: dict,
+    nlp: stanza.Pipeline,
+    chunksize: int = 1000000,
 ) -> dict:
     """Runs Stanza LI on `s`, returns a dict with results.
 
@@ -235,21 +240,22 @@ def identify_stanza(
     size = len("".join(sample).encode("utf8"))
     chunks = 1
     if size > chunksize:
-        chunks = ceil(size/chunksize) # 2903051 breaks at this size
+        chunks = ceil(size / chunksize)  # 2903051 breaks at this size
         logging.info(f"split {size} bytes into {chunks} chunks")
-    
+
     def _inner(batch) -> None:
         dt = _sort_lines(batch, sample_kwargs)
         docs = [stanza.Document([], text=t) for t in dt["long"]]
         nlp(docs)
         results["langs"].extend([doc.lang for doc in docs] + dt["langs_short"])
-        results["bytes"].extend([len(x.encode("utf8")) for x in dt["long"]] + dt["bytes_short"])
+        results["bytes"].extend(
+            [len(x.encode("utf8")) for x in dt["long"]] + dt["bytes_short"]
+        )
 
     for batch in np.array_split(sample, chunks):
         _inner(batch)
 
     return results
-
 
 
 @_li_wrapper
@@ -337,7 +343,7 @@ def identify(
     s: str | list,
     sample_kwargs: dict,
     nlp: stanza.Pipeline | None,
-    model: None ,# fasttext.FastText._FastText | None,
+    model: None,  # fasttext.FastText._FastText | None,
     threshold: float = 0.6,
     columns: list = li_columns,
     is_file: bool = True,
@@ -378,7 +384,7 @@ def identify(
     df.drop(df[df["tool"].isna()].index, inplace=True)
     t1 = perf_counter()
     t = round(t1 - t0, 2)
-    logging.info(f"... {round(t,3)}s - {round(t/len(df), 2)}s / text")
+    logging.info(f"... {round(t, 3)}s - {round(t/len(df), 2)}s / text")
     return df.reset_index(drop=True)
 
 
@@ -400,7 +406,7 @@ def _is_l1(dt: dict, lang: str) -> bool:
         lang: 2-3 letter ISO of a language to detect.
     """
     if not dt or not isinstance(dt, dict):
-        return np.NaN
+        return np.nan
     top = list(dt.keys())[list(dt.values()).index(max(dt.values()))]
     return lang == top
 
@@ -412,7 +418,7 @@ def _multiling(dt: dict) -> bool:
         dt: A dictionary of LI results, e.g., from `identify_stanza()`.
     """
     if not dt or not isinstance(dt, dict):
-        return np.NaN
+        return np.nan
     return len([x for x in dt.keys() if x not in ["unknown", "short"]]) > 1
 
 
@@ -423,7 +429,7 @@ def _l1(dt: dict) -> str:
         dt: A dictionary of LI results, e.g., from `identify_stanza()`.
     """
     if not dt or not isinstance(dt, dict):
-        return np.NaN
+        return np.nan
     return list(dt.keys())[list(dt.values()).index(max(dt.values()))]
 
 
@@ -502,7 +508,7 @@ class LangID:
         s: str | list,
         sample_kwargs: dict,
         nlp: stanza.Pipeline | None,
-        model: None, # fasttext.FastText._FastText | None,
+        model: None,  # fasttext.FastText._FastText | None,
         threshold: float,
         columns: list = li_columns,
         is_file: bool = True,
