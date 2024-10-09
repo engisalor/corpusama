@@ -36,3 +36,4 @@ restats
 
 # Test
 !test/test_pipeline/files/rw_en.txt
+!test/test_pipeline/files/splice_mwt.conllu

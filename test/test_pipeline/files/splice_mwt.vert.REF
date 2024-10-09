@@ -55,5 +55,5 @@
 31	en	en	ADP	sps00	_	33	case	_	start_char=50523|end_char=50525
 32	su	su	DET	dp3cs0	Number=Sing|Person=3|Poss=Yes|PronType=Prs	33	det	_	start_char=50526|end_char=50528
 33	totalidad	totalidad	NOUN	ncfs000	Gender=Fem|Number=Sing	28	obl	_	start_char=50529|end_char=50538
-</s></s></s>
+</s>
 </doc>

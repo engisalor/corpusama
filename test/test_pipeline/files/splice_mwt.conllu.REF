@@ -1,0 +1,79 @@
+# newdoc
+# id = EN test cases
+# sent_id = 0
+6	hygiene	hygiene	NOUN	NN	Number=Sing	4	conj	_	start_char=35|end_char=42
+7	practices	practice	NOUN	NNS	Number=Plur	1	nmod	_	start_char=43|end_char=52
+8-9	can't	_	_	_	_	_	_	_	start_char=53|end_char=58
+8	ca	can	AUX	MD	VerbForm=Fin	12	aux	_	start_char=53|end_char=55
+9	n't	not	PART	RB	_	12	advmod	_	start_char=55|end_char=58
+10	be	be	AUX	VB	VerbForm=Inf	12	aux:pass	_	start_char=59|end_char=61
+
+# sent_id = 1
+1	Government	government	NOUN	NN	Number=Sing	4	nsubj	_	start_char=0|end_char=10
+2-3	cannot	_	_	_	_	_	_	_	start_char=11|end_char=17
+2	can	can	AUX	MD	VerbForm=Fin	4	aux	_	start_char=11|end_char=14
+3	not	not	PART	RB	_	4	advmod	_	start_char=14|end_char=17
+4	control	control	VERB	VB	VerbForm=Inf	0	root	_	start_char=18|end_char=25
+
+# sent_id = 2
+1-2	families'	_	_	_	_	_	_	_	start_char=5|end_char=14
+1	families	family	NOUN	NNS	Number=Plur	5	nmod:poss	_	start_char=5|end_char=13
+2	'	's	PART	POS	_	2	case	_	start_char=13|end_char=14
+
+# sent_id = 3
+1-2	Stakeholders'	_	_	_	_	_	_	_	start_char=0|end_char=13
+1	Stakeholders	stakeholder	NOUN	NNS	Number=Plur	3	nmod:poss	_	start_char=0|end_char=12
+2	'	's	PART	POS	_	1	case	_	start_char=12|end_char=13
+3	interests	interest	NOUN	NNS	Number=Plur	13	nsubj	_	start_char=14|end_char=23|SpaceAfter=No
+
+# sent_id = 4
+1	Where	where	ADV	WRB	PronType=Int	0	root	_	start_char=0|end_char=5
+2	is	be	AUX	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	1	cop	_	start_char=6|end_char=8|SpacesAfter=\n
+3	The	the	DET	DT	Definite=Def|PronType=Art	4	det	_	start_char=9|end_char=12
+4-5	Girl's	_	_	_	_	_	_	_	start_char=13|end_char=19
+4	Girl	Girl	PROPN	NNP	Number=Sing	7	nmod:poss	_	start_char=13|end_char=17
+5	's	's	PART	POS	_	4	case	_	start_char=17|end_char=19
+6	Education	Education	PROPN	NNP	Number=Sing	7	compound	_	start_char=20|end_char=29
+
+# sent_id = 5
+4	it	it	PRON	PRP	Case=Nom|Gender=Neut|Number=Sing|Person=3|PronType=Prs	7	nsubj	_	start_char=12|end_char=14
+5-6	wasn't	_	_	_	_	_	_	_	start_char=15|end_char=21|SpacesAfter=\n
+5	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	7	cop	_	start_char=15|end_char=18
+6	n't	not	PART	RB	_	7	advmod	_	start_char=18|end_char=21
+7	necessary	necessary	ADJ	JJ	Degree=Pos	0	root	_	start_char=22|end_char=31|SpaceAfter=No
+
+# sent_id = 6
+1-2	Don't	_	_	_	_	_	_	_	start_char=0|end_char=5
+1	Do	do	AUX	VB	Mood=Imp|VerbForm=Fin	3	aux	_	start_char=0|end_char=2
+2	n't	not	PART	RB	_	3	advmod	_	start_char=2|end_char=5
+3	know	know	VERB	VB	Mood=Imp|VerbForm=Fin	0	root	_	start_char=6|end_char=10|SpacesAfter=\n
+
+# newdoc
+# id = ES test cases
+# sent_id = 0
+3	Codirector	Codirector	PROPN	_	_	1	flat	_	start_char=5452|end_char=5462
+4-5	del	_	_	_	_	_	_	_	start_char=5463|end_char=5466
+4	de	de	ADP	spcms	_	6	case	_	_
+5	el	el	DET	_	Definite=Def|Gender=Masc|Number=Sing|PronType=Art	6	det	_	_
+6	Instituto	Instituto	PROPN	np00000	_	1	nmod	_	start_char=5467|end_char=5476
+
+# sent_id = 0
+1	Por	por	ADP	rg	_	12	advmod	_	start_char=17760|end_char=17763
+2	así	así	ADV	_	_	1	fixed	_	start_char=17764|end_char=17767
+3-4	decirlo	_	_	_	_	_	_	_	start_char=17768|end_char=17775|SpaceAfter=No
+3	decir	decir	VERB	vmn0000	VerbForm=Inf	12	advcl	_	start_char=17768|end_char=17773
+4	lo	él	PRON	_	Case=Acc|Gender=Masc|Number=Sing|Person=3|PrepCase=Npr|PronType=Prs	3	obj	_	start_char=17773|end_char=17775
+5	,	,	PUNCT	fc	PunctType=Comm	3	punct	_	start_char=17775|end_char=17776
+6	el	el	DET	da0ms0	Definite=Def|Gender=Masc|Number=Sing|PronType=Art	7	det	_	start_char=17777|end_char=17779
+7	mundo	mundo	NOUN	ncms000	Gender=Masc|Number=Sing	12	nsubj	_	start_char=17780|end_char=17785
+
+# sent_id = 0
+26	hasta	hasta	ADP	sps00	_	27	mark	_	start_char=50497|end_char=50502
+27	lograr	lograr	VERB	vmn0000	VerbForm=Inf	5	advcl	_	start_char=50503|end_char=50509|SpacesAfter=\n
+28-30	apropiárselo	_	_	_	_	_	_	_	start_char=50510|end_char=50522
+28	apropiar	apropiar	VERB	vmn0000	VerbForm=Inf	27	xcomp	_	_
+29	se	él	PRON	_	Case=Acc|Person=3|PrepCase=Npr|PronType=Prs|Reflex=Yes	28	obl:arg	_	_
+30	lo	él	PRON	_	Case=Acc|Gender=Masc|Number=Sing|Person=3|PrepCase=Npr|PronType=Prs	28	obj	_	_
+31	en	en	ADP	sps00	_	33	case	_	start_char=50523|end_char=50525
+32	su	su	DET	dp3cs0	Number=Sing|Person=3|Poss=Yes|PronType=Prs	33	det	_	start_char=50526|end_char=50528
+33	totalidad	totalidad	NOUN	ncfs000	Gender=Fem|Number=Sing	28	obl	_	start_char=50529|end_char=50538

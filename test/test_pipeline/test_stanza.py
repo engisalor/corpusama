@@ -9,7 +9,7 @@ from click.testing import CliRunner
 
 from pipeline.stanza import base_pipeline
 
-# NOTE rw_en.ttx.conllu.REF has only one \n at EOF to pass pre-commit reqs.
+# NOTE rw_en.txt.conllu.REF has only one \n at EOF to pass pre-commit reqs.
 # By default conllu files produces \n\n: tests must ignore this difference.
 
 
@@ -32,25 +32,28 @@ class TestConllToVert(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.runner = CliRunner()
-        cls.rw_en_file = Path("test/test_pipeline/files/rw_en.txt.conllu")
-        cls.splice_mwt_file = Path("test/test_pipeline/files/splice_mwt.conllu")
-        cls.rw_en_file_xz = cls.rw_en_file.with_suffix(".conllu.xz")
-        with open(cls.rw_en_file) as source:
-            with lzma.open(cls.rw_en_file_xz, "w") as o:
-                o.write(source.read().encode())
+        cls.temp_conll = Path("test/test_pipeline/files/rw_en_temp.txt.conllu")
 
-    def tearDownClass(cls):
-        cls.rw_en_file_xz.unlink(missing_ok=True)
+    def setUp(self):
+        f = Path("test/test_pipeline/files/rw_en.txt.conllu.REF")
+        shutil.copy(f, self.temp_conll)
+        with open(self.temp_conll, "a") as f:
+            f.write("\n")
+
+    def tearDown(self) -> None:
+        tmp_files = Path("test/test_pipeline/files").glob("*_temp.*")
+        for file in tmp_files:
+            file.unlink()
 
     def test_conll_to_vert(self):
         """Compares file hashes. Use diff on out & ref if assertEqual fails."""
-        f = str(self.rw_en_file)
-        out = self.rw_en_file.with_suffix(".vert")
-        ref = self.rw_en_file.with_suffix(".vert.REF")
-        result = self.runner.invoke(base_pipeline.conll_to_vert, [f, "--no-compress"])
-        self.assertEqual(file_hash(out), file_hash(ref))
+        out = Path("test/test_pipeline/files/rw_en_temp.txt.vert")
+        ref = Path("test/test_pipeline/files/rw_en.txt.vert.REF")
+        result = self.runner.invoke(
+            base_pipeline.conll_to_vert, [str(self.temp_conll), "--no-compress"]
+        )
         self.assertTrue(result.exit_code == 0)
-        out.unlink()
+        self.assertEqual(file_hash(out), file_hash(ref))
 
     def test_conll_to_vert_splice_mwt(self):
         """Compares file hashes. Use diff on out & ref if assertEqual fails.
@@ -69,52 +72,61 @@ class TestConllToVert(unittest.TestCase):
         - <s id="1"> `decirlo` (verb+el)
         - <s id="2"> `apropiárselo` (three tokens)
         """
-        f = str(self.splice_mwt_file)
-        out = self.splice_mwt_file.with_suffix(".vert")
-        ref = self.splice_mwt_file.with_suffix(".vert.REF")
-        result = self.runner.invoke(base_pipeline.conll_to_vert, [f, "--no-compress"])
-        self.assertEqual(file_hash(out), file_hash(ref))
-        self.assertTrue(result.exit_code == 0)
-        out.unlink()
-
-    def test_conll_to_vert_read_xz(self):
-        """Compares file hashes. Use diff on out & ref if assertEqual fails."""
-        f = str(self.rw_en_file)
-        out = self.rw_en_file.with_suffix(".vert")
-        ref = self.rw_en_file.with_suffix(".vert.REF")
-        result = self.runner.invoke(base_pipeline.conll_to_vert, [f, "--no-compress"])
+        f = Path("test/test_pipeline/files/splice_mwt.conllu.REF")
+        temp = Path("test/test_pipeline/files/splice_mwt_temp.conllu")
+        out = Path("test/test_pipeline/files/splice_mwt_temp.vert")
+        ref = Path("test/test_pipeline/files/splice_mwt.vert.REF")
+        shutil.copy(f, temp)
+        with open(temp, "a") as f:
+            f.write("\n")
+        result = self.runner.invoke(
+            base_pipeline.conll_to_vert, [str(temp), "--no-compress"]
+        )
         self.assertTrue(result.exit_code == 0)
         self.assertEqual(file_hash(out), file_hash(ref))
         out.unlink(missing_ok=True)
 
+    def test_conll_to_vert_read_xz(self):
+        """Compares file hashes. Use diff on out & ref if assertEqual fails."""
+        f = Path("test/test_pipeline/files/rw_en.txt.conllu.REF")
+        temp = Path("test/test_pipeline/files/rw_en_temp.txt.conllu.xz")
+        out = Path("test/test_pipeline/files/rw_en_temp.txt.vert")
+        ref = Path("test/test_pipeline/files/rw_en.txt.vert.REF")
+        with open(f) as source:
+            with lzma.open(temp, "w") as o:
+                o.write(source.read().encode())
+                o.write("\n".encode())
+        result = self.runner.invoke(
+            base_pipeline.conll_to_vert, [str(temp), "--no-compress"]
+        )
+        self.assertTrue(result.exit_code == 0)
+        self.assertEqual(file_hash(out), file_hash(ref))
+
     def test_conll_to_vert_write_xz(self):
         """Checks if output file exists."""
-        f = str(self.rw_en_file)
-        out = self.rw_en_file.with_suffix(".vert.xz")
+        f = str(self.temp_conll)
+        out = self.temp_conll.with_suffix(".vert.xz")
         result = self.runner.invoke(base_pipeline.conll_to_vert, [f, "--compress"])
         self.assertTrue(result.exit_code == 0)
         self.assertTrue(out.exists())
-        out.unlink()
 
     def test_conll_to_vert_write_xz_keep(self):
         """Checks if output file exists."""
-        f = str(self.rw_en_file)
-        out = self.rw_en_file.with_suffix(".vert")
-        out_xz = self.rw_en_file.with_suffix(".vert.xz")
+        f = str(self.temp_conll)
+        out = self.temp_conll.with_suffix(".vert")
+        out_xz = self.temp_conll.with_suffix(".vert.xz")
         result = self.runner.invoke(
             base_pipeline.conll_to_vert, [f, "--compress", "--keep"]
         )
         self.assertTrue(result.exit_code == 0)
         self.assertTrue(out.exists())
         self.assertTrue(out_xz.exists())
-        out.unlink()
-        out_xz.unlink()
 
     def test_conll_to_vert_write_xz_no_force(self):
         """Checks if output file exists."""
-        f = str(self.rw_en_file)
-        out = self.rw_en_file.with_suffix(".vert")
-        out_xz = self.rw_en_file.with_suffix(".vert.xz")
+        f = str(self.temp_conll)
+        out = self.temp_conll.with_suffix(".vert")
+        out_xz = self.temp_conll.with_suffix(".vert.xz")
         # no compress
         result = self.runner.invoke(
             base_pipeline.conll_to_vert, [f, "--no-compress", "--force"]
@@ -142,33 +154,28 @@ class TestConllToVert(unittest.TestCase):
 
 class TestToConll(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):
+    def setUp(cls):
         cls.runner = CliRunner()
         cls.file_original = Path("test/test_pipeline/files/rw_en.txt")
         cls.file = Path("test/test_pipeline/files/rw_en_temp.txt")
         shutil.copy(cls.file_original, cls.file)
 
-    # @classmethod
-    # def tearDownClass(cls) -> None:
-    #     tmp_files = Path("test/test_pipeline/files").glob("*_temp.*")
-    #     for file in tmp_files:
-    #         file.unlink()
+    def tearDown(self) -> None:
+        tmp_files = Path("test/test_pipeline/files").glob("*_temp.*")
+        for file in tmp_files:
+            file.unlink()
 
     def test_to_conll(self):
         out = self.file.with_suffix(".txt.conllu")
         ref_file = self.file_original.with_suffix(".txt.conllu.REF")
-
         with open(ref_file) as f:
             ref_lines = f.readlines()
-
         result = self.runner.invoke(
             base_pipeline.to_conll, [str(self.file), "--lang", "en"]
         )
         self.assertTrue(result.exit_code == 0)
-
         with open(out) as f:
             out_lines = f.readlines()
-
         self.assertListEqual(ref_lines[:18], out_lines[:18])
 
     def test_to_conll_from_xz(self):
@@ -176,21 +183,16 @@ class TestToConll(unittest.TestCase):
         with open(self.file) as source:
             with lzma.open(file_xz, "w") as o:
                 o.write(source.read().encode())
-
         out = self.file.with_suffix(".txt.xz.conllu")
         ref_file = self.file_original.with_suffix(".txt.conllu.REF")
-
         with open(ref_file) as f:
             ref_lines = f.readlines()
-
         result = self.runner.invoke(
             base_pipeline.to_conll, [str(file_xz), "--lang", "en"]
         )
         self.assertTrue(result.exit_code == 0)
-
         with open(out) as f:
             out_lines = f.readlines()
-
         self.assertListEqual(ref_lines[:18], out_lines[:18])
 
 
