@@ -1,4 +1,5 @@
 """A module for managing ReliefWeb API calls and PDFs."""
+
 import logging
 import math
 import pathlib
@@ -210,7 +211,7 @@ class ReliefWeb(Call):
             self._insert_pdf()
         else:
             logging.debug("no more results")
-            raise SystemExit()
+            return None
 
     def get_pdfs(self, min: int = 0, max: int = 0, wait: int = 5) -> None:
         """Downloads ReliefWeb PDFs based on records in the _pdf table.
@@ -301,7 +302,7 @@ class ReliefWeb(Call):
         extractor = pdf.ExtractFiles(clean, overwrite)
         _ = extractor.run(pdfs, timeout)
         t1 = perf_counter()
-        logging.info(f"{nfiles} files: {round(t1-t0,2)}s ({nfiles_total} total)")
+        logging.info(f"{nfiles} files: {round(t1-t0, 2)}s ({nfiles_total} total)")
 
     def __init__(
         self,
