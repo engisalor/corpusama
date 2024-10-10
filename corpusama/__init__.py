@@ -11,7 +11,7 @@ stream_handler = logging.StreamHandler()
 
 logging.basicConfig(
     encoding="utf-8",
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(module)s - %(funcName)s - %(message)s",
     handlers=[stream_handler, file_handler],
 )
