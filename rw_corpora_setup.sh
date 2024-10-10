@@ -13,7 +13,7 @@ read -p """
 
 4. See ReliefWeb's terms and conditions before using the service/its data.
 
-Enter email address to use ReliefWeb's API: """ USER_EMAIL
+Enter an email to use ReliefWeb's API: """ USER_EMAIL
 
 # initial setup
 PDF_DIR=$PWD/data/pdf/
@@ -33,7 +33,7 @@ stanza.download("spanish")
 stanza.download("multilingual")
 EOL
 # generate untracked files
-mkdir $PDF_DIR
+mkdir -p $PDF_DIR
 cat > $PWD/test/config-example.secret.yml << EOL
 pdf_dir: ${PDF_DIR}
 url: https://api.reliefweb.int/v1/reports?appname=${USER_EMAIL}

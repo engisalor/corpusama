@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import re
 import sys
 from time import sleep
@@ -22,19 +23,15 @@ if __name__ == "__main__":
     # update date range
     n = 1
     if not corp.rw.config["parameters"]["filter"]["conditions"][n]["field"] == "date":
-        msg = (
-            f"condition {n} should have `field=date`: change n to the right list index."
-        )
+        msg = f"condition {n} should have `field=date`: change the list index `n`."
         raise ValueError(msg)
 
     corp.rw.config["parameters"]["filter"]["conditions"][n]["value"][
         "from"
     ] = start_date
     corp.rw.config["parameters"]["filter"]["conditions"][n]["value"]["to"] = end_date
-    print(
-        "... new date filter:",
-        corp.rw.config["parameters"]["filter"]["conditions"][n]["value"],
-    )
+    new_filter = corp.rw.config["parameters"]["filter"]["conditions"][n]["value"]
+    print(f"... new date filter: {new_filter}")
 
     # update sqlite database
     corp.rw.get_new_records()
