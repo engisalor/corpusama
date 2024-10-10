@@ -2,7 +2,6 @@
 
 source $PWD/.venv/bin/activate
 
-# prompt for date range
 echo """
 1. Starting ReliefWeb corpus update. This generates EN, FR & ES corpora
    by downloading API data and processing it with Stanza NLP. Having a
@@ -24,28 +23,22 @@ echo """
 """
 
 read -p "Enter start date: " START_DATE
-read -p "Enter end date: " END_DATE
-read -p """
-Your date range is:
+read -p "Enter end date:   " END_DATE
+read -p "Are you sure? Press any button to continue."
 
-${START_DATE}
-${END_DATE}
+echo "... get and process source data"
+python3 rw_corpora_update.py "${START_DATE}" "${END_DATE}" || exit 1
 
-Press enter to continue""" RESPONSE
-
-# get and process source data
-python3 rw_corpora_update.py "${START_DATE}" "${END_DATE}"
-
-# convert source files to .conllu (run Stanza NLP)
+echo "... convert source files to .conllu (run Stanza NLP)"
 ES_FILES=$(find -name reliefweb_es*.txt)
 FR_FILES=$(find -name reliefweb_fr*.txt)
 EN_FILES=$(find -name reliefweb_en*.txt)
-python3 ./pipeline/stanza/base_pipeline.py to-conll -l es $ES_FILES
-python3 ./pipeline/stanza/base_pipeline.py to-conll -l fr $FR_FILES
-python3 ./pipeline/stanza/base_pipeline.py to-conll -l en $EN_FILES
+python3 ./pipeline/stanza/base_pipeline.py to-conll -l es $ES_FILES || exit 1
+python3 ./pipeline/stanza/base_pipeline.py to-conll -l fr $FR_FILES || exit 1
+python3 ./pipeline/stanza/base_pipeline.py to-conll -l en $EN_FILES || exit 1
 
-# convert files to .vert and compress
+echo "... convert files to .vert and compress"
 CONLLU_FILES=$(find -name reliefweb_*.txt.conllu)
-python3 ./pipeline/stanza/base_pipeline.py conll-to-vert $CONLLU_FILES
+python3 ./pipeline/stanza/base_pipeline.py conll-to-vert $CONLLU_FILES || exit 1
 
-echo "... finished corpus vertical file generation"
+echo "... rw_corpora_update.sh finished without breaking"

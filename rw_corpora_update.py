@@ -37,7 +37,7 @@ if __name__ == "__main__":
     corp.rw.get_new_records()
 
     # download associated PDFs, retry to handle known errors
-    n_retries = 20
+    n_retries = 0
     max_retries = 20
     pause = 60
     success = False
@@ -55,7 +55,7 @@ if __name__ == "__main__":
             print(f"... retrying after {pause} seconds: {e}")
             sleep(pause)
     if not success:
-        raise ValueError("reached maximum number of retries: check exceptions")
+        raise Warning("reached maximum number of retries: check exceptions")
 
     # extract PDF text to TXT file in same location
     corp.rw.extract_pdfs()
