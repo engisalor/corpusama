@@ -5,15 +5,14 @@ read -p """
 1. Starting Corpusama setup. This script assumes you've already run the below:
    git clone https://github.com/engisalor/corpusama && cd corpusama
 
-2. Stanza and NLTK models will be downloaded to ~/.
-   These resources will be reused until updated manually.
+2. Stanza and NLTK models will be downloaded to ~/. These resources will be
+   reused until updated manually. Requires ~<10 GB for dependencies and models.
 
 3. After installing dependencies, unittest will run to ensure proper setup.
    As of 2024/10/09 no tests should fail.
 
-4. To continue, enter an email address for using ReliefWeb's API:
-   See ReliefWeb's terms and conditions before using the service/its data.
-""" USER_EMAIL
+4. See ReliefWeb's terms and conditions before using the service/its data.
+   To continue, enter an email address for using ReliefWeb's API: """ USER_EMAIL
 
 # initial setup
 PDF_DIR=$PWD/data/pdf/
@@ -38,7 +37,7 @@ cat > $PWD/test/config-example.secret.yml << EOL
 pdf_dir: ${PDF_DIR}
 url: https://api.reliefweb.int/v1/reports?appname=${USER_EMAIL}
 EOL
-cat > $PWD/config/reliefweb_recent.secret.yml << EOL
+cat > $PWD/config/reliefweb_2000+.secret.yml << EOL
 pdf_dir: ${PDF_DIR}
 url: https://api.reliefweb.int/v1/reports?appname=${USER_EMAIL}
 EOL

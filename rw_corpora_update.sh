@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source $PWD/.venv/bin/activate
+
 # prompt for date range
 echo """
 1. Starting ReliefWeb corpus update. This generates EN, FR & ES corpora
