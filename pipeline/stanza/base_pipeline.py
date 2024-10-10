@@ -32,7 +32,7 @@ from xml.sax.saxutils import quoteattr  # nosec
 import click
 import stanza
 from defusedxml.ElementTree import fromstring
-from nltk import download, sent_tokenize
+from nltk import sent_tokenize
 from numpy import array_split
 from stanza import DownloadMethod
 from stanza.utils.conll import CoNLL
@@ -429,7 +429,6 @@ class NLP:
             self._to_conll_inner()
 
     def start_nlp(self) -> None:
-        download("punkt_tab", quiet=True)
         self.nlp = stanza.Pipeline(
             self.lang,
             processors=self.processors,
