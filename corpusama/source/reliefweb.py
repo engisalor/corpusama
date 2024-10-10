@@ -17,13 +17,13 @@ from corpusama.util import decorator
 class ReliefWeb(Call):
     """Manages data retrieval for ReliefWeb."""
 
-    def _offset(self) -> None:
+    def _offset(self) -> bool:
         """Adjusts the offset parameter and halts a job if no more results."""
         if self.call_n > 0:
             self.config["parameters"]["offset"] += self.response_json["count"]
             if self.response_json["count"] == 0:
-                logging.debug("no more results")
-                raise SystemExit()
+                logging.info("no more results")
+                return True
         logging.debug(self.config.get("parameters").get("offset"))
 
     def get_all_records(self, stop_at: int = 0) -> None:
@@ -41,7 +41,8 @@ class ReliefWeb(Call):
         self.stop_at = stop_at
         if not self.stop_at:
             self.stop_at = self.config.get("quota")
-        self.get_record()
+        while True:
+            return self.get_record()
 
     def get_new_records(self, stop_at: int = 0) -> None:
         """Makes repeated calls starting from the latest `date.changed`.
@@ -74,7 +75,7 @@ class ReliefWeb(Call):
             logging.debug(latest)
 
     @decorator.while_loop
-    def get_record(self) -> None:
+    def get_record(self) -> bool:
         """Makes a single ReliefWeb API call.
 
         Notes:
@@ -92,7 +93,9 @@ class ReliefWeb(Call):
         if self.call_n >= self.stop_at:
             logging.debug(f"limit reached {self.stop_at}")
             return False
-        self._enforce_quota()
+        if self._enforce_quota():
+            logging.warning(f"daily quota reached {self.stop_at}")
+            return False
         # automatically set stop_at
         if self.call_n == 1 and self.stop_at >= self.config.get("quota"):
             stop_at = self.response_json["totalCount"] / self.config.get(
@@ -106,7 +109,9 @@ class ReliefWeb(Call):
         else:
             self._set_wait()
         # make call
-        self._offset()
+        no_more_results = self._offset()
+        if no_more_results:
+            return False
         self._request()
         self._get_field_names()
         self._hash()
@@ -210,7 +215,7 @@ class ReliefWeb(Call):
             self._insert_log()
             self._insert_pdf()
         else:
-            logging.debug("no more results")
+            logging.info("no more results")
             return None
 
     def get_pdfs(self, min: int = 0, max: int = 0, wait: int = 5) -> None:

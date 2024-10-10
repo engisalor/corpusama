@@ -1,4 +1,5 @@
 """A module for managing the Call class, a base class for API call management."""
+
 import hashlib
 import json
 import logging
@@ -31,14 +32,16 @@ class Call:
         self.calls_made = util.count_log_lines(message, log_file)
         logging.debug(f"{source} - {self.calls_made}")
 
-    def _enforce_quota(self) -> None:
+    def _enforce_quota(self) -> bool:
         """Enforces API usage quota."""
         self._calls_made()
         quota = self.config.get("quota")
         self.calls_remaining = quota - self.calls_made
         if self.calls_made >= quota:
             logging.debug(f"reached {self.calls_made}")
-            raise SystemExit()
+            return True
+        else:
+            return False
 
     def _set_wait(self, manual=None) -> None:
         """Sets a wait time between API calls."""
