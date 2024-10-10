@@ -4,6 +4,7 @@ import unittest
 # import fasttext
 # import pandas as pd
 import stanza
+from stanza import DownloadMethod
 
 from corpusama.util import langid
 
@@ -14,7 +15,7 @@ class Test_LangID(unittest.TestCase):
         cls.nlp = stanza.Pipeline(
             lang="multilingual",
             processors="langid",
-            download_method=None,
+            download_method=DownloadMethod.REUSE_RESOURCES,
         )
         # cls.model = fasttext.load_model("./fastText/lid.176.bin")
         cls.file = "test/test_util/text-file.txt"

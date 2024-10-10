@@ -1,7 +1,10 @@
 """Methods to classify document languages and save results to the `_lang` table."""
+
 # import fasttext
 import pandas as pd
-import stanza 
+import stanza
+from stanza import DownloadMethod
+
 from corpusama.util import convert, langid, util
 
 # TODO requires unit testing
@@ -9,9 +12,11 @@ from corpusama.util import convert, langid, util
 nlp = stanza.Pipeline(
     lang="multilingual",
     processors="langid",
-    ld_batch_size = 64, # 64 Batch size to use for language identification
-    max_cache_size = 10, # 10 Max number of pipelines to cache
-    )
+    ld_batch_size=64,  # 64 Batch size to use for language identification
+    max_cache_size=10,  # 10 Max number of pipelines to cache
+    download_method=DownloadMethod.REUSE_RESOURCES,
+)
+
 
 def make_langid(
     self,
@@ -68,8 +73,8 @@ class AddLangID:
         lid = langid.LangID(
             s,
             self.sample_kwargs,
-            nlp, # stanza nlp obj,
-            None, # fastext model,
+            nlp,  # stanza nlp obj,
+            None,  # fastext model,
             self.threshold,
             is_file=is_file,
         )
