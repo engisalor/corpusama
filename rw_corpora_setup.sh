@@ -12,7 +12,8 @@ read -p """
    As of 2024/10/09 no tests should fail.
 
 4. See ReliefWeb's terms and conditions before using the service/its data.
-   To continue, enter an email address for using ReliefWeb's API: """ USER_EMAIL
+
+Enter email address to use ReliefWeb's API: """ USER_EMAIL
 
 # initial setup
 PDF_DIR=$PWD/data/pdf/

@@ -1,3 +1,4 @@
+import re
 import sys
 from time import sleep
 
@@ -5,8 +6,14 @@ import requests
 
 from corpusama.corpus.corpus import Corpus
 
+# format dates
 start_date = sys.argv[1]
 end_date = sys.argv[2]
+for date in [start_date, end_date]:
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
+        raise ValueError(f" '{date}' is not a valid YYYY-MM-DD value")
+start_date = f"{start_date}T00:00:00+00:00"
+end_date = f"{end_date}T00:00:00+00:00"
 
 # instantiate corpus controller
 corp = Corpus("config/reliefweb_2000+.yml")

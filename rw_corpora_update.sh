@@ -23,20 +23,15 @@ echo """
    END_DATE   = 2020-02-01
 """
 
-read -p "Enter a start date: " START_DATE
-read -p "Enter a end date: " END_DATE
-
-START_DATE="${START_DATE}T00:00:00+00:00"
-END_DATE="${END_DATE}T00:00:00+00:00"
-
+read -p "Enter start date: " START_DATE
+read -p "Enter end date: " END_DATE
 read -p """
 Your date range is:
 
 ${START_DATE}
 ${END_DATE}
 
-Press enter to continue
-""" RESPONSE
+Press enter to continue""" RESPONSE
 
 # get and process source data
 python3 rw_corpora_update.py "${START_DATE}" "${END_DATE}"
