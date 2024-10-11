@@ -31,9 +31,9 @@ if __name__ == "__main__":
     ] = start_date
     corp.rw.config["parameters"]["filter"]["conditions"][n]["value"]["to"] = end_date
     new_filter = corp.rw.config["parameters"]["filter"]["conditions"][n]["value"]
-    print(f"... new date filter: {new_filter}")
 
     # update sqlite database
+    print(f"... get records: {new_filter}")
     corp.rw.get_new_records()
 
     # download associated PDFs, retry to handle known errors
@@ -41,6 +41,7 @@ if __name__ == "__main__":
     max_retries = 20
     pause = 60
     success = False
+    print("... get PDFs")
     while n_retries < max_retries:
         try:
             corp.rw.get_pdfs()
@@ -61,15 +62,18 @@ if __name__ == "__main__":
     corp.rw.extract_pdfs()
 
     # run language identification
+    print("... identify languages")
     corp.make_langid("_pdf")
     corp.make_langid("_raw")
 
     # make corpus XML <doc> attributes for languages
+    print("... generate attributes")
     corp.make_attribute("es")
     corp.make_attribute("fr")
     corp.make_attribute("en")
 
-    # export the XML-tagged texts in chunks of <= 10,000
+    # export the XML-tagged texts in chunks
+    print("... export corpora")
     corp.export_text("es", start_date=start_date[:10], end_date=end_date[:10])
     corp.export_text("fr", start_date=start_date[:10], end_date=end_date[:10])
     corp.export_text("en", start_date=start_date[:10], end_date=end_date[:10])
