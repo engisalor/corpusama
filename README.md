@@ -10,11 +10,11 @@ Corpusama can build corpora with texts from the ReliefWeb API. [Contact ReliefWe
 
 ## General requirements
 
-ReliefWeb is a large database with over 1 million humanitarian reports, each of which may include PDF attachments and texts in multiple languages. Upwards of 500 GB of space may be required for managing and processing files. Downloading this data at a reasonable rate takes weeks. Dependencies also require several GB of space and benefit from a fast CPU and GPU.
+ReliefWeb is a large database with over 1 million humanitarian reports, each of which may include PDF attachments and texts in multiple languages. Upwards of 500 GB of space may be required for managing and processing files. Downloading this data at a reasonable rate takes weeks. Dependencies also require ~< 10 GB of space and benefit from a fast CPU and GPU (a GPU is needed for processing large amounts of data).
 
-## Installation
+## Basic installation
 
-Clone this repo and install dependencies in in a virtual environment. These are the main packages: `pip install defusedxml nltk pandas PyMuPDF PyYAML requests stanza`.
+Clone this repo and install dependencies in in a virtual environment. These are the main packages: `pip install click defusedxml nltk pandas PyMuPDF PyYAML requests stanza`.
 
 ```bash
 python3 -m venv .venv
@@ -23,13 +23,67 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+## Reproducing corpora
+
+Corpora can be generated using the following code snippet. The notes below describe the process and important considerations in more detail.
+
+```bash
+### INITIAL SETUP
+git clone https://github.com/engisalor/corpusama && cd corpusama
+# get dependencies and models, unit test
+bash rw_corpora_setup.sh "<EMAIL_USED_FOR_RELIEFWEB_API>"
+
+### RUN PERIODICALLY TO GENERATE UP-TO-DATE CORPORA
+# generate EN, FR & ES corpora (.vert.xz) for a date range
+bash rw_corpora_update.sh "<START_DATE>" "<END_DATE>" # <YYYY_MM_DD> format
+```
+
+### On package setup: `rw_corpora_setup.sh`
+
+1. Clone the repo and CD to the directory.
+2. Stanza and NLTK models will be downloaded to `~/`. These resources will be reused until updated manually. Requires ~<10 GB for dependencies and models.
+3. After installing dependencies, `unittest` will run to ensure proper setup. As of `2024/10/09` no tests should fail.
+4. See ReliefWeb's terms and conditions before using its service/data. An email is required for making API calls (stored in files ending in `*secret.yml`).
+
+### On generating corpora: `rw_corpora_update.sh`
+
+1. This script produces a series of compressed vertical corpus files in
+   a CoNLLU-based format using Stanza NLP.
+2. After completion, the project can be deleted. If not deleted,
+   downloaded data will keep accumulating for every run. Storing all of
+   ReliefWeb takes ~500 GB and weeks to download/process. This script is intended for sequential, chronological updates only, not a mix of overlapping or dijointed dates.
+3. This script reuses `config/reliefweb_2000+.yml` to define settings.
+   A custom date range is supplied to define what texts to download. Use a YYYY-MM-DD format. The example below collects data for January 2020:
+
+```bash
+# get a month of data
+bash rw_corpora_update.py "2020-01-01" "2020-02-01"
+```
+
+This produces these vertical files (and intermediate formats) as long as documents of each language are detected in the chosen date range:
+
+- `reliefweb_en_2020-01-01_2020-02-01.1.txt.vert.xz`
+- `reliefweb_fr_2020-01-01_2020-02-01.1.txt.vert.xz`
+- `reliefweb_es_2020-01-01_2020-02-01.1.txt.vert.xz`
+
+4. Vertical files are ready to be compiled in Sketch Engine. See these directories for corpus configuration files:
+
+- https://github.com/engisalor/corpusama/tree/main/registry
+- https://github.com/engisalor/corpusama/tree/main/registry_subcorp
+
+5. This script has been tested for use with a recent Core i7 laptop with an NVIDIA GPU. Testing is done on Fedora Linux and Ubuntu to a lesser extent. Default settings attempt to be reasonable and reduce errors, but a number of issues may arise throughout the process. Verifying output data at each phase and becoming familiar with the code base are recommended. If in doubt, please reach out.
+
+See more in-depth explanations of software and data formats below.
+
+## Additional details
+
 ### Stanza
 
 [Stanza](https://github.com/stanfordnlp/stanza) is a Python NLP package from Stanford. Models for languages may need to be downloaded with its `download()` function if this doesn't happen automatically.
 
 ### Deprecated packages
 
-Earlier versions relied on FreeLing and fastText NLP tools. See the history of this README for old installation instructions. These tools perform better on machines without a dedicated GPU, whereas Stanza can run on a CPU but only for limited tasks.
+Earlier versions relied on FreeLing and fastText NLP tools. See the history of this README for old installation instructions. These tools perform better on machines without a dedicated GPU, whereas Stanza can run on a CPU but more slowly.
 
 ## Configuration files
 
@@ -138,6 +192,17 @@ Once the content of these files is inspected, they can be compressed with `xz` o
 
 ### Pipelines
 
+#### TLDR
+
+These are the main commands for using the Stanza pipeline to process the above-mentioned TXT files. Use the `--help` flag to learn more.
+
+- base script: `python3 ./pipeline/stanza/base_pipeline.py`
+
+- generate CoNNLU files: `python3 ./pipeline/stanza/base_pipeline.py to-conll`
+- convert CoNNLU to vertical: `python3 ./pipeline/stanza/base_pipeline.py conll-to-vert`
+
+#### More details
+
 Files in the `pipeline/` directory are used to complete corpus creation. The current version of Corpusama relies on the Stanza pipeline. Run `python pipeline/stanza/base_pipeline.py --help` for an overview. This has been tested with an NVIDIA 4070m GPU (8 GB). Also adjust the arguments below in `stanza.Pipeline` when fine-tuning memory management:
 
 ```py
@@ -151,8 +216,6 @@ self.nlp = stanza.Pipeline(
 ```
 
 If possible, the dependency parsing batch size should be "set larger than the number of words in the longest sentence in your input document" ([see documentation](https://stanfordnlp.github.io/stanza/neural_pipeline.html)). Managing memory issues in the GPU-based Stanza pipeline may be necessary. See `error_corrections.md` for a list of steps taken to build the corpora with an Nvidia 4070.
-
-A complete job looks like this: `time python pipeline/stanza/base_pipeline.py -csuwvV en fileName.txt.xz`
 
 The first output format is `.conllu` (see https://universaldependencies.org/format.html). Here's a sample:
 
@@ -181,7 +244,7 @@ The first output format is `.conllu` (see https://universaldependencies.org/form
 [...]
 ```
 
-The `--ske` flag also converts the CoNLLU files into a vertical format recognized by [Sketch Engine](https://www.sketchengine.eu/my_keywords/conll-format/).
+CoNLLU can then be converted to a vertical format recognized by [Sketch Engine](https://www.sketchengine.eu/my_keywords/conll-format/):
 
 ```xml
 <doc id="302405" file_id="0" country__iso3="pse" country__shortname="oPt" date__original="2009-03-25T00:00:00+00:00" date__original__year="2009" format__name="News and Press Release" primary_country__iso3="pse" primary_country__shortname="oPt" source__name="Palestinian Centre for Human Rights" source__shortname="PCHR" source__type__name="Non-governmental Organization" theme__name="Health|Protection and Human Rights" title="OPT: PCHR appeals for action to save lives of Gaza Strip patients" url="https://reliefweb.int/node/302405">
@@ -191,7 +254,7 @@ The `--ske` flag also converts the CoNLLU files into a vertical format recognize
 3	Centre	Centre	PROPN	NNP	Number=Sing	11	nsubj	_	start_char=16|end_char=22
 ```
 
-Inspect the output files and compress them with `xz`. The TXT, CoNLLU and vertical formats have their own use cases for NLP tasks. See `base_pipeline.py` for details or making modifications. Viewing the corpus (e.g., in Sketch Engine) also requires making a corpus [configuration file](https://www.sketchengine.eu/documentation/corpus-configuration-file-all-features/) and other steps beyond this introduction.
+The TXT, CoNLLU and vertical formats have their own use cases for NLP tasks. Viewing the corpus (e.g., in Sketch Engine) also requires making a corpus [configuration file](https://www.sketchengine.eu/documentation/corpus-configuration-file-all-features/) and other steps beyond this introduction.
 
 Generating and verifying checksums is also recommended for sharing and versioning:
 
@@ -214,7 +277,7 @@ sha256sum -c hashes.txt
 
 Support comes from the [Humanitarian Encyclopedia](https://humanitarianencyclopedia.org/) and the [LexiCon research group](https://lexicon.ugr.es/) at the University of Granada. See the paper below for references and funding disclosures.
 
-Dependencies include these academic works, which have their corresponding bibliographies: [Stanza](https://github.com/stanfordnlp/stanza), [FreeLing](https://nlp.lsi.upc.edu/freeling/) and [fastText](https://github.com/facebookresearch/fastText).
+Dependencies have included these academic works, which have their corresponding bibliographies: [Stanza](https://github.com/stanfordnlp/stanza), [FreeLing](https://nlp.lsi.upc.edu/freeling/) and [fastText](https://github.com/facebookresearch/fastText).
 
 Subdirectories with a `ske_` prefix are from [Sketch Engine](https://www.sketchengine.eu/) under [AGPL](https://www.gnu.org/licenses/agpl-3.0.en.html), [MPL](https://www.mozilla.org/MPL/2.0), and/or other pertinent licenses. See their [bibliography](https://www.sketchengine.eu/bibliography-of-sketch-engine/) and [website](https://corpus.tools/) with open-source corpus tools.
 
