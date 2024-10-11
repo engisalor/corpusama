@@ -8,7 +8,7 @@ if [ $# -ne 2 ]; then
 fi
 
 echo "... get and process source data"
-python3 rw_corpora_update.py "${$1}" "${$2}" || exit 1
+python3 rw_corpora_update.py "${1}" "${2}" || exit 1
 echo "... convert source files to .conllu (run Stanza NLP)"
 ES_FILES=$(find -name reliefweb_es*.txt)
 FR_FILES=$(find -name reliefweb_fr*.txt)
