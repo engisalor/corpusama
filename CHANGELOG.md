@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.3.2](https://github.com/engisalor/corpusama/compare/v0.3.1...v0.3.2) (2024-10-15)
+
+
+### Bug Fixes
+
+* add corpus config files ([81bf898](https://github.com/engisalor/corpusama/commit/81bf8985ac3312314ee55085e81743bd9bd73c67))
+* add keep_empty to st clean_text ([398a371](https://github.com/engisalor/corpusama/commit/398a3716e11f377e492822663bf61fe97dc9ba59))
+* add newline at eof in conll_to_vert ([dcc5a2d](https://github.com/engisalor/corpusama/commit/dcc5a2db3373f0494b5361c7b62105014ab1f78a))
+* add rw management scripts ([e51a301](https://github.com/engisalor/corpusama/commit/e51a3018e0af73d8ce3f38d27f4f2542210cd802))
+* change log level to info ([8e1f0bc](https://github.com/engisalor/corpusama/commit/8e1f0bc9ba8056d539fcd9915b08d920658cc06e))
+* fix fitz module paths ([7388979](https://github.com/engisalor/corpusama/commit/73889790cbb298a20413eb81b4906870ee23b8d7))
+* fix ReliefWeb get records return ([f1b4870](https://github.com/engisalor/corpusama/commit/f1b4870e3d7109e051743a4a15f56a75d33e715e))
+* langid change np.NaN to np.nan ([7e96e71](https://github.com/engisalor/corpusama/commit/7e96e719eab4fea1634a0a4e4469088e6f380d90))
+* mwe transition to click for cli ([e7c9af6](https://github.com/engisalor/corpusama/commit/e7c9af661073590325f63876c08bfeaf190aa052))
+* nltk string ([4cf842d](https://github.com/engisalor/corpusama/commit/4cf842d344a81cd5a3ee8cf4e6eee8e8f28ccdab))
+* reduce f default from 10 to 8 amended ([28d9210](https://github.com/engisalor/corpusama/commit/28d92103fb5365ad44c4775e3370823b64f90a47))
+* reliefweb._insert replace sys exist ([8cdb031](https://github.com/engisalor/corpusama/commit/8cdb0312394a91f61c550c7248dc99eb3e4d975e))
+* remove nltk auto download ([538af4e](https://github.com/engisalor/corpusama/commit/538af4eca37918ca91f89ce4665b7b7bc295e1a7))
+* reuse stanza resources ([5d2a9e4](https://github.com/engisalor/corpusama/commit/5d2a9e48cccf970e9e2feee9af891505a4add97c))
+* rw scripts ([ba35b18](https://github.com/engisalor/corpusama/commit/ba35b182e6aa4a09f24d5f19a1517d3ad73bb253))
+* rw scripts ([212f88a](https://github.com/engisalor/corpusama/commit/212f88a3ee98646ef3b800ba2911a80a00a810d6))
+* rw scripts ([fae7a59](https://github.com/engisalor/corpusama/commit/fae7a59d6dfede49ae8f8fd0b82944bf4bdf267c))
+* rw scripts ([c82ffa5](https://github.com/engisalor/corpusama/commit/c82ffa502f5cb17762ae83eb15b35fe46cc7ab2b))
+* rw scripts ([ed79d4e](https://github.com/engisalor/corpusama/commit/ed79d4e0633477757db2b0c6c031387f9c443cb8))
+* rw scripts ([39a1a7f](https://github.com/engisalor/corpusama/commit/39a1a7fdb8bbc7137dc9c840068b00e240d83c1f))
+* rw scripts ([8409152](https://github.com/engisalor/corpusama/commit/84091525aa4c48f01e674fb7b3159813840192c5))
+* rw scripts ([495e0c7](https://github.com/engisalor/corpusama/commit/495e0c70a836c0fb74ce7f67e6b448fd4f3df4a8))
+
+
+### Documentation
+
+* fix typo ([7a32b8f](https://github.com/engisalor/corpusama/commit/7a32b8f19c1493fa276cac6f7d7d2a3c1da87a61))
+* update readme ([df9e364](https://github.com/engisalor/corpusama/commit/df9e364e335026fa6965536ce2badc1e23a0a5b8))
+* update readme, add error_corrections ([4b05eea](https://github.com/engisalor/corpusama/commit/4b05eeadbcf978672ea3ee68631a845ca96e4aab))
+
 ## [0.3.1](https://github.com/engisalor/corpusama/compare/v0.3.0...v0.3.1) (2024-06-21)
 
 
