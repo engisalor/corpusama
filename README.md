@@ -198,8 +198,8 @@ These are the main commands for using the Stanza pipeline to process the above-m
 
 - base script: `python3 ./pipeline/stanza/base_pipeline.py`
 
-- generate CoNNLU files: `python3 ./pipeline/stanza/base_pipeline.py to-conll`
-- convert CoNNLU to vertical: `python3 ./pipeline/stanza/base_pipeline.py conll-to-vert`
+- generate CoNLLU files: `python3 ./pipeline/stanza/base_pipeline.py to-conll`
+- convert CoNLLU to vertical: `python3 ./pipeline/stanza/base_pipeline.py conll-to-vert`
 
 #### More details
 

@@ -5,7 +5,7 @@ Produces CoNLLU-formatted output and converts this to be compatible with Sketch 
 On CONLL-U, see:
     https://universaldependencies.org/format.html
 
-On Sketch Engine's CoNNL-based format, see:
+On Sketch Engine's CoNLL-based format, see:
     https://www.sketchengine.eu/documentation/building-sketches-from-parsed-corpora
 
 Optionally normalizes text with `uninorm`, see:
