@@ -1,12 +1,7 @@
 """Utility functions."""
 
 import logging
-import lzma
 import pathlib
-from collections import OrderedDict
-from io import TextIOWrapper
-from os import rename
-from pathlib import Path
 from xml.sax.saxutils import quoteattr  # nosec
 
 import pandas as pd
@@ -136,57 +131,3 @@ def clean_text(text: str) -> str:
     lines = text.split("\n")
     lines = [uninorm.normalize_line(x) for x in lines]
     return "".join(lines)
-
-
-def set_ref(files: list, n: int = 0) -> None:
-    """Sets a "ref" attribute for all documents in a set of corpus vertical files.
-
-    Args:
-        files: Vertical files that make up a corpus (.vert or .vert.xz).
-        n: Default "ref" number (starts at = n+1).
-
-    Notes:
-        - Replaces original files with modified and backs up originals to "*.ORIGINAL".
-        - Replaces any old "ref" values, increments +1 for each document sequentually
-            for all vert or vert.xz files provided (sorted automatically).
-        - Expects documents begin with a `<doc id=` XML line.
-        - Expects preexisting XML lines with "id" and "file_id" attributes.
-        - Run `xz -T 0 <files>` in bash to compress output files as a final step.
-    """
-
-    def _inner(f: TextIOWrapper, d: TextIOWrapper, n: int):
-        for _, line in enumerate(f):
-            if line.startswith('<doc id="'):
-                n += 1
-                dt = OrderedDict(ElementTree.fromstring(line + "</doc>").items())
-                dt = OrderedDict((k, quoteattr(v)) for k, v in dt.items())
-                dt.pop("ref", None)
-                n_attr = quoteattr(str(n))
-                s = f'<doc id={dt["id"]} file_id={dt["file_id"]} ref={n_attr} '
-                doc_tag = [s]
-                del dt["id"]
-                del dt["file_id"]
-                for k, v in dt.items():
-                    if v:
-                        doc_tag.append(f"{k}={v} ")
-                doc_tag[-1] = doc_tag[-1].rstrip()
-                doc_tag.append(">\n")
-                line = "".join(doc_tag)
-            d.write(line)
-        return n
-
-    if isinstance(files, str | Path):
-        raise TypeError("files must be passed as an iterable")
-    files = sorted([x for x in files])
-    for file in files:
-        file = Path(file)
-        original = Path(str(file) + ".ORIGINAL")
-        _ = rename(file, original)
-        if file.suffix == ".xz":
-            with lzma.open(original, "rt") as f:
-                with open(file.with_suffix(""), "w") as d:
-                    n = _inner(f, d, n)
-        else:
-            with open(original) as f:
-                with open(file, "w") as d:
-                    n = _inner(f, d, n)
