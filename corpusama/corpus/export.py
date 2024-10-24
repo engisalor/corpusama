@@ -1,4 +1,5 @@
 """Methods to combine sqlite and txt data before processing with a pipeline."""
+
 import logging
 import pathlib
 
@@ -115,7 +116,12 @@ def export_text(
     for df in res:
         if not df.empty:
             job = _PrepareText(self.config["pdf_dir"])
-            df = parallel.run(df, job.run, cores)
+            # FIXME PATCH for pd "Columns must be same length as key" error
+            try:
+                df = parallel.run(df, job.run, cores)
+            except ValueError:
+                logging.warning("... using patch for export_text (disable parallel).")
+                df = job.run(df)
             texts = "\n".join(df.loc[df["text"].notnull(), "text"].values)
             with open(file.with_suffix(f".{batch}.txt"), "w") as f:
                 f.write(texts)
