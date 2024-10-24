@@ -12,7 +12,7 @@ SUBCBASE "/corpora/rw_fr23/indexed/subcorp"
 SUBCDEF "/corpora/registry_subcorp/rw_subcorp"
 SUBCORPATTRS "doc.country__shortname,doc.disaster__glide,doc.disaster__name,doc.disaster_type__name,doc.format__name,doc.primary_country__shortname,doc.source__name,doc.source__type__name,doc.theme__name,doc.date__original__year"
 TAGSETDOC "https://universaldependencies.org/treebanks/fr_gsd/index.html"
-VERTICAL "| for FILE in $(find /corpora/rw_fr23/vertical -maxdepth 1 -name *.vert.xz | sort); do xzcat $FILE; done;"
+VERTICAL "| for FILE in $(ls /corpora/rw_fr23/vertical/*.[0-9]*.vert.xz | sort -t. -k2,2n); do xzcat $FILE; done;"
 
 ATTRIBUTE "id" {
     MULTISEP ","
@@ -67,7 +67,20 @@ ATTRIBUTE "lemma_lc" {
 }
 STRUCTURE "s" {
 	ENCODING "UTF-8"
-    ATTRIBUTE "id" {
+	ATTRIBUTE "id" {
+		DYNTYPE "freq"
+		LABEL "ID"
+		}
+}
+STRUCTURE "docx" {
+	ENCODING "UTF-8"
+	ATTRIBUTE "ref" {
+		DYNTYPE "freq"
+        LABEL "Reference"
+    }
+    ATTRIBUTE "name" {
+		DYNTYPE "freq"
+        LABEL "Filename"
     }
 }
 STRUCTURE "doc" {
@@ -75,6 +88,18 @@ STRUCTURE "doc" {
     ENCODING "UTF-8"
     LANGUAGE ""
     NESTED ""
+	ATTRIBUTE "id" {
+		DYNTYPE "freq"
+		LABEL "Report ID"
+		}
+	ATTRIBUTE "file_id" {
+		DYNTYPE "freq"
+		LABEL "File ID"
+		}
+	ATTRIBUTE "ref" {
+		DYNTYPE "freq"
+		LABEL "Reference"
+		}
 	ATTRIBUTE "country__iso3" {
 		MULTIVALUE "1"
 		DYNTYPE "freq"
@@ -113,19 +138,11 @@ STRUCTURE "doc" {
 		MULTISEP "|"
 		LABEL "Disaster type"
 		}
-	ATTRIBUTE "file_id" {
-		DYNTYPE "freq"
-		LABEL "File ID"
-		}
 	ATTRIBUTE "format__name" {
 		MULTIVALUE "1"
 		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Format"
-		}
-	ATTRIBUTE "id" {
-		DYNTYPE "freq"
-		LABEL "Report ID"
 		}
 	ATTRIBUTE "primary_country__iso3" {
 		MULTIVALUE "1"
