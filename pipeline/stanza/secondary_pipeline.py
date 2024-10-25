@@ -161,7 +161,7 @@ def _sentence_id(_f: Path, language, short, long, batch):
                 if clean:
                     tokens = len(clean[0].split())
                 # ignore too short or long
-                if tokens >= short and tokens <= long:
+                if tokens >= short and tokens < long:
                     sentences.append(clean[0])
                     indexes.append(index)
                 # process long sentence separately in chunks
