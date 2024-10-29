@@ -1,0 +1,29 @@
+*FREQLISTATTRS word lemma lempos
+
+=html
+  doc
+  file_id="0"
+
+=pdf
+  doc
+  file_id!="0"
+
+=source_single
+  doc
+  source__name!=".*\|.*"
+
+=source_multi
+  doc
+  source__name=".*\|.*"
+
+=lang_en
+  s
+  lang!="es|fr"
+
+=lang_es
+  s
+  lang="es"
+
+=lang_fr
+  s
+  lang="fr"
