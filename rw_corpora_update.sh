@@ -24,12 +24,19 @@ FR_VERT_FILES=$(find -name "reliefweb_fr*.vert")
 ES_VERT_FILES=$(find -name "reliefweb_es*.vert")
 echo "... base_pipeline completed"
 echo "... start secondary pipeline"
-echo "... run sentence-level language identification for ES"
-python3 ./pipeline/stanza/secondary_pipeline.py lingid $ES_VERT_FILES || exit 1
-echo "... update structures for ES, inc. langid"
+# NOTE: the secondary pipeline is optional but adds more information
+# to the corpora: language identification and more detailed corpus
+# structures (s.lang, doc.ref, docx).
+echo "... run sentence-level language identification"
+python3 ./pipeline/stanza/secondary_pipeline.py langid $ES_VERT_FILES || exit 1
+python3 ./pipeline/stanza/secondary_pipeline.py langid $FR_VERT_FILES || exit 1
+python3 ./pipeline/stanza/secondary_pipeline.py langid $EN_VERT_FILES || exit 1
+# WARNING: the following cmds are destructive with the --clear flag.
+# This is more automated but removing --clear and manually renaming
+# output files is safer. If --clear is used, create a backup of the
+# vertical files in another directory first.
+echo "... update structures"
 python3 ./pipeline/stanza/secondary_pipeline.py main $ES_VERT_FILES --clear --langid || exit 1
-echo "... update structures for EN and FR"
-python3 ./pipeline/stanza/secondary_pipeline.py main $EN_VERT_FILES --clear || exit 1
-python3 ./pipeline/stanza/secondary_pipeline.py main $FR_VERT_FILES --clear || exit 1
-echo "... secondary pipeline completed"
+python3 ./pipeline/stanza/secondary_pipeline.py main $FR_VERT_FILES --clear --langid || exit 1
+python3 ./pipeline/stanza/secondary_pipeline.py main $EN_VERT_FILES --clear --langid || exit 1
 echo "... rw_corpora_update.sh completed"
