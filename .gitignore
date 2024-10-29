@@ -23,6 +23,7 @@ pyfreeling.py
 *.vert
 *.vert.xz
 *.txt
+*.xml
 *.zip
 *.xz
 
