@@ -1,10 +1,10 @@
 *FREQLISTATTRS word lemma
 
-=html
+=doc_html
   doc
   file_id="0"
 
-=pdf
+=doc_pdf
   doc
   file_id!="0"
 

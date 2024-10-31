@@ -1,16 +1,17 @@
 CORPUS "rw_en23"
 DEFAULTATTR "word"
+DIACHRONIC "doc.date__original__year"
 DOCSTRUCTURE "doc"
 ENCODING "UTF-8"
-INFO "English ReliefWeb reports 2000-2023 (Corpusama v0.3.1)."
+INFO "English ReliefWeb reports 2000-2023 (Corpusama v0.4.0)."
 INFOHREF "https://github.com/engisalor/corpusama"
 LANGUAGE "English"
 MAINTAINER "github.com/engisalor"
 NAME "ReliefWeb English 2023 (rw_en23)"
 PATH "/corpora/rw_en23/indexed/"
 SUBCBASE "/corpora/rw_en23/indexed/subcorp"
-SUBCDEF "/corpora/registry_subcorp/rw_subcorp"
-SUBCORPATTRS "doc.country__shortname,doc.disaster__glide,doc.disaster__name,doc.disaster_type__name,doc.format__name,doc.primary_country__shortname,doc.source__name,doc.source__type__name,doc.theme__name,doc.date__original__year"
+SUBCDEF "/corpora/registry_subcorp/rw_en_subcorp"
+SUBCORPATTRS "s.lang,doc.ref,doc.country__shortname,doc.disaster__glide,doc.disaster__name,doc.disaster_type__name,doc.format__name,doc.primary_country__shortname,doc.source__name,doc.source__type__name,doc.theme__name,doc.date__original__year"
 TAGSETDOC "https://universaldependencies.org/treebanks/en_ewt/index.html"
 VERTICAL "| for FILE in $(ls /corpora/rw_en23/vertical/*.[0-9]*.vert.xz | sort -t. -k2,2n); do xzcat $FILE; done;"
 
@@ -76,156 +77,131 @@ ATTRIBUTE "lemma_lc" {
     TRANSQUERY "yes"
 }
 STRUCTURE "s" {
-	TYPE "MD_MGD"
-	ENCODING "UTF-8"
     ATTRIBUTE "id" {
 		TYPE "MD_MGD"
+		LABEL "ID"
     }
+    ATTRIBUTE "lang" {
+		TYPE "MD_MGD"
+		LABEL "Language"
+	}
 }
 STRUCTURE "docx" {
-	TYPE "MD_MGD"
-	ENCODING "UTF-8"
 	ATTRIBUTE "ref" {
 		TYPE "MD_MGD"
-		DYNTYPE "freq"
 		LABEL "Reference"
 	}
 	ATTRIBUTE "name" {
 		TYPE "MD_MGD"
-		DYNTYPE "freq"
 		LABEL "Filename"
 	}
 }
 STRUCTURE "doc" {
 	TYPE "MD_MGD"
-    DEFAULTLOCALE "C"
-    ENCODING "UTF-8"
-    LANGUAGE ""
-    NESTED ""
 	ATTRIBUTE "id" {
 		TYPE "MD_MGD"
-		DYNTYPE "freq"
 		LABEL "Report ID"
 		}
 	ATTRIBUTE "file_id" {
 		TYPE "MD_MGD"
-		DYNTYPE "freq"
 		LABEL "File ID"
 		}
 	ATTRIBUTE "ref" {
 		TYPE "MD_MGD"
-		DYNTYPE "freq"
 		LABEL "Reference"
 		}
 	ATTRIBUTE "country__iso3" {
 		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Country ISO"
 		}
 	ATTRIBUTE "country__shortname" {
 		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Country"
 		}
 	ATTRIBUTE "date__original" {
 		TYPE "MD_MGD"
-		DYNTYPE "freq"
 		LABEL "Timestamp"
 		}
 	ATTRIBUTE "date__original__year" {
 		TYPE "MD_MGD"
-		DYNTYPE "freq"
 		LABEL "Year"
 		}
 	ATTRIBUTE "disaster__glide" {
 		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Disaster GLIDE"
 		}
 	ATTRIBUTE "disaster__name" {
 		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Disaster name"
 		}
 	ATTRIBUTE "disaster_type__name" {
 		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Disaster type"
 		}
 	ATTRIBUTE "format__name" {
 		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Format"
 		}
 	ATTRIBUTE "primary_country__iso3" {
 		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Primary country ISO"
 		}
 	ATTRIBUTE "primary_country__shortname" {
 		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Primary country"
 		}
 	ATTRIBUTE "source__name" {
 		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Source (full)"
 		}
 	ATTRIBUTE "source__shortname" {
 		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Source (short)"
 		}
 	ATTRIBUTE "source__spanish_name" {
 		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Source (ES)"
 		}
 	ATTRIBUTE "source__type__name" {
 		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Source type"
 		}
 	ATTRIBUTE "theme__name" {
 		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Theme"
 		}
 	ATTRIBUTE "title" {
 		TYPE "MD_MGD"
-		DYNTYPE "freq"
 		LABEL "Report title"
 		}
 	ATTRIBUTE "url" {
 		TYPE "MD_MGD"
-		DYNTYPE "freq"
 		LABEL "Report URL"
 		}
 }

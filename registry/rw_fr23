@@ -1,51 +1,61 @@
 CORPUS "rw_fr23"
 DEFAULTATTR "word"
+DIACHRONIC "doc.date__original__year"
 DOCSTRUCTURE "doc"
 ENCODING "UTF-8"
-INFO "French ReliefWeb reports 2000-2023 (Corpusama v0.3.1)."
+INFO "French ReliefWeb reports 2000-2023 (Corpusama v0.4.0)."
 INFOHREF "https://github.com/engisalor/corpusama"
 LANGUAGE "French"
 MAINTAINER "github.com/engisalor"
 NAME "ReliefWeb French 2023 (rw_fr23)"
 PATH "/corpora/rw_fr23/indexed/"
 SUBCBASE "/corpora/rw_fr23/indexed/subcorp"
-SUBCDEF "/corpora/registry_subcorp/rw_subcorp"
-SUBCORPATTRS "doc.country__shortname,doc.disaster__glide,doc.disaster__name,doc.disaster_type__name,doc.format__name,doc.primary_country__shortname,doc.source__name,doc.source__type__name,doc.theme__name,doc.date__original__year"
+SUBCDEF "/corpora/registry_subcorp/rw_fr_subcorp"
+SUBCORPATTRS "s.lang,doc.ref,doc.country__shortname,doc.disaster__glide,doc.disaster__name,doc.disaster_type__name,doc.format__name,doc.primary_country__shortname,doc.source__name,doc.source__type__name,doc.theme__name,doc.date__original__year"
 TAGSETDOC "https://universaldependencies.org/treebanks/fr_gsd/index.html"
 VERTICAL "| for FILE in $(ls /corpora/rw_fr23/vertical/*.[0-9]*.vert.xz | sort -t. -k2,2n); do xzcat $FILE; done;"
 
 ATTRIBUTE "id" {
+	TYPE "MD_MGD"
     MULTISEP ","
     MULTIVALUE "y"
 }
 ATTRIBUTE "word" {
+	TYPE "MD_MGD"
     MAPTO "lemma"
 }
 ATTRIBUTE "lemma" {
+	TYPE "MD_MGD"
     MULTISEP ","
     MULTIVALUE "y"
 }
 ATTRIBUTE "upos" {
+	TYPE "MD_MGD"
         MULTISEP ","
         MULTIVALUE "y"
 }
 ATTRIBUTE "xpos" {
+	TYPE "MD_MGD"
         MULTISEP ","
         MULTIVALUE "y"
 }
 ATTRIBUTE "feats" {
+	TYPE "MD_MGD"
         MULTISEP "|"
         MULTIVALUE "y"
 }
 ATTRIBUTE "head" {
+	TYPE "MD_MGD"
         MULTISEP ","
         MULTIVALUE "y"
 }
 ATTRIBUTE "deprel" {
+	TYPE "MD_MGD"
         MULTISEP ","
         MULTIVALUE "y"
 }
 ATTRIBUTE "lc" {
+	TYPE "MD_MGD"
     ARG1 "C"
     DYNAMIC "utf8lowercase"
     DYNLIB "internal"
@@ -56,6 +66,7 @@ ATTRIBUTE "lc" {
     TRANSQUERY "yes"
 }
 ATTRIBUTE "lemma_lc" {
+	TYPE "MD_MGD"
     ARG1 "C"
     DYNAMIC "utf8lowercase"
     DYNLIB "internal"
@@ -66,132 +77,131 @@ ATTRIBUTE "lemma_lc" {
     TRANSQUERY "yes"
 }
 STRUCTURE "s" {
-	ENCODING "UTF-8"
-	ATTRIBUTE "id" {
-		DYNTYPE "freq"
+    ATTRIBUTE "id" {
+		TYPE "MD_MGD"
 		LABEL "ID"
-		}
+    }
+    ATTRIBUTE "lang" {
+		TYPE "MD_MGD"
+		LABEL "Language"
+	}
 }
 STRUCTURE "docx" {
-	ENCODING "UTF-8"
 	ATTRIBUTE "ref" {
-		DYNTYPE "freq"
-        LABEL "Reference"
-    }
-    ATTRIBUTE "name" {
-		DYNTYPE "freq"
-        LABEL "Filename"
-    }
+		TYPE "MD_MGD"
+		LABEL "Reference"
+	}
+	ATTRIBUTE "name" {
+		TYPE "MD_MGD"
+		LABEL "Filename"
+	}
 }
 STRUCTURE "doc" {
-    DEFAULTLOCALE "C"
-    ENCODING "UTF-8"
-    LANGUAGE ""
-    NESTED ""
+	TYPE "MD_MGD"
 	ATTRIBUTE "id" {
-		DYNTYPE "freq"
+		TYPE "MD_MGD"
 		LABEL "Report ID"
 		}
 	ATTRIBUTE "file_id" {
-		DYNTYPE "freq"
+		TYPE "MD_MGD"
 		LABEL "File ID"
 		}
 	ATTRIBUTE "ref" {
-		DYNTYPE "freq"
+		TYPE "MD_MGD"
 		LABEL "Reference"
 		}
 	ATTRIBUTE "country__iso3" {
+		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Country ISO"
 		}
 	ATTRIBUTE "country__shortname" {
+		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Country"
 		}
 	ATTRIBUTE "date__original" {
-		DYNTYPE "freq"
+		TYPE "MD_MGD"
 		LABEL "Timestamp"
 		}
 	ATTRIBUTE "date__original__year" {
-		DYNTYPE "freq"
+		TYPE "MD_MGD"
 		LABEL "Year"
 		}
 	ATTRIBUTE "disaster__glide" {
+		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Disaster GLIDE"
 		}
 	ATTRIBUTE "disaster__name" {
+		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Disaster name"
 		}
 	ATTRIBUTE "disaster_type__name" {
+		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Disaster type"
 		}
 	ATTRIBUTE "format__name" {
+		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Format"
 		}
 	ATTRIBUTE "primary_country__iso3" {
+		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Primary country ISO"
 		}
 	ATTRIBUTE "primary_country__shortname" {
+		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Primary country"
 		}
 	ATTRIBUTE "source__name" {
+		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Source (full)"
 		}
 	ATTRIBUTE "source__shortname" {
+		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Source (short)"
 		}
 	ATTRIBUTE "source__spanish_name" {
+		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Source (ES)"
 		}
 	ATTRIBUTE "source__type__name" {
+		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Source type"
 		}
 	ATTRIBUTE "theme__name" {
+		TYPE "MD_MGD"
 		MULTIVALUE "1"
-		DYNTYPE "freq"
 		MULTISEP "|"
 		LABEL "Theme"
 		}
 	ATTRIBUTE "title" {
-		DYNTYPE "freq"
+		TYPE "MD_MGD"
 		LABEL "Report title"
 		}
 	ATTRIBUTE "url" {
-		DYNTYPE "freq"
+		TYPE "MD_MGD"
 		LABEL "Report URL"
 		}
 }
