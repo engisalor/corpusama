@@ -1,11 +1,13 @@
 import lzma
 import unittest
+import uuid
 from collections import OrderedDict
 from pathlib import Path
 from shutil import copy
 from types import GeneratorType
 
 from click.testing import CliRunner
+from defusedxml import ElementTree
 
 from pipeline.stanza import secondary_pipeline
 
@@ -45,10 +47,19 @@ class TestSecondaryPipelineUtils(unittest.TestCase):
 
     def test_update_doc_tag(self):
         line = '<doc id="1" file_id="5">'
-        s, n = secondary_pipeline.update_doc_tag(line, 0)
+        s, n = secondary_pipeline.update_doc_tag(line, 1, False)
         ref = '<doc id="1" file_id="5" ref="1">\n'
         self.assertEqual(s, ref)
-        self.assertEqual(1, n)
+        self.assertEqual(2, n)
+
+    def test_update_doc_tag_uuid(self):
+        line = '<doc id="1" file_id="5">'
+        s, n = secondary_pipeline.update_doc_tag(line, 1, True)
+        ls = ElementTree.fromstring(s + "</doc>").items()
+        _uuid = ls[2][1].strip('"')
+        self.assertEqual(2, n)
+        res = isinstance(uuid.UUID(_uuid), uuid.UUID)
+        self.assertTrue(res)
 
     def test_sort_files(self):
         files = ["file.2.vert", "file.1.vert", "file.10.vert"]
@@ -58,7 +69,7 @@ class TestSecondaryPipelineUtils(unittest.TestCase):
         self.assertListEqual(out, [Path(x) for x in ref])
 
 
-class TestSecondaryPipeline(unittest.TestCase):
+class TestSecondaryPipelineLangID(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.runner = CliRunner()
@@ -107,6 +118,12 @@ class TestSecondaryPipeline(unittest.TestCase):
         self.assertEqual("1\ten\n12\tes\n", out)
         file.with_suffix(".vert.lid.tsv").unlink()
 
+
+class TestSecondaryPipelineMain(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.runner = CliRunner()
+
     def test_main(self):
         file1 = Path("test/test_pipeline/files/file.1.vert")
         file2 = Path("test/test_pipeline/files/file.2.vert")
@@ -121,6 +138,23 @@ class TestSecondaryPipeline(unittest.TestCase):
                 ref = f.read()
             self.assertEqual(ref, out)
             file.with_suffix(".vert.TMP").unlink()
+
+    def test_main_docx_exists(self):
+        file = Path("test/test_pipeline/files/file-copy.1.vert")
+        src_file = Path("test/test_pipeline/files/file.1.vert.TMP.REF")
+        copy(src_file, file)
+        result = self.runner.invoke(
+            secondary_pipeline.main, [str(file), "--no-compress"]
+        )
+        self.assertTrue(result.exit_code == 0)
+        with open(file.with_suffix(".vert.TMP")) as f:
+            out = f.read()
+            out = out.replace("-copy", "")
+        with open(src_file) as f:
+            ref = f.read()
+        self.assertEqual(ref, out)
+        file.with_suffix(".vert.TMP").unlink()
+        file.unlink()
 
     def test_main_with_langid(self):
         file = Path("test/test_pipeline/files/file.1.vert")
@@ -195,6 +229,23 @@ class TestSecondaryPipeline(unittest.TestCase):
         file.unlink()
         tmp = Path("test/test_pipeline/files/file-copy.1.vert.TMP")
         tmp.unlink()
+
+    def test_main_uuid(self):
+        file = Path("test/test_pipeline/files/file.1.vert")
+        result = self.runner.invoke(
+            secondary_pipeline.main, [str(file), "--no-compress", "--uuid"]
+        )
+        self.assertTrue(result.exit_code == 0)
+        with open(file.with_suffix(".vert.TMP")) as f:
+            out = f.readlines()
+
+        docx = ElementTree.fromstring(out[0] + "</docx>").items()[0][1]
+        doc1 = ElementTree.fromstring(out[1] + "</doc>").items()[2][1]
+        doc2 = ElementTree.fromstring(out[12] + "</doc>").items()[2][1]
+        for _uuid in [docx, doc1, doc2]:
+            res = isinstance(uuid.UUID(_uuid), uuid.UUID)
+            self.assertTrue(res)
+        file.with_suffix(".vert.TMP").unlink()
 
 
 if __name__ == "__main__":
