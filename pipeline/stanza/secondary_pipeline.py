@@ -10,6 +10,7 @@ from collections import Counter, OrderedDict
 from io import TextIOWrapper
 from pathlib import Path
 from typing import List
+from uuid import UUID, uuid4
 from xml.sax.saxutils import quoteattr  # nosec
 
 import click
@@ -17,11 +18,18 @@ import pandas as pd
 from defusedxml import ElementTree
 from stanza import Pipeline
 
+_u = uuid4()
+# _u = "hello"
+s = UUID(str(_u))
+s
 try:
     import uninorm_4 as uninorm
 except ModuleNotFoundError:
     from pipeline.stanza import uninorm_4 as uninorm
 
+
+# TODO: test running secondary pipeline main several times
+# in same dir: does it update files correctly or break?
 
 # default settings
 Path(".temp/").mkdir(exist_ok=True)
@@ -82,12 +90,14 @@ def update_s_tag(dt):
     return line + ">\n"
 
 
-def update_doc_tag(line, doc_n) -> tuple:
-    doc_n += 1
+def update_doc_tag(line, doc_n, uuid: bool) -> tuple:
     dt = get_xml_attrs(line, "</doc>")
     dt.pop("ref", None)
-    n_attr = quoteattr(str(doc_n))
-    s = f'<doc id={dt["id"]} file_id={dt["file_id"]} ref={n_attr} '
+    if uuid:
+        _ref = quoteattr(str(uuid4()))
+    else:
+        _ref = quoteattr(str(doc_n))
+    s = f'<doc id={dt["id"]} file_id={dt["file_id"]} ref={_ref} '
     doc_tag = [s]
     del dt["id"]
     del dt["file_id"]
@@ -97,7 +107,7 @@ def update_doc_tag(line, doc_n) -> tuple:
     doc_tag[-1] = doc_tag[-1].rstrip()
     line = "".join(doc_tag)
     line += ">\n"
-    return line, doc_n
+    return line, doc_n + 1
 
 
 def get_sent_lid_tsv(file):
@@ -289,16 +299,22 @@ def langid(
 @click.option(
     "--doc_n",
     type=click.INT,
-    default=0,
+    default=1,
     show_default=True,
-    help="Starting number for document reference # tags (starts at n+1).",
+    help="Starting number for document reference tags.",
 )
 @click.option(
     "--docx_n",
     type=click.INT,
-    default=0,
+    default=1,
     show_default=True,
-    help="Starting number for source file reference # tags (starts at n+1).",
+    help="Starting number for source file (docx) reference tags.",
+)
+@click.option(
+    "--uuid/--no-uuid",
+    default=False,
+    show_default=True,
+    help="Generate UUIDs for every doc and docx line (overrides --doc_n, --docx_n).",
 )
 @click.option(
     "--clear/--no-clear",
@@ -336,6 +352,7 @@ def main(
     file: List[Path],
     doc_n: int,
     docx_n: int,
+    uuid: bool,
     clear: bool,
     compress: bool,
     keep: bool,
@@ -360,19 +377,15 @@ def main(
         f: TextIOWrapper,
         d: TextIOWrapper,
         doc_n: int,
-        docx_n: int,
         file: Path,
         langid: bool,
+        uuid: bool,
     ):
         if langid:
             df = get_sent_lid_tsv(file)
         for i, line in enumerate(f):
-            if i == 0:
-                ref = quoteattr(str(docx_n))
-                name = quoteattr(file.name)
-                d.write(f"<docx ref={ref} name={name}>\n")
             if line.startswith('<doc id="'):
-                line, doc_n = update_doc_tag(line, doc_n)
+                line, doc_n = update_doc_tag(line, doc_n, uuid)
             elif langid and line.startswith("<s"):
                 try:
                     lang = df.loc[i]["lang"]
@@ -381,15 +394,15 @@ def main(
                     line = update_s_tag(dt)
                 except KeyError:
                     pass
-            elif line.startswith("<docx") or line.startswith("</docx"):
+            if line.startswith("<docx") or line.startswith("</docx"):
                 pass
-            d.write(line)
+            else:
+                d.write(line)
         return doc_n
 
     # run
     file = sort_files(file)
     for _f in file:
-        docx_n += 1
         _f = Path(_f)
         if _f.suffix == ".xz":
             open_func = lzma.open
@@ -401,10 +414,16 @@ def main(
             temp = _f
         else:
             raise Warning(f"_f must end in .vert or .xz: {_f}")
+        dest = Path(str(temp) + ".TMP")
+        name = quoteattr(_f.name)
+        if uuid:
+            _ref = quoteattr(str(uuid4()))
+        else:
+            _ref = quoteattr(str(docx_n))
         with open_func(_f, mode) as f:
-            dest = Path(str(temp) + ".TMP")
             with open(dest, "w") as d:
-                doc_n = _inner(f, d, doc_n, docx_n, _f, langid)
+                d.write(f"<docx ref={_ref} name={name}>\n")
+                doc_n = _inner(f, d, doc_n, _f, langid, uuid)
                 d.write("</docx>\n")
         if compress:
             cmd = ["xz", dest, "-T", str(threads)]
@@ -416,6 +435,7 @@ def main(
         if clear:
             _f.unlink()
             os.rename(dest, dest.with_suffix(""))
+        docx_n += 1
 
 
 if __name__ == "__main__":
