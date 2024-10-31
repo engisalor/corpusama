@@ -1,12 +1,5 @@
 #!/bin/bash
 
-# docker exec noske compilecorp --recompile-corpus --lexicon-cache=3000000000 --no-ske rw_es23 && \
-# python pipeline/stanza/secondary_pipeline.py main /run/media/user/evo970/corpora/rw_fr23/vertical/*.vert.xz --uuid --langid --clear && \
-# docker exec noske compilecorp --recompile-corpus --lexicon-cache=3000000000 --no-ske rw_fr23 && \
-# python pipeline/stanza/secondary_pipeline.py main /run/media/user/evo970/corpora/rw_en23/vertical/*.vert.xz --uuid --langid --clear && \
-# docker exec noske compilecorp --recompile-corpus --lexicon-cache=3000000000 --no-ske rw_en23
-
-
 source $PWD/.venv/bin/activate
 
 if [ $# -ne 2 ]; then
