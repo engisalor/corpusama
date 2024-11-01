@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.4.0](https://github.com/engisalor/corpusama/compare/v0.3.1...v0.4.0) (2024-11-01)
+
+A significant update with various issues fixed and new enhancements. Provides scripts for automated corpus updates (see README).
+
+### Features
+
+* add stanza secondary_pipeline ([1524851](https://github.com/engisalor/corpusama/commit/15248510f4c41e6426fbbcca988b8ee8eca28a38))
+
+### Bug Fixes
+
+* various
+
+### Documentation
+
+* various
+
 ## [0.3.1](https://github.com/engisalor/corpusama/compare/v0.3.0...v0.3.1) (2024-06-21)
 
 
