@@ -14,7 +14,7 @@ ReliefWeb is a large database with over 1 million humanitarian reports, each of 
 
 ## Basic installation
 
-Clone this repo and install dependencies in in a virtual environment. These are the main packages: `pip install click defusedxml nltk pandas PyMuPDF PyYAML requests stanza`.
+Clone this repo and install dependencies in in a virtual environment (tested on Python 3.12). These are the main packages: `pip install click defusedxml nltk pandas PyMuPDF PyYAML requests stanza`.
 
 ```bash
 python3 -m venv .venv
@@ -42,16 +42,18 @@ bash rw_corpora_update.sh "<START_DATE>" "<END_DATE>" # <YYYY_MM_DD> format
 
 1. Clone the repo and CD to the directory.
 2. Stanza and NLTK models will be downloaded to `~/`. These resources will be reused until updated manually. Requires ~<10 GB for dependencies and models.
-3. After installing dependencies, `unittest` will run to ensure proper setup. As of `2024/10/09` no tests should fail.
+3. After installing dependencies, `unittest` will run to ensure proper setup. As of `2024/11/01` no tests should fail.
 4. See ReliefWeb's terms and conditions before using its service/data. An email is required for making API calls (stored in files ending in `*secret.yml`).
 
 ### On generating corpora: `rw_corpora_update.sh`
 
 1. This script produces a series of compressed vertical corpus files in
    a CoNLLU-based format using Stanza NLP.
-2. After completion, the project can be deleted. If not deleted,
-   downloaded data will keep accumulating for every run. Storing all of
-   ReliefWeb takes ~500 GB and weeks to download/process. This script is intended for sequential, chronological updates only, not a mix of overlapping or dijointed dates.
+    - fetches ReliefWeb data for a date range
+    - processes with Stanza NLP into CoNLLU
+    - converts to SkE-compatible vertical foramt
+    - runs a secondary pipeline to add sentence-level language metadata and UUIDs for doc and docx structures (technically optional)
+2. After completion, `.vert.xz` files can be stored and used. The rest of the project can be deleted if CoNLLU and other files aren't desired. Downloaded data will keep accumulating for every run. Storing all of ReliefWeb takes ~500 GB and weeks to download/process. This script is intended for sequential, chronological updates only, not a mix of overlapping or dijointed dates.
 3. This script reuses `config/reliefweb_2000+.yml` to define settings.
    A custom date range is supplied to define what texts to download. Use a YYYY-MM-DD format. The example below collects data for January 2020:
 
@@ -75,13 +77,39 @@ This produces these vertical files (and intermediate formats) as long as documen
 
 See more in-depth explanations of software and data formats below.
 
-## Additional details
+## Corpus sizes
 
-### Stanza
+|Name|ID|Types|Tokens|Docs|
+|-|-|-|-|-|
+|ReliefWeb English 2023 | rw_en23 | 1,683,494,268 | 2,079,244,974 |884,528|
+|ReliefWeb French 2023 | rw_fr23 | 210,112,455 | 248,413,974 | 109,592 |
+|ReliefWeb Spanish 2023 | rw_es23 | 125,983,910 | 150,712,952 | 79,697 |
+
+- Dates cover January 1, 2000 through December 31, 2023 (until next update)
+
+## Corpus structures
+
+- `<doc>` delineates documents, which may be HTML text or extracted PDF text
+  - contains the most pertinent metadata for linguistic analysis
+  - `doc.id` refers to the Report ID (which can be shared by its 1 HTML text and 0+ associated PDFs)
+  - `doc.file_id` refers to PDF content for a report
+- `<docx>` is the XZ archive containing a set of documents
+- `<s>` is a sentence boundary
+  - `s.id` refers to the sentence number in a document, starting at 1
+  - `s.lang` if implemented, refers to the Stanza language identification result for the sentence, with English, Spanish, French, and None as the possible values (None being sentences too short to analyze)
+- a `ref` value is given for `doc` and `docx` structures, which may be a unique sequential number or a UUID (preferably the latter)
+
+## Subcorpora
+
+- `doc_html` and `doc_pdf` split the corpus by document type
+- `lang_*` splits the corpus by sentence language: mostly used to identify pockets of unwanted noise; does not strictly refer to each language ID result (see the `registry_subcorp` files for precise definitions)
+- `source_single` and `source_multi` split the corpus by documents that have only one 'author' in the `doc.source__name` value or multiple authors
+
+## Stanza
 
 [Stanza](https://github.com/stanfordnlp/stanza) is a Python NLP package from Stanford. Models for languages may need to be downloaded with its `download()` function if this doesn't happen automatically.
 
-### Deprecated packages
+## Deprecated packages
 
 Earlier versions relied on FreeLing and fastText NLP tools. See the history of this README for old installation instructions. These tools perform better on machines without a dedicated GPU, whereas Stanza can run on a CPU but more slowly.
 
@@ -271,6 +299,7 @@ sha256sum -c hashes.txt
 - [Stanza Treebanks](https://stanfordnlp.github.io/stanza/performance.html)
 - [Universal Dependencies](https://universaldependencies.org/)
 - [Ancora treebank documentation (Spanish pipeline)](https://clic.ub.edu/corpus/en/documentation)
+- [French GSD treebank documentation (French pipeline)](https://universaldependencies.org/treebanks/fr_gsd/index.html)
 - [Penn treebank tagset (English pipeline)](https://www.sketchengine.eu/penn-treebank-tagset/)
 
 ## Acknowledgements
