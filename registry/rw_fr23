@@ -108,7 +108,7 @@ STRUCTURE "doc" {
 		}
 	ATTRIBUTE "ref" {
 		TYPE "MD_MGD"
-		LABEL "Reference"
+		LABEL "Reference doc"
 		}
 	ATTRIBUTE "country__iso3" {
 		TYPE "MD_MGD"
