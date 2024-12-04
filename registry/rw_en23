@@ -89,7 +89,7 @@ STRUCTURE "s" {
 STRUCTURE "docx" {
 	ATTRIBUTE "ref" {
 		TYPE "MD_MGD"
-		LABEL "Reference"
+		LABEL "Reference docx"
 	}
 	ATTRIBUTE "name" {
 		TYPE "MD_MGD"
