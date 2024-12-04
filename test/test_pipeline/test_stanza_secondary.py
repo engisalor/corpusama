@@ -61,6 +61,13 @@ class TestSecondaryPipelineUtils(unittest.TestCase):
         res = isinstance(uuid.UUID(_uuid), uuid.UUID)
         self.assertTrue(res)
 
+    def test_update_doc_tag_no_id(self):
+        line = '<doc something="1">'
+        s, n = secondary_pipeline.update_doc_tag(line, 1, False)
+        ref = '<doc ref="1" something="1">\n'
+        self.assertEqual(s, ref)
+        self.assertEqual(2, n)
+
     def test_sort_files(self):
         files = ["file.2.vert", "file.1.vert", "file.10.vert"]
         files = [Path(x) for x in files]
