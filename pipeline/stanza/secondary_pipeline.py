@@ -80,34 +80,31 @@ def get_xml_attrs(line, closing="</s>") -> OrderedDict:
     return OrderedDict((k, quoteattr(v)) for k, v in dt.items())
 
 
-def update_s_tag(dt):
-    line = f'<s id={dt["id"]} '
-    del dt["id"]
+def _update_tag(dt, struct, add_first):
+    s = f"<{struct} "
+    for x in add_first:
+        if dt.get(x):
+            s += f'{x}={dt[x]} '
+            del dt[x]
     for k, v in dt.items():
         if v:
-            line += f"{k}={v} "
-    line = line.rstrip()
-    return line + ">\n"
+            s += f"{k}={v} "
+    s = s.rstrip()
+    return s + ">\n"
+    
+
+def update_s_tag(dt):
+    return _update_tag(dt,"s", ["id"])
 
 
 def update_doc_tag(line, doc_n, uuid: bool) -> tuple:
     dt = get_xml_attrs(line, "</doc>")
-    dt.pop("ref", None)
     if uuid:
-        _ref = quoteattr(str(uuid4()))
+        dt["ref"] = quoteattr(str(uuid4()))
     else:
-        _ref = quoteattr(str(doc_n))
-    s = f'<doc id={dt["id"]} file_id={dt["file_id"]} ref={_ref} '
-    doc_tag = [s]
-    del dt["id"]
-    del dt["file_id"]
-    for k, v in dt.items():
-        if v:
-            doc_tag.append(f"{k}={v} ")
-    doc_tag[-1] = doc_tag[-1].rstrip()
-    line = "".join(doc_tag)
-    line += ">\n"
-    return line, doc_n + 1
+        dt["ref"] = quoteattr(str(doc_n))
+    s = _update_tag(dt, "doc", ["id", "file_id", "ref"])
+    return s, doc_n + 1
 
 
 def get_sent_lid_tsv(file):
