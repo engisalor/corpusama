@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.1](https://github.com/engisalor/corpusama/compare/v0.4.0...v0.4.1) (2024-12-04)
+
+
+### Bug Fixes
+
+* clarify Reference labels ([6b3eb6e](https://github.com/engisalor/corpusama/commit/6b3eb6eafe345cd1cc0173f353a8009a2be177ba))
+* disable compress for secondary pipeline, add warning ([de37f36](https://github.com/engisalor/corpusama/commit/de37f36ead9762283c942ce31a813ec669da45b8))
+* make id and file_id optional for stanza secondary pipeline ([9f490d6](https://github.com/engisalor/corpusama/commit/9f490d60faf89cc3c9d1a17a8eaee15c1fe8e3b8))
+* rw registry relabel docx.ref ([61c40b8](https://github.com/engisalor/corpusama/commit/61c40b83abc72db6b874a26c896af4ba98961f29))
+
 ## [0.4.0](https://github.com/engisalor/corpusama/compare/v0.3.1...v0.4.0) (2024-11-01)
 
 A significant update with various issues fixed and new enhancements. Provides scripts for automated corpus updates (see README).
