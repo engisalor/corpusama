@@ -321,7 +321,7 @@ def langid(
 )
 @click.option(
     "--compress/--no-compress",
-    default=True,
+    default=False,
     show_default=True,
     help="Compress output files with XZ.",
 )
@@ -423,6 +423,10 @@ def main(
                 doc_n = _inner(f, d, doc_n, _f, langid, uuid)
                 d.write("</docx>\n")
         if compress:
+            m = "Note: the compress option may cause read permission issues"
+            m += "\non some noske installations. Until fixed, it's safer to"
+            m += "\ncompress output files with xz as a separate command"
+            logging.warning(m)
             cmd = ["xz", dest, "-T", str(threads)]
             if keep:
                 cmd.append("-k")
