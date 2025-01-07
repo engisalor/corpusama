@@ -159,6 +159,7 @@ def _conll_to_vert(source: TextIOWrapper, dest: TextIOWrapper) -> None:
             new_doc = True
         # write sentence tag
         elif line.startswith("# sent_id"):
+            new_sent = True
             if new_doc:
                 n = 0
                 dest.write(f'>\n<s id="{n}">\n')
@@ -219,7 +220,12 @@ def _conll_to_vert(source: TextIOWrapper, dest: TextIOWrapper) -> None:
                 mwt_parts = []
                 mwt_ids = []
             # end sentence tag
-            dest.write("</s>")
+            if new_sent:
+                dest.write("</s>")
+                new_sent = False
+            elif new_doc:
+                dest.write(">")
+                new_doc = False
     # end document tag
     dest.write("\n</doc>\n")
 
