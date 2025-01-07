@@ -1,0 +1,29 @@
+# newdoc
+# id = 3122823
+# url = https://en.wikipedia.org/wiki?curid=3122823
+# title = George Washington's
+# text = George Washington's
+# sent_id = 0
+1	George	George	PROPN	NNP	Number=Sing	0	root	_	start_char=0|end_char=6
+2-3	Washington's	_	_	_	_	_	_	_	start_char=7|end_char=19|SpacesAfter=\n
+2	Washington	Washington	PROPN	NNP	Number=Sing	1	flat	_	start_char=7|end_char=17
+3	's	's	PART	POS	_	1	case	_	start_char=17|end_char=19
+
+# newdoc
+# id = 3122831
+# url = https://en.wikipedia.org/wiki?curid=3122831
+# title = ۝
+
+
+# newdoc
+# id = 3122832
+# url = https://en.wikipedia.org/wiki?curid=3122832
+# title = Battle of Placentia (271)
+# text = Battle of Placentia (271)
+# sent_id = 0
+1	Battle	Battle	NOUN	NN	Number=Sing	0	root	_	start_char=0|end_char=6
+2	of	of	ADP	IN	_	3	case	_	start_char=7|end_char=9
+3	Placentia	Placentia	PROPN	NNP	Number=Sing	1	nmod	_	start_char=10|end_char=19
+4	(	(	PUNCT	-LRB-	_	5	punct	_	start_char=20|end_char=21|SpaceAfter=No
+5	271	271	NUM	CD	NumForm=Digit|NumType=Card	1	dep	_	start_char=21|end_char=24|SpaceAfter=No
+6	)	)	PUNCT	-RRB-	_	5	punct	_	start_char=24|end_char=25|SpacesAfter=\n

@@ -55,6 +55,21 @@ class TestConllToVert(unittest.TestCase):
         self.assertTrue(result.exit_code == 0)
         self.assertEqual(file_hash(out), file_hash(ref))
 
+    def test_conll_to_vert_empty_doc_and_extra_empty_lines(self):
+        """Compares file hashes. Use diff on out & ref if assertEqual fails."""
+        f = Path("test/test_pipeline/files/wiki_en.txt.conllu.REF")
+        temp = Path("test/test_pipeline/files/wiki_en_temp.txt.conllu")
+        shutil.copy(f, temp)
+        with open(temp, "a") as f:
+            f.write("\n")
+        out = Path("test/test_pipeline/files/wiki_en_temp.txt.vert")
+        ref = Path("test/test_pipeline/files/wiki_en.txt.vert.REF")
+        result = self.runner.invoke(
+            base_pipeline.conll_to_vert, [str(temp), "--no-compress"]
+        )
+        self.assertTrue(result.exit_code == 0)
+        self.assertEqual(file_hash(out), file_hash(ref))
+
     def test_conll_to_vert_splice_mwt(self):
         """Compares file hashes. Use diff on out & ref if assertEqual fails.
 
