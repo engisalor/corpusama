@@ -12,21 +12,6 @@ from defusedxml import ElementTree
 from pipeline.stanza import secondary_pipeline
 
 
-class TestConllToVert(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        pass
-
-    def setUp(self):
-        pass
-
-    def tearDown(self) -> None:
-        pass
-
-    def test_conll_to_vert(self):
-        pass
-
-
 class TestSecondaryPipelineUtils(unittest.TestCase):
     def test_chunk(self):
         gen = secondary_pipeline.chunks([1] * 10, 5)
