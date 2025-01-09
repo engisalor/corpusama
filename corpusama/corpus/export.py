@@ -125,6 +125,7 @@ def export_text(
             texts = "\n".join(df.loc[df["text"].notnull(), "text"].values)
             with open(file.with_suffix(f".{batch}.txt"), "w") as f:
                 f.write(texts)
+                f.write("\n")
             logging.debug(f'{file.with_suffix(f".{batch}.txt")}')
             batch += 1
             if test:
