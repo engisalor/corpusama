@@ -1,0 +1,209 @@
+CORPUS "rw_en24"
+DEFAULTATTR "word"
+DIACHRONIC "doc.date__original__year"
+DOCSTRUCTURE "doc"
+ENCODING "UTF-8"
+INFO "English ReliefWeb reports 2000-2024 (Corpusama v0.4.1)."
+INFOHREF "https://github.com/engisalor/corpusama"
+LANGUAGE "English"
+MAINTAINER "github.com/engisalor"
+NAME "ReliefWeb English 2024 (rw_en24)"
+PATH "/corpora/rw_en24/indexed/"
+SUBCBASE "/corpora/rw_en24/indexed/subcorp"
+SUBCDEF "/corpora/registry_subcorp/rw_en_subcorp"
+SUBCORPATTRS "s.lang,doc.ref,doc.country__shortname,doc.disaster__glide,doc.disaster__name,doc.disaster_type__name,doc.format__name,doc.primary_country__shortname,doc.source__name,doc.source__type__name,doc.theme__name,doc.date__original__year"
+TAGSETDOC "https://universaldependencies.org/treebanks/es_ancora/index.html"
+VERTICAL "| for FILE in $(ls /corpora/rw_en24/vertical/*.vert.xz | sort -t. -k2,2n); do xzcat $FILE; done;"
+
+ATTRIBUTE "id" {
+	TYPE "MD_MGD"
+    MULTISEP ","
+    MULTIVALUE "y"
+}
+ATTRIBUTE "word" {
+	TYPE "MD_MGD"
+    MAPTO "lemma"
+}
+ATTRIBUTE "lemma" {
+	TYPE "MD_MGD"
+    MULTISEP ","
+    MULTIVALUE "y"
+}
+ATTRIBUTE "upos" {
+	TYPE "MD_MGD"
+        MULTISEP ","
+        MULTIVALUE "y"
+}
+ATTRIBUTE "xpos" {
+	TYPE "MD_MGD"
+        MULTISEP ","
+        MULTIVALUE "y"
+}
+ATTRIBUTE "feats" {
+	TYPE "MD_MGD"
+        MULTISEP "|"
+        MULTIVALUE "y"
+}
+ATTRIBUTE "head" {
+	TYPE "MD_MGD"
+        MULTISEP ","
+        MULTIVALUE "y"
+}
+ATTRIBUTE "deprel" {
+	TYPE "MD_MGD"
+        MULTISEP ","
+        MULTIVALUE "y"
+}
+ATTRIBUTE "lc" {
+	TYPE "MD_MGD"
+    ARG1 "C"
+    DYNAMIC "utf8lowercase"
+    DYNLIB "internal"
+    DYNTYPE "freq"
+    FROMATTR "word"
+    FUNTYPE "s"
+	LABEL "word (lowercase)"
+    TRANSQUERY "yes"
+}
+ATTRIBUTE "lemma_lc" {
+	TYPE "MD_MGD"
+    ARG1 "C"
+    DYNAMIC "utf8lowercase"
+    DYNLIB "internal"
+    DYNTYPE "freq"
+    FROMATTR "lemma"
+    FUNTYPE "s"
+    LABEL "lemma (lowercase)"
+    TRANSQUERY "yes"
+}
+STRUCTURE "s" {
+	TYPE "map64"
+    ATTRIBUTE "id" {
+		TYPE "MD_MGD"
+		LABEL "ID"
+    }
+    ATTRIBUTE "lang" {
+		TYPE "MD_MGD"
+		LABEL "Language"
+	}
+}
+STRUCTURE "docx" {
+	TYPE "map64"
+	ATTRIBUTE "ref" {
+		TYPE "MD_MGD"
+		LABEL "Reference docx"
+	}
+	ATTRIBUTE "name" {
+		TYPE "MD_MGD"
+		LABEL "Filename"
+	}
+}
+STRUCTURE "doc" {
+	TYPE "map64"
+	ATTRIBUTE "id" {
+		TYPE "MD_MGD"
+		LABEL "Report ID"
+		}
+	ATTRIBUTE "file_id" {
+		TYPE "MD_MGD"
+		LABEL "File ID"
+		}
+	ATTRIBUTE "ref" {
+		TYPE "MD_MGD"
+		LABEL "Reference doc"
+		}
+	ATTRIBUTE "country__iso3" {
+		TYPE "MD_MGD"
+		MULTIVALUE "1"
+		MULTISEP "|"
+		LABEL "Country ISO"
+		}
+	ATTRIBUTE "country__shortname" {
+		TYPE "MD_MGD"
+		MULTIVALUE "1"
+		MULTISEP "|"
+		LABEL "Country"
+		}
+	ATTRIBUTE "date__original" {
+		TYPE "MD_MGD"
+		LABEL "Timestamp"
+		}
+	ATTRIBUTE "date__original__year" {
+		TYPE "MD_MGD"
+		LABEL "Year"
+		}
+	ATTRIBUTE "disaster__glide" {
+		TYPE "MD_MGD"
+		MULTIVALUE "1"
+		MULTISEP "|"
+		LABEL "Disaster GLIDE"
+		}
+	ATTRIBUTE "disaster__name" {
+		TYPE "MD_MGD"
+		MULTIVALUE "1"
+		MULTISEP "|"
+		LABEL "Disaster name"
+		}
+	ATTRIBUTE "disaster_type__name" {
+		TYPE "MD_MGD"
+		MULTIVALUE "1"
+		MULTISEP "|"
+		LABEL "Disaster type"
+		}
+	ATTRIBUTE "format__name" {
+		TYPE "MD_MGD"
+		MULTIVALUE "1"
+		MULTISEP "|"
+		LABEL "Format"
+		}
+	ATTRIBUTE "primary_country__iso3" {
+		TYPE "MD_MGD"
+		MULTIVALUE "1"
+		MULTISEP "|"
+		LABEL "Primary country ISO"
+		}
+	ATTRIBUTE "primary_country__shortname" {
+		TYPE "MD_MGD"
+		MULTIVALUE "1"
+		MULTISEP "|"
+		LABEL "Primary country"
+		}
+	ATTRIBUTE "source__name" {
+		TYPE "MD_MGD"
+		MULTIVALUE "1"
+		MULTISEP "|"
+		LABEL "Source (full)"
+		}
+	ATTRIBUTE "source__shortname" {
+		TYPE "MD_MGD"
+		MULTIVALUE "1"
+		MULTISEP "|"
+		LABEL "Source (short)"
+		}
+	ATTRIBUTE "source__spanish_name" {
+		TYPE "MD_MGD"
+		MULTIVALUE "1"
+		MULTISEP "|"
+		LABEL "Source (ES)"
+		}
+	ATTRIBUTE "source__type__name" {
+		TYPE "MD_MGD"
+		MULTIVALUE "1"
+		MULTISEP "|"
+		LABEL "Source type"
+		}
+	ATTRIBUTE "theme__name" {
+		TYPE "MD_MGD"
+		MULTIVALUE "1"
+		MULTISEP "|"
+		LABEL "Theme"
+		}
+	ATTRIBUTE "title" {
+		TYPE "MD_MGD"
+		LABEL "Report title"
+		}
+	ATTRIBUTE "url" {
+		TYPE "MD_MGD"
+		LABEL "Report URL"
+		}
+}

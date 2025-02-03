@@ -1,0 +1,112 @@
+CORPUS "wikipedia_en24"
+DEFAULTATTR "word"
+DOCSTRUCTURE "doc"
+ENCODING "UTF-8"
+INFO "English Wikipedia 2024-10-20 (Corpusama v0.4.0)."
+INFOHREF "https://github.com/engisalor/corpusama"
+LANGUAGE "English"
+MAINTAINER "github.com/engisalor"
+NAME "Wikipedia English 2024 (wikipedia_en24)"
+PATH "/corpora/wikipedia_en24/indexed/"
+SUBCORPATTRS "doc.id,doc.title,doc.url"
+TAGSETDOC "https://universaldependencies.org/treebanks/en_ewt/index.html"
+VERTICAL "| for FILE in $(ls /corpora/wikipedia_en24/vertical/*.[0-9]*.vert.xz | sort -t. -k2,2n); do xzcat $FILE; done;"
+
+ATTRIBUTE "id" {
+	TYPE "MD_MGD"
+    MULTISEP ","
+    MULTIVALUE "y"
+}
+ATTRIBUTE "word" {
+	TYPE "MD_MGD"
+    MAPTO "lemma"
+}
+ATTRIBUTE "lemma" {
+	TYPE "MD_MGD"
+    MULTISEP ","
+    MULTIVALUE "y"
+}
+ATTRIBUTE "upos" {
+	TYPE "MD_MGD"
+        MULTISEP ","
+        MULTIVALUE "y"
+}
+ATTRIBUTE "xpos" {
+	TYPE "MD_MGD"
+        MULTISEP ","
+        MULTIVALUE "y"
+}
+ATTRIBUTE "feats" {
+	TYPE "MD_MGD"
+        MULTISEP "|"
+        MULTIVALUE "y"
+}
+ATTRIBUTE "head" {
+	TYPE "MD_MGD"
+        MULTISEP ","
+        MULTIVALUE "y"
+}
+ATTRIBUTE "deprel" {
+	TYPE "MD_MGD"
+        MULTISEP ","
+        MULTIVALUE "y"
+}
+ATTRIBUTE "lc" {
+	TYPE "MD_MGD"
+    ARG1 "C"
+    DYNAMIC "utf8lowercase"
+    DYNLIB "internal"
+    DYNTYPE "freq"
+    FROMATTR "word"
+    FUNTYPE "s"
+	LABEL "word (lowercase)"
+    TRANSQUERY "yes"
+}
+ATTRIBUTE "lemma_lc" {
+	TYPE "MD_MGD"
+    ARG1 "C"
+    DYNAMIC "utf8lowercase"
+    DYNLIB "internal"
+    DYNTYPE "freq"
+    FROMATTR "lemma"
+    FUNTYPE "s"
+    LABEL "lemma (lowercase)"
+    TRANSQUERY "yes"
+}
+STRUCTURE "s" {
+    TYPE "map64"
+    ATTRIBUTE "id" {
+		TYPE "MD_MGD"
+        LABEL "ID"
+    }
+}
+STRUCTURE "docx" {
+    TYPE "map64"
+	ATTRIBUTE "ref" {
+		TYPE "MD_MGD"
+		LABEL "Reference docx"
+	}
+	ATTRIBUTE "name" {
+		TYPE "MD_MGD"
+		LABEL "Filename"
+	}
+}
+STRUCTURE "doc" {
+	TYPE "map64"
+	ATTRIBUTE "id" {
+		TYPE "MD_MGD"
+		LABEL "ID"
+		}
+    ATTRIBUTE "ref" {
+        TYPE "MD_MGD"
+        LABEL "Reference doc"
+        }        
+	ATTRIBUTE "title" {
+		TYPE "MD_MGD"
+		LABEL "Title"
+		}
+	ATTRIBUTE "url" {
+		TYPE "MD_MGD"
+		LABEL "URL"
+		}
+}
